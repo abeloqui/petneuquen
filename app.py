@@ -8,20 +8,64 @@ from PIL import Image
 import io
 
 # ===================== CONFIGURACIÓN Y ESTÉTICA PREMIUM =====================
-# Nota: Puedes usar tu logo también como icono de pestaña cambiando "🐾" por "logo.png"
-st.set_page_config(page_title="Pet Neuquén", layout="wide", page_icon="🐾", initial_sidebar_state="expanded")
+st.set_page_config(
+    page_title="Pet Neuquén",
+    layout="wide",
+    page_icon="🐾",           # podés cambiar por una imagen si querés
+    initial_sidebar_state="expanded"
+)
 
+# CSS mejorado
 st.markdown("""
     <style>
-    .stApp { background: linear-gradient(180deg, #f8f9fa 0%, #e6f0e8 100%); }
-    .main-header { font-size: 42px; font-weight: 700; color: #1a3c34; text-align: center; margin-bottom: 0px; }
-    .sub-header { font-size: 20px; color: #ff6b4a; text-align: center; margin-bottom: 30px; font-weight: 500; }
-    .pet-card { background: white; border-radius: 20px; padding: 15px; box-shadow: 0 8px 25px rgba(0,0,0,0.08); transition: all 0.3s; }
-    .pet-card:hover { transform: translateY(-8px); box-shadow: 0 15px 35px rgba(255,107,74,0.2); }
-    .wa-button { background: #25D366; color: white !important; padding: 14px; border-radius: 12px; text-align: center; font-weight: bold; text-decoration: none; display: block; margin-top: 10px; }
-    .logo-container { display: flex; justify-content: center; margin-bottom: 10px; }
+    .stApp { 
+        background: linear-gradient(180deg, #f8f9fa 0%, #e6f0e8 100%); 
+    }
+    .main-header { 
+        font-size: 48px; 
+        font-weight: 800; 
+        color: #1a3c34; 
+        margin-bottom: 4px;
+        letter-spacing: -0.5px;
+    }
+    .sub-header { 
+        font-size: 22px; 
+        color: #ff6b4a; 
+        font-weight: 500;
+        margin-bottom: 30px;
+    }
+    .pet-card { 
+        background: white; 
+        border-radius: 20px; 
+        padding: 20px; 
+        box-shadow: 0 8px 25px rgba(0,0,0,0.08); 
+        transition: all 0.3s ease; 
+    }
+    .pet-card:hover { 
+        transform: translateY(-8px); 
+        box-shadow: 0 15px 35px rgba(255,107,74,0.25); 
+    }
+    .wa-button { 
+        background: #25D366; 
+        color: white !important; 
+        padding: 14px; 
+        border-radius: 12px; 
+        text-align: center; 
+        font-weight: bold; 
+        text-decoration: none; 
+        display: block; 
+        margin-top: 15px;
+    }
+    /* Espaciado extra en sidebar */
+    [data-testid="stSidebarHeader"] {
+        padding-top: 10px;
+    }
     </style>
     """, unsafe_allow_html=True)
+
+# ===================== st.logo() - Logo elegante en sidebar y header =====================
+# Llamalo temprano. Usa "large" o "medium" según el tamaño de tu logo
+st.logo("logo.png", size="large")   # ← Cambia a "medium" si queda muy grande
 
 # ===================== UTILIDADES =====================
 def get_db_connection():
@@ -41,85 +85,90 @@ def img_to_base64(image_file):
 if "logged_in" not in st.session_state:
     st.session_state.update({"logged_in": False, "username": None, "full_name": "Invitado", "rol": None})
 
-# ===================== LOGIN =====================
+# ===================== VISTA LOGIN =====================
 def vista_login():
-    # Logo centrado en el login
-    c1, c2, c3 = st.columns([1, 1, 1])
-    with c2:
-        try:
-            st.image("logo.png", use_container_width=True)
-        except:
-            st.markdown("<h2 style='text-align: center;'>🐾</h2>", unsafe_allow_html=True)
-            
-    st.markdown("<h2 style='text-align: center;'>Bienvenido a Pet Neuquén</h2>", unsafe_allow_html=True)
-    tab1, tab2 = st.tabs(["Ingresar", "Registrarse como Voluntario"])
-    conn = get_db_connection()
+    # Espacio superior para que respire
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        st.markdown("<h1 style='text-align: center; color: #1a3c34;'>🐾 Pet Neuquén</h1>", unsafe_allow_html=True)
+        st.markdown("<p style='text-align: center; font-size: 20px; color: #ff6b4a;'>Adopciones con amor en Neuquén</p>", unsafe_allow_html=True)
+        
+        tab1, tab2 = st.tabs(["Ingresar", "Registrarse como Voluntario"])
+        conn = get_db_connection()
 
-    with tab1:
-        u = st.text_input("Usuario")
-        p = st.text_input("Contraseña", type="password")
-        if st.button("Entrar", use_container_width=True, type="primary"):
-            df = conn.read(ttl=0)
-            if not df.empty and 'username' in df.columns:
-                user_row = df[(df['username'] == u) & (df['password'] == hash_password(p))]
-                if not user_row.empty:
-                    if user_row.iloc[0]['estado_usuario'] == 'aprobado':
-                        st.session_state.update({
-                            "logged_in": True, "username": u,
-                            "full_name": user_row.iloc[0]['contacto_nombre'],
-                            "rol": user_row.iloc[0].get('rol', 'voluntario')
-                        })
-                        st.success(f"¡Bienvenido de nuevo, {st.session_state.full_name}! 🐾")
-                        st.rerun()
+        with tab1:
+            u = st.text_input("Usuario")
+            p = st.text_input("Contraseña", type="password")
+            if st.button("Entrar", use_container_width=True, type="primary"):
+                df = conn.read(ttl=0)
+                if not df.empty and 'username' in df.columns:
+                    user_row = df[(df['username'] == u) & (df['password'] == hash_password(p))]
+                    if not user_row.empty:
+                        if user_row.iloc[0]['estado_usuario'] == 'aprobado':
+                            st.session_state.update({
+                                "logged_in": True, 
+                                "username": u,
+                                "full_name": user_row.iloc[0]['contacto_nombre'],
+                                "rol": user_row.iloc[0].get('rol', 'voluntario')
+                            })
+                            st.success(f"¡Bienvenido de nuevo, {st.session_state.full_name}! 🐾")
+                            st.rerun()
+                        else:
+                            st.warning("Tu cuenta aún está pendiente de aprobación.")
                     else:
-                        st.warning("Tu cuenta aún está pendiente de aprobación.")
-                else:
-                    st.error("Usuario o contraseña incorrectos.")
+                        st.error("Usuario o contraseña incorrectos.")
 
-    with tab2:
-        with st.form("registro"):
-            new_u = st.text_input("Nombre de usuario *")
-            new_n = st.text_input("Nombre completo *")
-            new_p = st.text_input("Contraseña *", type="password")
-            new_t = st.text_input("WhatsApp (sin +54) *")
-            if st.form_submit_button("Enviar solicitud"):
-                if new_u and new_n and new_p and new_t:
-                    df = conn.read(ttl=0)
-                    if new_u in df['username'].values:
-                        st.error("Ese usuario ya existe")
-                    else:
-                        new_row = pd.DataFrame([{
-                            "tipo": "usuario", "username": new_u, "password": hash_password(new_p),
-                            "contacto_nombre": new_n, "contacto_tel": new_t, "rol": "voluntario",
-                            "estado_usuario": "pendiente", "estado_adopcion": "SISTEMA"
-                        }])
-                        conn.update(data=pd.concat([df, new_row], ignore_index=True))
-                        st.success("✅ Solicitud enviada. Te avisaremos cuando estés aprobado.")
+        with tab2:
+            with st.form("registro"):
+                new_u = st.text_input("Nombre de usuario *")
+                new_n = st.text_input("Nombre completo *")
+                new_p = st.text_input("Contraseña *", type="password")
+                new_t = st.text_input("WhatsApp (sin +54) *")
+                if st.form_submit_button("Enviar solicitud"):
+                    if new_u and new_n and new_p and new_t:
+                        df = conn.read(ttl=0)
+                        if new_u in df['username'].values:
+                            st.error("Ese usuario ya existe")
+                        else:
+                            new_row = pd.DataFrame([{
+                                "tipo": "usuario", "username": new_u, "password": hash_password(new_p),
+                                "contacto_nombre": new_n, "contacto_tel": new_t, "rol": "voluntario",
+                                "estado_usuario": "pendiente", "estado_adopcion": "SISTEMA"
+                            }])
+                            conn.update(data=pd.concat([df, new_row], ignore_index=True))
+                            st.success("✅ Solicitud enviada. Te avisaremos cuando estés aprobado.")
 
-# ===================== INICIO =====================
+# ===================== VISTA INICIO =====================
 def vista_inicio():
-    # Encabezado con Logo y Título
-    col_l, col_r = st.columns([1, 5])
+    # Header creativo y equilibrado
+    col_l, col_m, col_r = st.columns([1.3, 4, 1])
+    
     with col_l:
         try:
-            st.image("logo.png", width=120)
+            st.image("logo.png", width=160)   # Ajustá el width según tu logo
         except:
-            st.write("🐾")
+            st.markdown("<h1 style='font-size: 70px; text-align: center;'>🐾</h1>", unsafe_allow_html=True)
+    
+    with col_m:
+        st.markdown('<h1 class="main-header">Pet Neuquén</h1>', unsafe_allow_html=True)
+        st.markdown('<p class="sub-header">Adopciones responsables con mucho ❤️ en Neuquén</p>', unsafe_allow_html=True)
+    
     with col_r:
-        st.markdown('<h1 class="main-header" style="text-align: left;">Pet Neuquén</h1>', unsafe_allow_html=True)
-        st.markdown('<p class="sub-header" style="text-align: left;">Adopciones con amor en Neuquén</p>', unsafe_allow_html=True)
+        st.empty()
 
+    # Estadísticas
     conn = get_db_connection()
     df = conn.read(ttl=0)
     df_pets = df[(df.get('tipo') == 'mascota') & (df.get('estado_adopcion') == 'disponible')]
 
-    # Estadísticas
     c1, c2, c3 = st.columns(3)
     c1.metric("🐶 En adopción", len(df_pets))
     c2.metric("❤️ Adoptadas", len(df[df.get('estado_adopcion') == 'adoptado']))
     c3.metric("👥 Voluntarios", len(df[df.get('tipo') == 'usuario']))
 
-    # Búsqueda avanzada
+    # Búsqueda y galería (el resto de tu código original se mantiene)
     st.subheader("🔎 Buscá tu nuevo mejor amigo")
     col1, col2, col3, col4 = st.columns([3,1,1,1])
     with col1:
@@ -131,7 +180,7 @@ def vista_inicio():
     with col4:
         tamano = st.selectbox("Tamaño", ["Todos", "Pequeño", "Mediano", "Grande"])
 
-    # Aplicar filtros
+    # Filtros (mantengo tu lógica original)
     if search:
         df_pets = df_pets[df_pets['nombre_mascota'].str.contains(search, case=False, na=False) |
                          df_pets['descripcion'].str.contains(search, case=False, na=False)]
@@ -147,16 +196,17 @@ def vista_inicio():
         for i, (_, pet) in enumerate(df_pets.iterrows()):
             with cols[i % 3]:
                 st.markdown('<div class="pet-card">', unsafe_allow_html=True)
-                if pet['imagen_base64']:
+                if pet.get('imagen_base64'):
                     st.image(f"data:image/png;base64,{pet['imagen_base64']}", use_column_width=True)
                 st.subheader(pet['nombre_mascota'])
                 st.caption(f"{pet['especie']} • {pet['edad']} años • {pet['tamano']} • {pet['sexo']}")
-                st.write(pet['descripcion'][:110] + "..." if len(str(pet.get('descripcion', ''))) > 110 else pet.get('descripcion', ''))
+                desc = pet.get('descripcion', '')
+                st.write(desc[:110] + "..." if len(str(desc)) > 110 else desc)
                 wa_link = f"https://wa.me/54{pet.get('contacto_tel', '')}?text=Hola! Me enamoré de {pet['nombre_mascota']} ❤️"
                 st.markdown(f'<a href="{wa_link}" target="_blank" class="wa-button">💬 Contactar por WhatsApp</a>', unsafe_allow_html=True)
                 st.markdown('</div>', unsafe_allow_html=True)
 
-# ===================== HISTORIAS DE ÉXITO =====================
+# ===================== OTRAS VISTAS (sin cambios grandes) =====================
 def vista_exitos():
     st.title("🏆 Historias que nos llenan el corazón")
     conn = get_db_connection()
@@ -170,7 +220,6 @@ def vista_exitos():
         st.write(pet.get('historia_exito', 'Adoptado con mucho amor ❤️'))
         st.divider()
 
-# ===================== PUBLICAR MASCOTA =====================
 def vista_subir_mascota():
     st.title("📸 Publicar nueva mascota")
     conn = get_db_connection()
@@ -197,7 +246,6 @@ def vista_subir_mascota():
             st.success("¡Mascota publicada! 🎉")
             st.rerun()
 
-# ===================== MODERACIÓN ADMIN =====================
 def vista_moderacion():
     st.title("🛡️ Panel de Moderación - Admin")
     conn = get_db_connection()
@@ -225,35 +273,35 @@ def vista_moderacion():
                     st.success("Rechazado")
                     st.rerun()
 
-# ===================== NAVEGACIÓN (CON LOGO EN SIDEBAR) =====================
-# Logo en la parte superior del Sidebar
+# ===================== NAVEGACIÓN =====================
 with st.sidebar:
-    try:
-        st.image("logo.png", use_container_width=True)
-    except:
-        st.title("🐾 Pet Neuquén")
-    
     st.divider()
+    
+    if st.session_state.logged_in:
+        st.success(f"Hola {st.session_state.full_name} 🐾")
+        opciones = ["Inicio", "Historias de Éxito", "Publicar Mascota", "Mis Publicaciones"]
+        if st.session_state.rol == "admin" or st.session_state.username == "admin":
+            opciones.append("🛡️ Moderación")
+        nav = st.sidebar.radio("Menú", opciones, label_visibility="collapsed")
+        if st.sidebar.button("Cerrar sesión", use_container_width=True):
+            st.session_state.clear()
+            st.rerun()
+    else:
+        nav = st.sidebar.radio("Navegación", ["Inicio", "Historias de Éxito", "Login"], label_visibility="collapsed")
 
-if st.session_state.logged_in:
-    st.sidebar.success(f"Hola {st.session_state.full_name}")
-    opciones = ["Inicio", "Historias de Éxito", "Publicar Mascota", "Mis Publicaciones"]
-    if st.session_state.rol == "admin" or st.session_state.username == "admin":
-        opciones.append("🛡️ Moderación")
-    nav = st.sidebar.radio("Menú", opciones)
-    if st.sidebar.button("Cerrar sesión"):
-        st.session_state.clear()
-        st.rerun()
-else:
-    nav = st.sidebar.radio("Navegación", ["Inicio", "Historias de Éxito", "Login"])
-
-# Lógica de navegación
-if nav == "Inicio": vista_inicio()
-elif nav == "Historias de Éxito": vista_exitos()
-elif nav == "Login": vista_login()
-elif nav == "Publicar Mascota": vista_subir_mascota()
-elif nav == "Mis Publicaciones": st.info("Mis publicaciones (próximamente)")
-elif nav == "🛡️ Moderación": vista_moderacion()
+# ===================== LÓGICA DE NAVEGACIÓN =====================
+if nav == "Inicio":
+    vista_inicio()
+elif nav == "Historias de Éxito":
+    vista_exitos()
+elif nav == "Login":
+    vista_login()
+elif nav == "Publicar Mascota":
+    vista_subir_mascota()
+elif nav == "Mis Publicaciones":
+    st.info("Mis publicaciones (próximamente)")
+elif nav == "🛡️ Moderación":
+    vista_moderacion()
 
 st.sidebar.markdown("---")
 st.sidebar.caption("❤️ Hecho con amor para las mascotas de Neuquén")
