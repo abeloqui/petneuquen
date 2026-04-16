@@ -8,20 +8,18 @@ from PIL import Image
 import io
 
 # ===================== CONFIGURACIÓN Y ESTÉTICA PREMIUM =====================
+# Nota: Puedes usar tu logo también como icono de pestaña cambiando "🐾" por "logo.png"
 st.set_page_config(page_title="Pet Neuquén", layout="wide", page_icon="🐾", initial_sidebar_state="expanded")
 
 st.markdown("""
     <style>
     .stApp { background: linear-gradient(180deg, #f8f9fa 0%, #e6f0e8 100%); }
-    .main-header { font-size: 42px; font-weight: 700; color: #1a3c34; text-align: center; margin-bottom: 10px; }
-    .sub-header { font-size: 24px; color: #ff6b4a; text-align: center; margin-bottom: 30px; }
+    .main-header { font-size: 42px; font-weight: 700; color: #1a3c34; text-align: center; margin-bottom: 0px; }
+    .sub-header { font-size: 20px; color: #ff6b4a; text-align: center; margin-bottom: 30px; font-weight: 500; }
     .pet-card { background: white; border-radius: 20px; padding: 15px; box-shadow: 0 8px 25px rgba(0,0,0,0.08); transition: all 0.3s; }
     .pet-card:hover { transform: translateY(-8px); box-shadow: 0 15px 35px rgba(255,107,74,0.2); }
-    .badge { padding: 6px 14px; border-radius: 50px; font-size: 13px; font-weight: 700; color: white; }
-    .badge-disponible { background: #00c853; }
-    .badge-adoptado { background: #ff9800; }
-    .wa-button { background: #25D366; color: white; padding: 14px; border-radius: 12px; text-align: center; font-weight: bold; text-decoration: none; display: block; margin-top: 10px; }
-    .stat-card { background: white; padding: 20px; border-radius: 18px; text-align: center; box-shadow: 0 6px 20px rgba(0,0,0,0.07); }
+    .wa-button { background: #25D366; color: white !important; padding: 14px; border-radius: 12px; text-align: center; font-weight: bold; text-decoration: none; display: block; margin-top: 10px; }
+    .logo-container { display: flex; justify-content: center; margin-bottom: 10px; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -45,7 +43,15 @@ if "logged_in" not in st.session_state:
 
 # ===================== LOGIN =====================
 def vista_login():
-    st.title("🔐 Bienvenido a Pet Neuquén")
+    # Logo centrado en el login
+    c1, c2, c3 = st.columns([1, 1, 1])
+    with c2:
+        try:
+            st.image("logo.png", use_container_width=True)
+        except:
+            st.markdown("<h2 style='text-align: center;'>🐾</h2>", unsafe_allow_html=True)
+            
+    st.markdown("<h2 style='text-align: center;'>Bienvenido a Pet Neuquén</h2>", unsafe_allow_html=True)
     tab1, tab2 = st.tabs(["Ingresar", "Registrarse como Voluntario"])
     conn = get_db_connection()
 
@@ -90,16 +96,24 @@ def vista_login():
                         conn.update(data=pd.concat([df, new_row], ignore_index=True))
                         st.success("✅ Solicitud enviada. Te avisaremos cuando estés aprobado.")
 
-# ===================== INICIO - CON BÚSQUEDA AVANZADA =====================
+# ===================== INICIO =====================
 def vista_inicio():
-    st.markdown('<h1 class="main-header">🐾 Pet Neuquén</h1>', unsafe_allow_html=True)
-    st.markdown('<p class="sub-header">Adopciones con amor en Neuquén</p>', unsafe_allow_html=True)
+    # Encabezado con Logo y Título
+    col_l, col_r = st.columns([1, 5])
+    with col_l:
+        try:
+            st.image("logo.png", width=120)
+        except:
+            st.write("🐾")
+    with col_r:
+        st.markdown('<h1 class="main-header" style="text-align: left;">Pet Neuquén</h1>', unsafe_allow_html=True)
+        st.markdown('<p class="sub-header" style="text-align: left;">Adopciones con amor en Neuquén</p>', unsafe_allow_html=True)
 
     conn = get_db_connection()
     df = conn.read(ttl=0)
     df_pets = df[(df.get('tipo') == 'mascota') & (df.get('estado_adopcion') == 'disponible')]
 
-    # Estadísticas bonitas
+    # Estadísticas
     c1, c2, c3 = st.columns(3)
     c1.metric("🐶 En adopción", len(df_pets))
     c2.metric("❤️ Adoptadas", len(df[df.get('estado_adopcion') == 'adoptado']))
@@ -125,7 +139,7 @@ def vista_inicio():
     if especie != "Todas": df_pets = df_pets[df_pets['especie'] == especie]
     if tamano != "Todos": df_pets = df_pets[df_pets['tamano'] == tamano]
 
-    # Galería hermosa
+    # Galería
     if df_pets.empty:
         st.info("😔 No encontramos mascotas con esos filtros.")
     else:
@@ -211,21 +225,16 @@ def vista_moderacion():
                     st.success("Rechazado")
                     st.rerun()
 
-    st.subheader("Mascotas publicadas")
-    mascotas = df[df.get('tipo') == 'mascota']
-    for i, row in mascotas.iterrows():
-        col1, col2 = st.columns([4,2])
-        with col1:
-            st.write(f"{row['nombre_mascota']} - {row.get('estado_adopcion')}")
-        with col2:
-            if st.button("Marcar como Adoptado", key=f"ad{i}"):
-                df.loc[i, 'estado_adopcion'] = 'adoptado'
-                df.loc[i, 'historia_exito'] = st.text_input("Historia de adopción", key=f"h{i}")
-                conn.update(data=df)
-                st.rerun()
+# ===================== NAVEGACIÓN (CON LOGO EN SIDEBAR) =====================
+# Logo en la parte superior del Sidebar
+with st.sidebar:
+    try:
+        st.image("logo.png", use_container_width=True)
+    except:
+        st.title("🐾 Pet Neuquén")
+    
+    st.divider()
 
-# ===================== NAVEGACIÓN =====================
-st.sidebar.title("🐾 Pet Neuquén")
 if st.session_state.logged_in:
     st.sidebar.success(f"Hola {st.session_state.full_name}")
     opciones = ["Inicio", "Historias de Éxito", "Publicar Mascota", "Mis Publicaciones"]
@@ -238,6 +247,7 @@ if st.session_state.logged_in:
 else:
     nav = st.sidebar.radio("Navegación", ["Inicio", "Historias de Éxito", "Login"])
 
+# Lógica de navegación
 if nav == "Inicio": vista_inicio()
 elif nav == "Historias de Éxito": vista_exitos()
 elif nav == "Login": vista_login()
@@ -245,4 +255,5 @@ elif nav == "Publicar Mascota": vista_subir_mascota()
 elif nav == "Mis Publicaciones": st.info("Mis publicaciones (próximamente)")
 elif nav == "🛡️ Moderación": vista_moderacion()
 
-st.caption("❤️ Hecho con amor para las mascotas de Neuquén")
+st.sidebar.markdown("---")
+st.sidebar.caption("❤️ Hecho con amor para las mascotas de Neuquén")
