@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, Float
 from database import Base
 
 class User(Base):
@@ -6,7 +6,7 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
-    role = Column(String, default="user") # 'admin', 'refugio', 'user'
+    role = Column(String, default="user") 
     is_verified = Column(Boolean, default=False)
 
 class Pet(Base):
@@ -15,5 +15,8 @@ class Pet(Base):
     name = Column(String)
     species = Column(String)
     image_url = Column(String)
+    status = Column(String, default="adopcion") # 'adopcion' o 'perdido'
+    lat = Column(Float, nullable=True) # Para geolocalización
+    lon = Column(Float, nullable=True) # Para geolocalización
     owner_id = Column(Integer, ForeignKey("users.id"))
     
