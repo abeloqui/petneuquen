@@ -64,4 +64,21 @@ async def upload_pet(
     db.add(new_pet)
     db.commit()
     return {"message": "Mascota publicada", "url": url}
+
+@app.post("/setup-admin-secreto")
+def setup_admin(db: Session = Depends(get_db)):
+    # Verificamos si ya existe un admin para no crear duplicados
+    admin = db.query(models.User).filter(models.User.role == "admin").first()
+    if admin:
+        return {"message": "El admin ya existe"}
+    
+    nuevo_admin = models.User(
+        email="tu-email@gmail.com", # <--- PONÉ TU MAIL ACÁ
+        hashed_password=auth.get_password_hash("tu-clave-segura"), # <--- PONÉ TU CLAVE ACÁ
+        role="admin",
+        is_verified=True
+    )
+    db.add(nuevo_admin)
+    db.commit()
+    return {"message": "Admin creado con éxito desde el celu"}
   
