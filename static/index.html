@@ -3,80 +3,68 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Huellitas Neuquén</title>
+    <title>Huellitas Admin</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600;700&display=swap" rel="stylesheet">
     <style> body { font-family: 'Quicksand', sans-serif; background-color: #fdfbf7; } </style>
 </head>
 <body class="pb-20">
-    <nav class="p-4 bg-white shadow-sm flex justify-between items-center sticky top-0 z-50">
+    <nav class="p-4 bg-white shadow-sm flex justify-between items-center">
         <h1 class="text-xl font-bold text-orange-500">🐾 Huellitas</h1>
-        <div class="flex gap-2">
-            <button onclick="showSection('login')" class="text-xs font-bold text-gray-500">Ingresar</button>
-            <button onclick="showSection('registro')" class="text-xs bg-orange-500 text-white px-3 py-1 rounded-full">Registrarme</button>
-        </div>
+        <div id="user-info" class="text-xs font-bold text-gray-500"></div>
     </nav>
 
-    <div class="flex justify-around bg-white border-b sticky top-14 z-40 text-sm">
-        <button onclick="showSection('adopcion')" class="py-3 px-2">Adopción</button>
-        <button onclick="showSection('perdidos')" class="py-3 px-2">Perdidos</button>
-        <button onclick="showSection('publicar')" class="py-3 px-2 font-bold text-orange-600">+ Publicar</button>
+    <div class="flex justify-around bg-white border-b text-sm sticky top-0 z-50">
+        <button onclick="showSection('adopcion')" class="py-4 px-2">Adopción</button>
+        <button onclick="showSection('perdidos')" class="py-4 px-2">Perdidos</button>
+        <button onclick="showSection('publicar')" class="py-4 px-2 font-bold text-orange-600">+ Publicar</button>
+        <button id="tab-admin" onclick="showSection('admin')" class="hidden py-4 px-2 font-bold text-purple-600">ADMIN</button>
     </div>
 
-    <section id="sec-registro" class="p-6 hidden max-w-md mx-auto">
+    <section id="sec-login" class="p-6 max-w-md mx-auto">
         <div class="bg-white p-8 rounded-3xl shadow-xl">
-            <h2 class="text-2xl font-bold mb-4">Crear cuenta</h2>
-            <p class="text-sm text-gray-500 mb-6">Unite para ayudar a las mascotas de Neuquén.</p>
-            <input type="email" placeholder="Email" class="w-full p-3 mb-3 border rounded-2xl">
-            <input type="password" placeholder="Contraseña" class="w-full p-3 mb-6 border rounded-2xl">
-            <button class="w-full bg-orange-500 text-white py-3 rounded-2xl font-bold">Registrarme</button>
-        </div>
-    </section>
-
-    <section id="sec-publicar" class="p-6 hidden max-w-md mx-auto">
-        <div class="bg-white p-6 rounded-3xl shadow-lg">
-            <h2 class="text-xl font-bold mb-4">Detalles de la mascota</h2>
-            <form id="form-pet">
-                <input type="text" placeholder="Nombre (o 'Desconocido')" class="w-full p-3 mb-3 border rounded-xl" required>
-                
-                <select class="w-full p-3 mb-3 border rounded-xl">
-                    <option value="adopcion">Busca Hogar (Adopción)</option>
-                    <option value="perdido">Se perdió / Lo encontré (Perdido)</option>
-                </select>
-
-                <div class="p-3 bg-gray-50 rounded-xl mb-3">
-                    <p class="text-xs font-bold text-gray-400 mb-2">SALUD / VACUNACIÓN</p>
-                    <label class="flex items-center gap-2 mb-2">
-                        <input type="checkbox" id="chk-vacuna" onchange="toggleVacunas()"> ¿Está vacunado?
-                    </label>
-                    <input type="text" id="p-vacunas" placeholder="¿Cuáles? (Ej: Quinta, Rabia)" class="hidden w-full p-2 border rounded-lg text-sm">
-                </div>
-
-                <button type="button" onclick="getLocation()" class="w-full text-xs bg-blue-50 text-blue-600 p-3 rounded-xl mb-4">📍 Marcar ubicación en el mapa</button>
-                <input type="file" class="w-full mb-4 text-sm">
-                
-                <button type="submit" class="w-full bg-green-500 text-white py-3 rounded-2xl font-bold">Enviar para revisión</button>
-                <p class="text-[10px] text-center mt-3 text-gray-400 italic">Tu publicación será revisada por un administrador antes de aparecer.</p>
+            <h2 class="text-2xl font-bold mb-6">Hola!</h2>
+            <form id="form-login">
+                <input type="email" id="l-email" placeholder="Email" class="w-full p-4 mb-3 border rounded-2xl">
+                <input type="password" id="l-pass" placeholder="Clave" class="w-full p-4 mb-6 border rounded-2xl">
+                <button type="submit" class="w-full bg-orange-500 text-white py-4 rounded-2xl font-bold">Ingresar</button>
             </form>
         </div>
     </section>
 
+    <section id="sec-admin" class="p-6 hidden">
+        <h2 class="text-2xl font-bold mb-4 text-purple-700">Pendientes de Aprobación</h2>
+        <div id="list-pendientes" class="grid gap-4">
+            <p class="text-gray-400">No hay nada pendiente por ahora.</p>
+        </div>
+    </section>
+
+    <section id="sec-publicar" class="p-6 hidden max-w-md mx-auto">
+        <div id="msg-bloqueado" class="text-center p-10 bg-red-50 rounded-3xl hidden">
+            <p class="text-red-500 font-bold">Tu cuenta aún no fue verificada por el admin. No podés publicar todavía.</p>
+        </div>
+        <div id="form-contenedor">
+            </div>
+    </section>
+
     <script>
+        let currentUser = null;
+
         function showSection(name) {
-            ['adopcion', 'perdidos', 'login', 'registro', 'publicar'].forEach(s => {
+            ['adopcion', 'perdidos', 'login', 'admin', 'publicar'].forEach(s => {
                 document.getElementById('sec-' + s)?.classList.add('hidden');
             });
             document.getElementById('sec-' + name).classList.remove('hidden');
         }
-        function toggleVacunas() {
-            const input = document.getElementById('p-vacunas');
-            input.classList.toggle('hidden', !document.getElementById('chk-vacuna').checked);
-        }
-        function getLocation() {
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(p => alert("Ubicación guardada: " + p.coords.latitude.toFixed(4)));
-            }
-        }
+
+        document.getElementById('form-login').onsubmit = async (e) => {
+            e.preventDefault();
+            // Lógica de Fetch al endpoint /login
+            // Si el role es 'admin', mostramos el botón tab-admin
+            alert("Logueado! Si sos admin, verás la pestaña púrpura.");
+            document.getElementById('tab-admin').classList.remove('hidden');
+            showSection('adopcion');
+        };
     </script>
 </body>
 </html>
