@@ -1,4 +1,8 @@
-streamlit
-pandas
-Pillow
-st-gsheets-connection
+fastapi
+uvicorn
+sqlalchemy
+passlib[bcrypt]
+python-multipart
+cloudinary
+psycopg2-binary
+python-dotenv
