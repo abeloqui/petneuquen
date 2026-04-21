@@ -6,8 +6,8 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
-    role = Column(String, default="user") 
-    is_verified = Column(Boolean, default=False)
+    role = Column(String, default="user") # 'admin' o 'user'
+    is_verified = Column(Boolean, default=False) # Solo publican los verificados por vos
 
 class Pet(Base):
     __tablename__ = "pets"
@@ -15,8 +15,11 @@ class Pet(Base):
     name = Column(String)
     species = Column(String)
     image_url = Column(String)
-    status = Column(String, default="adopcion") # 'adopcion' o 'perdido'
-    lat = Column(Float, nullable=True) # Para geolocalización
-    lon = Column(Float, nullable=True) # Para geolocalización
+    status = Column(String) # 'adopcion' o 'perdido'
+    vacunado = Column(Boolean, default=False)
+    vacunas_detalle = Column(String, nullable=True) # Ej: "Rabia, Parvovirus"
+    lat = Column(Float, nullable=True)
+    lon = Column(Float, nullable=True)
+    is_approved = Column(Boolean, default=False) # <--- FILTRO DE ADMIN
     owner_id = Column(Integer, ForeignKey("users.id"))
     
