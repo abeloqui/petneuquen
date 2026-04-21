@@ -6,86 +6,77 @@
     <title>Huellitas Neuquén</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600;700&display=swap" rel="stylesheet">
-    <style>
-        body { font-family: 'Quicksand', sans-serif; background-color: #fdfbf7; }
-        .tab-active { border-bottom: 3px solid #f97316; color: #f97316; font-weight: bold; }
-    </style>
+    <style> body { font-family: 'Quicksand', sans-serif; background-color: #fdfbf7; } </style>
 </head>
 <body class="pb-20">
     <nav class="p-4 bg-white shadow-sm flex justify-between items-center sticky top-0 z-50">
         <h1 class="text-xl font-bold text-orange-500">🐾 Huellitas</h1>
-        <button onclick="showSection('login')" class="text-sm bg-orange-100 text-orange-600 px-4 py-2 rounded-full">Mi Cuenta</button>
+        <div class="flex gap-2">
+            <button onclick="showSection('login')" class="text-xs font-bold text-gray-500">Ingresar</button>
+            <button onclick="showSection('registro')" class="text-xs bg-orange-500 text-white px-3 py-1 rounded-full">Registrarme</button>
+        </div>
     </nav>
 
-    <div class="flex justify-around bg-white border-b sticky top-14 z-40">
-        <button onclick="showSection('adopcion')" id="tab-adopcion" class="py-3 px-4 tab-active">Adopción</button>
-        <button onclick="showSection('perdidos')" id="tab-perdidos" class="py-3 px-4 text-gray-500">Perdidos</button>
-        <button onclick="showSection('publicar')" id="tab-publicar" class="py-3 px-4 text-gray-500 font-bold text-orange-600">+ Publicar</button>
+    <div class="flex justify-around bg-white border-b sticky top-14 z-40 text-sm">
+        <button onclick="showSection('adopcion')" class="py-3 px-2">Adopción</button>
+        <button onclick="showSection('perdidos')" class="py-3 px-2">Perdidos</button>
+        <button onclick="showSection('publicar')" class="py-3 px-2 font-bold text-orange-600">+ Publicar</button>
     </div>
 
-    <section id="sec-adopcion" class="p-4 grid grid-cols-1 gap-4">
-        <h2 class="text-lg font-bold text-gray-700">Mascotas buscando hogar</h2>
-        <div id="gallery-adopcion" class="grid grid-cols-1 gap-4">
-            <p class="text-gray-400">Cargando...</p>
+    <section id="sec-registro" class="p-6 hidden max-w-md mx-auto">
+        <div class="bg-white p-8 rounded-3xl shadow-xl">
+            <h2 class="text-2xl font-bold mb-4">Crear cuenta</h2>
+            <p class="text-sm text-gray-500 mb-6">Unite para ayudar a las mascotas de Neuquén.</p>
+            <input type="email" placeholder="Email" class="w-full p-3 mb-3 border rounded-2xl">
+            <input type="password" placeholder="Contraseña" class="w-full p-3 mb-6 border rounded-2xl">
+            <button class="w-full bg-orange-500 text-white py-3 rounded-2xl font-bold">Registrarme</button>
         </div>
     </section>
 
-    <section id="sec-perdidos" class="p-4 hidden">
-        <h2 class="text-lg font-bold text-red-500">Mascotas perdidas recientemente</h2>
-        <p class="text-sm text-gray-500 mb-4 italic">Cerca de tu ubicación en Neuquén</p>
-        <div id="gallery-perdidos" class="grid grid-cols-1 gap-4">
-            </div>
-    </section>
-
-    <section id="sec-login" class="p-6 hidden max-w-md mx-auto bg-white m-4 rounded-3xl shadow-lg">
-        <h2 class="text-2xl font-bold mb-4">Ingresar</h2>
-        <input type="email" id="log-email" placeholder="Email" class="w-full p-3 mb-3 border rounded-2xl">
-        <input type="password" id="log-pass" placeholder="Contraseña" class="w-full p-3 mb-4 border rounded-2xl">
-        <button onclick="login()" class="w-full bg-orange-500 text-white py-3 rounded-2xl font-bold">Entrar</button>
-        <p class="mt-4 text-center text-sm text-gray-500">¿Sos un refugio nuevo? <br>Registrate en el panel de /docs</p>
-    </section>
-
     <section id="sec-publicar" class="p-6 hidden max-w-md mx-auto">
-        <h2 class="text-2xl font-bold mb-4">Publicar Huellita</h2>
-        <form id="form-publicar" class="bg-white p-6 rounded-3xl shadow-lg border-2 border-orange-100">
-            <input type="text" id="p-name" placeholder="Nombre" class="w-full p-3 mb-3 border rounded-xl" required>
-            <select id="p-status" class="w-full p-3 mb-3 border rounded-xl">
-                <option value="adopcion">Para Adopción</option>
-                <option value="perdido">Mascota Perdida</option>
-            </select>
-            <div class="mb-3">
-                <label class="text-xs text-gray-400">Foto de la mascota</label>
-                <input type="file" id="p-file" class="w-full text-sm" accept="image/*" required>
-            </div>
-            <button type="button" onclick="getLocation()" class="text-xs bg-blue-50 text-blue-600 p-2 rounded mb-3 w-full">📍 Obtener mi ubicación actual</button>
-            <input type="hidden" id="p-lat">
-            <input type="hidden" id="p-lon">
-            <button type="submit" class="w-full bg-green-500 text-white py-3 rounded-2xl font-bold">Subir a la nube</button>
-        </form>
+        <div class="bg-white p-6 rounded-3xl shadow-lg">
+            <h2 class="text-xl font-bold mb-4">Detalles de la mascota</h2>
+            <form id="form-pet">
+                <input type="text" placeholder="Nombre (o 'Desconocido')" class="w-full p-3 mb-3 border rounded-xl" required>
+                
+                <select class="w-full p-3 mb-3 border rounded-xl">
+                    <option value="adopcion">Busca Hogar (Adopción)</option>
+                    <option value="perdido">Se perdió / Lo encontré (Perdido)</option>
+                </select>
+
+                <div class="p-3 bg-gray-50 rounded-xl mb-3">
+                    <p class="text-xs font-bold text-gray-400 mb-2">SALUD / VACUNACIÓN</p>
+                    <label class="flex items-center gap-2 mb-2">
+                        <input type="checkbox" id="chk-vacuna" onchange="toggleVacunas()"> ¿Está vacunado?
+                    </label>
+                    <input type="text" id="p-vacunas" placeholder="¿Cuáles? (Ej: Quinta, Rabia)" class="hidden w-full p-2 border rounded-lg text-sm">
+                </div>
+
+                <button type="button" onclick="getLocation()" class="w-full text-xs bg-blue-50 text-blue-600 p-3 rounded-xl mb-4">📍 Marcar ubicación en el mapa</button>
+                <input type="file" class="w-full mb-4 text-sm">
+                
+                <button type="submit" class="w-full bg-green-500 text-white py-3 rounded-2xl font-bold">Enviar para revisión</button>
+                <p class="text-[10px] text-center mt-3 text-gray-400 italic">Tu publicación será revisada por un administrador antes de aparecer.</p>
+            </form>
+        </div>
     </section>
 
     <script>
         function showSection(name) {
-            ['adopcion', 'perdidos', 'login', 'publicar'].forEach(s => {
-                document.getElementById('sec-' + s).classList.add('hidden');
-                document.getElementById('tab-' + s)?.classList.remove('tab-active');
+            ['adopcion', 'perdidos', 'login', 'registro', 'publicar'].forEach(s => {
+                document.getElementById('sec-' + s)?.classList.add('hidden');
             });
             document.getElementById('sec-' + name).classList.remove('hidden');
-            document.getElementById('tab-' + name)?.classList.add('tab-active');
         }
-
+        function toggleVacunas() {
+            const input = document.getElementById('p-vacunas');
+            input.classList.toggle('hidden', !document.getElementById('chk-vacuna').checked);
+        }
         function getLocation() {
             if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(pos => {
-                    document.getElementById('p-lat').value = pos.coords.latitude;
-                    document.getElementById('p-lon').value = pos.coords.longitude;
-                    alert("Ubicación capturada correctamente");
-                });
+                navigator.geolocation.getCurrentPosition(p => alert("Ubicación guardada: " + p.coords.latitude.toFixed(4)));
             }
         }
-
-        // Aquí irían las funciones Fetch para conectar con tu main.py
     </script>
 </body>
 </html>
-
