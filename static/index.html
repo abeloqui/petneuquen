@@ -3,40 +3,89 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Huellitas - Adopción de Mascotas</title>
+    <title>Huellitas Neuquén</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Quicksand', sans-serif; background-color: #fdfbf7; }
-        .hero-gradient { background: linear-gradient(135deg, #ffeddb 0%, #ffd3b6 100%); }
+        .tab-active { border-bottom: 3px solid #f97316; color: #f97316; font-weight: bold; }
     </style>
 </head>
-<body>
-    <nav class="p-6 flex justify-between items-center bg-white shadow-sm">
-        <h1 class="text-2xl font-bold text-orange-500">🐾 Huellitas</h1>
-        <a href="/docs" class="text-sm bg-orange-100 text-orange-600 px-4 py-2 rounded-full font-semibold">Panel Refugios</a>
+<body class="pb-20">
+    <nav class="p-4 bg-white shadow-sm flex justify-between items-center sticky top-0 z-50">
+        <h1 class="text-xl font-bold text-orange-500">🐾 Huellitas</h1>
+        <button onclick="showSection('login')" class="text-sm bg-orange-100 text-orange-600 px-4 py-2 rounded-full">Mi Cuenta</button>
     </nav>
 
-    <header class="hero-gradient px-8 py-16 text-center">
-        <h2 class="text-4xl font-bold text-gray-800 mb-4">Encontrá a tu nuevo mejor amigo</h2>
-        <p class="text-gray-600 mb-8 max-w-md mx-auto">Conectamos refugios de Neuquén con familias responsables. Cada huella cuenta una historia.</p>
-        <div class="flex justify-center gap-4">
-            <button class="bg-orange-500 text-white px-8 py-3 rounded-2xl font-bold shadow-lg shadow-orange-200">Ver Mascotas</button>
-        </div>
-    </header>
+    <div class="flex justify-around bg-white border-b sticky top-14 z-40">
+        <button onclick="showSection('adopcion')" id="tab-adopcion" class="py-3 px-4 tab-active">Adopción</button>
+        <button onclick="showSection('perdidos')" id="tab-perdidos" class="py-3 px-4 text-gray-500">Perdidos</button>
+        <button onclick="showSection('publicar')" id="tab-publicar" class="py-3 px-4 text-gray-500 font-bold text-orange-600">+ Publicar</button>
+    </div>
 
-    <section class="p-8">
-        <h3 class="text-xl font-bold text-gray-800 mb-6">Mascotas en adopción</h3>
-        <div id="gallery" class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div class="bg-white rounded-3xl overflow-hidden shadow-md p-4 text-center border border-dashed border-gray-200">
-                <p class="text-gray-400 py-10">Cargando huellitas...</p>
-            </div>
+    <section id="sec-adopcion" class="p-4 grid grid-cols-1 gap-4">
+        <h2 class="text-lg font-bold text-gray-700">Mascotas buscando hogar</h2>
+        <div id="gallery-adopcion" class="grid grid-cols-1 gap-4">
+            <p class="text-gray-400">Cargando...</p>
         </div>
     </section>
 
-    <footer class="p-8 text-center text-gray-400 text-sm">
-        &copy; 2026 Huellitas Neuquén - Hecho con ❤️ para los animales
-    </footer>
+    <section id="sec-perdidos" class="p-4 hidden">
+        <h2 class="text-lg font-bold text-red-500">Mascotas perdidas recientemente</h2>
+        <p class="text-sm text-gray-500 mb-4 italic">Cerca de tu ubicación en Neuquén</p>
+        <div id="gallery-perdidos" class="grid grid-cols-1 gap-4">
+            </div>
+    </section>
+
+    <section id="sec-login" class="p-6 hidden max-w-md mx-auto bg-white m-4 rounded-3xl shadow-lg">
+        <h2 class="text-2xl font-bold mb-4">Ingresar</h2>
+        <input type="email" id="log-email" placeholder="Email" class="w-full p-3 mb-3 border rounded-2xl">
+        <input type="password" id="log-pass" placeholder="Contraseña" class="w-full p-3 mb-4 border rounded-2xl">
+        <button onclick="login()" class="w-full bg-orange-500 text-white py-3 rounded-2xl font-bold">Entrar</button>
+        <p class="mt-4 text-center text-sm text-gray-500">¿Sos un refugio nuevo? <br>Registrate en el panel de /docs</p>
+    </section>
+
+    <section id="sec-publicar" class="p-6 hidden max-w-md mx-auto">
+        <h2 class="text-2xl font-bold mb-4">Publicar Huellita</h2>
+        <form id="form-publicar" class="bg-white p-6 rounded-3xl shadow-lg border-2 border-orange-100">
+            <input type="text" id="p-name" placeholder="Nombre" class="w-full p-3 mb-3 border rounded-xl" required>
+            <select id="p-status" class="w-full p-3 mb-3 border rounded-xl">
+                <option value="adopcion">Para Adopción</option>
+                <option value="perdido">Mascota Perdida</option>
+            </select>
+            <div class="mb-3">
+                <label class="text-xs text-gray-400">Foto de la mascota</label>
+                <input type="file" id="p-file" class="w-full text-sm" accept="image/*" required>
+            </div>
+            <button type="button" onclick="getLocation()" class="text-xs bg-blue-50 text-blue-600 p-2 rounded mb-3 w-full">📍 Obtener mi ubicación actual</button>
+            <input type="hidden" id="p-lat">
+            <input type="hidden" id="p-lon">
+            <button type="submit" class="w-full bg-green-500 text-white py-3 rounded-2xl font-bold">Subir a la nube</button>
+        </form>
+    </section>
+
+    <script>
+        function showSection(name) {
+            ['adopcion', 'perdidos', 'login', 'publicar'].forEach(s => {
+                document.getElementById('sec-' + s).classList.add('hidden');
+                document.getElementById('tab-' + s)?.classList.remove('tab-active');
+            });
+            document.getElementById('sec-' + name).classList.remove('hidden');
+            document.getElementById('tab-' + name)?.classList.add('tab-active');
+        }
+
+        function getLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(pos => {
+                    document.getElementById('p-lat').value = pos.coords.latitude;
+                    document.getElementById('p-lon').value = pos.coords.longitude;
+                    alert("Ubicación capturada correctamente");
+                });
+            }
+        }
+
+        // Aquí irían las funciones Fetch para conectar con tu main.py
+    </script>
 </body>
 </html>
 
