@@ -8,96 +8,121 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         body { font-family: 'Quicksand', sans-serif; background-color: #fdfbf7; }
-        .section-hidden { display: none; }
+        .hidden { display: none; }
     </style>
 </head>
 <body class="pb-24">
-
     <nav class="p-4 bg-white shadow-sm flex justify-between items-center sticky top-0 z-50">
-        <div onclick="showSection('home')" class="flex items-center gap-2 cursor-pointer">
+        <div class="flex items-center gap-2" onclick="showSection('home')">
             <div class="bg-orange-500 p-2 rounded-xl text-white"><i class="fas fa-paw"></i></div>
-            <h1 class="font-bold text-orange-600">HuellitasNQN</h1>
+            <h1 class="font-bold text-orange-600 text-xl">HuellitasNQN</h1>
         </div>
-        <button onclick="showSection('auth')" id="user-btn" class="text-gray-400 text-xl"><i class="fas fa-user-circle"></i></button>
+        <button id="auth-btn" onclick="showSection('auth')" class="text-gray-400 text-2xl"><i class="fas fa-user-circle"></i></button>
     </nav>
 
-    <section id="sec-auth" class="p-6 section-hidden max-w-md mx-auto">
+    <section id="sec-home" class="p-4 space-y-6">
+        <div id="pet-list" class="grid grid-cols-1 gap-6"></div>
+    </section>
+
+    <section id="sec-upload" class="p-6 hidden max-w-md mx-auto">
         <div class="bg-white p-6 rounded-3xl shadow-xl">
-            <div class="flex border-b mb-6">
-                <button onclick="toggleAuth('login')" class="flex-1 py-2 font-bold text-orange-500 border-b-2 border-orange-500" id="btn-tab-login">Login</button>
-                <button onclick="toggleAuth('reg')" class="flex-1 py-2 font-bold text-gray-400" id="btn-tab-reg">Registro</button>
-            </div>
-
-            <form id="form-login" onsubmit="handleAuth(event, '/login')">
-                <input type="email" name="email" placeholder="Email" class="w-full p-4 mb-3 bg-gray-50 rounded-2xl" required>
-                <input type="password" name="password" placeholder="Contraseña" class="w-full p-4 mb-6 bg-gray-50 rounded-2xl" required>
-                <button class="w-full bg-orange-500 text-white py-4 rounded-2xl font-bold">Entrar</button>
-            </form>
-
-            <form id="form-reg" class="hidden" onsubmit="handleAuth(event, '/register')">
-                <input type="email" name="email" placeholder="Email" class="w-full p-3 mb-3 bg-gray-50 rounded-xl" required>
-                <input type="password" name="password" placeholder="Contraseña" class="w-full p-3 mb-3 bg-gray-50 rounded-xl" required>
-                <input type="text" name="telefono" placeholder="WhatsApp (Ej: 2991234567)" class="w-full p-3 mb-6 bg-gray-50 rounded-xl" required>
-                <button class="w-full bg-green-500 text-white py-4 rounded-2xl font-bold">Crear Cuenta</button>
+            <h2 class="text-xl font-bold mb-4">Publicar Mascota</h2>
+            <form id="form-upload" onsubmit="handleUpload(event)" class="space-y-4">
+                <input type="text" name="name" placeholder="Nombre" class="w-full p-3 bg-gray-50 rounded-xl" required>
+                <select name="status" class="w-full p-3 bg-gray-50 rounded-xl">
+                    <option value="adopcion">En Adopción</option>
+                    <option value="perdido">Mascota Perdida</option>
+                </select>
+                <input type="text" name="barrio" placeholder="Barrio (Ej: Confluencia)" class="w-full p-3 bg-gray-50 rounded-xl" required>
+                <input type="file" name="file" class="w-full text-sm text-gray-500" required>
+                <button class="w-full bg-orange-500 text-white py-4 rounded-2xl font-bold">Enviar a Revisión</button>
             </form>
         </div>
     </section>
 
-    <section id="sec-home" class="p-4 space-y-4">
-        <div id="pet-list" class="space-y-6">
+    <section id="sec-auth" class="p-6 hidden max-w-md mx-auto">
+        <div class="bg-white p-6 rounded-3xl shadow-xl text-center">
+            <div id="auth-forms">
+                <div class="flex mb-6 border-b">
+                    <button onclick="toggleAuth('login')" class="flex-1 py-2 font-bold text-orange-500 border-b-2 border-orange-500" id="t-login">Login</button>
+                    <button onclick="toggleAuth('reg')" class="flex-1 py-2 text-gray-400 font-bold" id="t-reg">Registro</button>
+                </div>
+                <form id="f-login" onsubmit="handleLogin(event)">
+                    <input type="email" name="email" placeholder="Email" class="w-full p-3 mb-3 bg-gray-50 rounded-xl" required>
+                    <input type="password" name="password" placeholder="Clave" class="w-full p-3 mb-6 bg-gray-50 rounded-xl" required>
+                    <button class="w-full bg-orange-500 text-white py-4 rounded-2xl font-bold">Entrar</button>
+                </form>
+                <form id="f-reg" class="hidden" onsubmit="handleReg(event)">
+                    <input type="email" name="email" placeholder="Email" class="w-full p-3 mb-3 bg-gray-50 rounded-xl" required>
+                    <input type="password" name="password" placeholder="Clave" class="w-full p-3 mb-3 bg-gray-50 rounded-xl" required>
+                    <input type="text" name="telefono" placeholder="WhatsApp (Ej: 2991234567)" class="w-full p-3 mb-6 bg-gray-50 rounded-xl" required>
+                    <button class="w-full bg-green-500 text-white py-4 rounded-2xl font-bold">Crear Cuenta</button>
+                </form>
             </div>
+            <div id="user-info" class="hidden">
+                <p id="user-email" class="font-bold mb-4"></p>
+                <button onclick="logout()" class="text-red-500">Cerrar Sesión</button>
+            </div>
+        </div>
     </section>
 
-    <div class="fixed bottom-0 left-0 right-0 bg-white border-t p-4 flex justify-around">
+    <section id="sec-admin" class="p-4 hidden">
+        <h2 class="text-xl font-bold mb-4 text-purple-700">Moderación</h2>
+        <div id="admin-list" class="space-y-4"></div>
+    </section>
+
+    <div class="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-md border-t p-4 flex justify-around items-center">
         <button onclick="showSection('home')" class="text-orange-500"><i class="fas fa-home text-2xl"></i></button>
-        <button onclick="checkLoginForUpload()" class="bg-orange-500 text-white w-12 h-12 rounded-full -mt-8 shadow-lg flex items-center justify-center text-2xl">+</button>
-        <button onclick="showAdminPanel()" id="admin-btn" class="hidden text-purple-500"><i class="fas fa-shield-alt text-2xl"></i></button>
+        <button onclick="checkAuthToUpload()" class="bg-orange-500 text-white w-14 h-14 rounded-full -mt-10 shadow-lg flex items-center justify-center text-2xl border-4 border-white">+</button>
+        <button id="btn-admin" onclick="showAdmin()" class="hidden text-purple-500"><i class="fas fa-shield-alt text-2xl"></i></button>
     </div>
 
     <script>
-        let currentUser = null;
+        let user = JSON.parse(localStorage.getItem('user'));
 
         function showSection(id) {
-            document.querySelectorAll('section').forEach(s => s.classList.add('section-hidden'));
-            document.getElementById('sec-' + id).classList.remove('section-hidden');
+            ['home', 'upload', 'auth', 'admin'].forEach(s => document.getElementById('sec-'+s).classList.add('hidden'));
+            document.getElementById('sec-'+id).classList.remove('hidden');
         }
 
         function toggleAuth(type) {
-            document.getElementById('form-login').classList.toggle('hidden', type === 'reg');
-            document.getElementById('form-reg').classList.toggle('hidden', type === 'login');
+            document.getElementById('f-login').classList.toggle('hidden', type === 'reg');
+            document.getElementById('f-reg').classList.toggle('hidden', type === 'login');
+            document.getElementById('t-login').className = type === 'login' ? 'flex-1 py-2 font-bold text-orange-500 border-b-2 border-orange-500' : 'flex-1 py-2 text-gray-400 font-bold';
+            document.getElementById('t-reg').className = type === 'reg' ? 'flex-1 py-2 font-bold text-orange-500 border-b-2 border-orange-500' : 'flex-1 py-2 text-gray-400 font-bold';
         }
 
-        async function handleAuth(e, url) {
+        async function handleLogin(e) {
             e.preventDefault();
-            const formData = new FormData(e.target);
-            const res = await fetch(url, { method: 'POST', body: formData });
-            const data = await res.json();
-            
+            const res = await fetch('/login', { method: 'POST', body: new FormData(e.target) });
             if (res.ok) {
-                if(url === '/login') {
-                    currentUser = data;
-                    localStorage.setItem('user', JSON.stringify(data));
-                    if(data.role === 'admin') document.getElementById('admin-btn').classList.remove('hidden');
-                    alert("¡Bienvenido!");
-                    showSection('home');
-                } else {
-                    alert("Registro exitoso, ahora inicia sesión");
-                    toggleAuth('login');
-                }
-            } else { alert(data.detail); }
+                user = await res.json();
+                localStorage.setItem('user', JSON.stringify(user));
+                initSession();
+                showSection('home');
+            } else { alert("Datos incorrectos"); }
+        }
+
+        async function handleUpload(e) {
+            e.preventDefault();
+            const fd = new FormData(e.target);
+            fd.append('user_id', user.id);
+            const res = await fetch('/pets/upload', { method: 'POST', body: fd });
+            if (res.ok) { alert("Enviado. Espera aprobación."); showSection('home'); }
         }
 
         async function loadPets() {
             const res = await fetch('/pets');
             const pets = await res.json();
-            const list = document.getElementById('pet-list');
-            list.innerHTML = pets.map(p => `
-                <div class="bg-white rounded-3xl shadow-md overflow-hidden">
-                    <img src="${p.image_url}" class="w-full h-64 object-cover">
-                    <div class="p-4">
-                        <h3 class="text-xl font-bold">${p.name}</h3>
-                        <p class="text-gray-400 text-sm mb-4">${p.barrio || 'Neuquén'}</p>
-                        <a href="https://wa.me/${p.telefono}" class="block text-center bg-[#25D366] text-white py-3 rounded-xl font-bold">
+            document.getElementById('pet-list').innerHTML = pets.map(p => `
+                <div class="bg-white rounded-3xl shadow-sm overflow-hidden border border-orange-50">
+                    <img src="${p.image_url}" class="w-full h-72 object-cover">
+                    <div class="p-6">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-2xl font-bold">${p.name}</h3>
+                            <span class="bg-orange-100 text-orange-600 text-[10px] px-3 py-1 rounded-full font-bold uppercase">${p.barrio}</span>
+                        </div>
+                        <a href="https://wa.me/${p.telefono}?text=Hola! Vi a ${p.name} en Huellitas" class="block bg-[#25D366] text-white text-center py-4 rounded-2xl font-bold shadow-lg">
                             <i class="fab fa-whatsapp"></i> Contactar
                         </a>
                     </div>
@@ -105,7 +130,40 @@
             `).join('');
         }
 
-        window.onload = loadPets;
+        async function showAdmin() {
+            showSection('admin');
+            const res = await fetch('/pets?all_pets=true');
+            const pets = await res.json();
+            document.getElementById('admin-list').innerHTML = pets.filter(p => !p.is_approved).map(p => `
+                <div class="bg-white p-4 rounded-2xl flex items-center gap-4 shadow">
+                    <img src="${p.image_url}" class="w-16 h-16 rounded-xl object-cover">
+                    <div class="flex-1">
+                        <p class="font-bold text-sm">${p.name}</p>
+                        <button onclick="approve(${p.id})" class="bg-green-500 text-white px-4 py-1 rounded-full text-xs font-bold mt-1">APROBAR</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function approve(id) {
+            await fetch(`/pets/approve/${id}`, { method: 'POST' });
+            showAdmin();
+            loadPets();
+        }
+
+        function initSession() {
+            if (user) {
+                document.getElementById('auth-forms').classList.add('hidden');
+                document.getElementById('user-info').classList.remove('hidden');
+                document.getElementById('user-email').innerText = user.email;
+                if (user.role === 'admin') document.getElementById('btn-admin').classList.remove('hidden');
+            }
+        }
+
+        function checkAuthToUpload() { user ? showSection('upload') : showSection('auth'); }
+        function logout() { localStorage.removeItem('user'); location.reload(); }
+
+        window.onload = () => { initSession(); loadPets(); };
     </script>
 </body>
 </html>
