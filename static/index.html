@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Huellitas Admin</title>
+    <title>Huellitas - Publicar</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600;700&display=swap" rel="stylesheet">
     <style> body { font-family: 'Quicksand', sans-serif; background-color: #fdfbf7; } </style>
@@ -11,60 +11,95 @@
 <body class="pb-20">
     <nav class="p-4 bg-white shadow-sm flex justify-between items-center">
         <h1 class="text-xl font-bold text-orange-500">🐾 Huellitas</h1>
-        <div id="user-info" class="text-xs font-bold text-gray-500"></div>
+        <button onclick="showSection('adopcion')" class="text-xs text-gray-500 underline">Volver al inicio</button>
     </nav>
 
-    <div class="flex justify-around bg-white border-b text-sm sticky top-0 z-50">
-        <button onclick="showSection('adopcion')" class="py-4 px-2">Adopción</button>
-        <button onclick="showSection('perdidos')" class="py-4 px-2">Perdidos</button>
-        <button onclick="showSection('publicar')" class="py-4 px-2 font-bold text-orange-600">+ Publicar</button>
-        <button id="tab-admin" onclick="showSection('admin')" class="hidden py-4 px-2 font-bold text-purple-600">ADMIN</button>
-    </div>
+    <section id="sec-publicar" class="p-4 max-w-md mx-auto">
+        <div class="bg-white p-6 rounded-3xl shadow-xl border-t-4 border-orange-400">
+            <h2 class="text-2xl font-bold mb-2 text-gray-800">Nueva Publicación</h2>
+            <p class="text-sm text-gray-500 mb-6">Completá los datos para ayudar a esta mascota.</p>
 
-    <section id="sec-login" class="p-6 max-w-md mx-auto">
-        <div class="bg-white p-8 rounded-3xl shadow-xl">
-            <h2 class="text-2xl font-bold mb-6">Hola!</h2>
-            <form id="form-login">
-                <input type="email" id="l-email" placeholder="Email" class="w-full p-4 mb-3 border rounded-2xl">
-                <input type="password" id="l-pass" placeholder="Clave" class="w-full p-4 mb-6 border rounded-2xl">
-                <button type="submit" class="w-full bg-orange-500 text-white py-4 rounded-2xl font-bold">Ingresar</button>
+            <form id="form-upload" onsubmit="handleUpload(event)">
+                <div class="mb-4">
+                    <label class="block text-sm font-bold mb-1 text-gray-600">Nombre de la mascota</label>
+                    <input type="text" id="p-name" placeholder="Ej: Firulais o 'Desconocido'" class="w-full p-3 border rounded-2xl bg-gray-50 focus:outline-orange-400" required>
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-sm font-bold mb-1 text-gray-600">¿Qué tipo de publicación es?</label>
+                    <select id="p-status" onchange="toggleFields()" class="w-full p-3 border rounded-2xl bg-gray-50">
+                        <option value="adopcion">Busca Hogar (Adopción)</option>
+                        <option value="perdido">Se perdió / Lo encontré (Perdido)</option>
+                    </select>
+                </div>
+
+                <div id="salud-fields" class="mb-4 p-4 bg-orange-50 rounded-2xl">
+                    <p class="text-xs font-bold text-orange-600 mb-3 uppercase tracking-wider">Información de Salud</p>
+                    <label class="flex items-center gap-3 mb-3 cursor-pointer">
+                        <input type="checkbox" id="p-vacunado" class="w-5 h-5 accent-orange-500" onchange="document.getElementById('vacunas-box').classList.toggle('hidden', !this.checked)">
+                        <span class="text-sm text-gray-700">¿Tiene sus vacunas al día?</span>
+                    </label>
+                    <div id="vacunas-box" class="hidden">
+                        <input type="text" id="p-vacunas-detalle" placeholder="¿Cuáles? (Ej: Sextuple, Rabia...)" class="w-full p-3 border rounded-xl text-sm bg-white">
+                    </div>
+                </div>
+
+                <div id="geo-fields" class="mb-6">
+                    <label class="block text-sm font-bold mb-1 text-gray-600">Ubicación</label>
+                    <p class="text-[10px] text-gray-400 mb-2">Para mascotas perdidas es vital marcar dónde fue vista.</p>
+                    <button type="button" onclick="getLocation()" id="btn-geo" class="w-full flex items-center justify-center gap-2 bg-blue-50 text-blue-600 py-3 rounded-2xl font-semibold border border-blue-100 active:scale-95 transition-all">
+                        📍 <span>Capturar Ubicación Actual</span>
+                    </button>
+                    <input type="hidden" id="p-lat">
+                    <input type="hidden" id="p-lon">
+                </div>
+
+                <div class="mb-6">
+                    <label class="block text-sm font-bold mb-1 text-gray-600">Foto Clara</label>
+                    <div class="border-2 border-dashed border-gray-200 rounded-2xl p-4 text-center bg-gray-50">
+                        <input type="file" id="p-file" accept="image/*" class="text-sm w-full" required>
+                    </div>
+                </div>
+
+                <button type="submit" class="w-full bg-orange-500 text-white py-4 rounded-2xl font-bold shadow-lg shadow-orange-200 active:scale-95 transition-all">
+                    Enviar para Aprobación
+                </button>
+                <p class="text-[10px] text-center mt-4 text-gray-400 italic">Un administrador revisará la información antes de publicarla.</p>
             </form>
         </div>
     </section>
 
-    <section id="sec-admin" class="p-6 hidden">
-        <h2 class="text-2xl font-bold mb-4 text-purple-700">Pendientes de Aprobación</h2>
-        <div id="list-pendientes" class="grid gap-4">
-            <p class="text-gray-400">No hay nada pendiente por ahora.</p>
-        </div>
-    </section>
-
-    <section id="sec-publicar" class="p-6 hidden max-w-md mx-auto">
-        <div id="msg-bloqueado" class="text-center p-10 bg-red-50 rounded-3xl hidden">
-            <p class="text-red-500 font-bold">Tu cuenta aún no fue verificada por el admin. No podés publicar todavía.</p>
-        </div>
-        <div id="form-contenedor">
-            </div>
-    </section>
-
     <script>
-        let currentUser = null;
-
-        function showSection(name) {
-            ['adopcion', 'perdidos', 'login', 'admin', 'publicar'].forEach(s => {
-                document.getElementById('sec-' + s)?.classList.add('hidden');
-            });
-            document.getElementById('sec-' + name).classList.remove('hidden');
+        function toggleFields() {
+            const status = document.getElementById('p-status').value;
+            // Podés ocultar o mostrar cosas específicas según si es adopción o perdido
         }
 
-        document.getElementById('form-login').onsubmit = async (e) => {
+        function getLocation() {
+            const btn = document.getElementById('btn-geo');
+            btn.innerText = "Buscando satélite...";
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (pos) => {
+                        document.getElementById('p-lat').value = pos.coords.latitude;
+                        document.getElementById('p-lon').value = pos.coords.longitude;
+                        btn.classList.replace('bg-blue-50', 'bg-green-50');
+                        btn.classList.replace('text-blue-600', 'text-green-600');
+                        btn.innerText = "✅ Ubicación Guardada";
+                    },
+                    (err) => {
+                        alert("No pudimos obtener tu GPS. Asegurate de dar permisos.");
+                        btn.innerText = "📍 Reintentar Ubicación";
+                    }
+                );
+            }
+        }
+
+        async function handleUpload(e) {
             e.preventDefault();
-            // Lógica de Fetch al endpoint /login
-            // Si el role es 'admin', mostramos el botón tab-admin
-            alert("Logueado! Si sos admin, verás la pestaña púrpura.");
-            document.getElementById('tab-admin').classList.remove('hidden');
-            showSection('adopcion');
-        };
+            // Aquí irá el código Fetch que conectará con tu main.py
+            alert("¡Formulario enviado! Esperando aprobación del admin.");
+        }
     </script>
 </body>
 </html>
