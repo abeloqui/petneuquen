@@ -13,9 +13,8 @@
         body { font-family: 'Quicksand', sans-serif; background-color: #fdfbf7; }
         .hidden { display: none; }
         #main-map, #map-upload { border-radius: 24px; border: 4px solid white; box-shadow: 0 8px 20px rgba(0,0,0,0.05); }
-        .pet-card { background: white; border-radius: 24px; transition: transform 0.2s; border: 1px solid #f3f4f6; }
-        .pet-card:hover { transform: translateY(-5px); box-shadow: 0 12px 25px rgba(0,0,0,0.05); }
-        .pet-marker { width: 30px; height: 30px; border-radius: 50% 50% 50% 0; border: 2px solid white; transform: rotate(-45deg); display: flex; align-items: center; justify-content: center; color: white; }
+        .pet-card { background: white; border-radius: 24px; overflow: hidden; border: 1px solid #f3f4f6; }
+        .pet-marker { width: 30px; height: 30px; border-radius: 50% 50% 50% 0; border: 2px solid white; transform: rotate(-45deg); display: flex; align-items: center; justify-content: center; color: white; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
         .pet-marker i { transform: rotate(45deg); }
     </style>
 </head>
@@ -30,27 +29,32 @@
 
     <section id="sec-home" class="p-4 space-y-6">
         <div id="main-map" class="w-full h-80 z-10"></div>
-        <div class="flex justify-between items-center">
-            <h2 class="text-xl font-bold text-gray-800">Cerca tuyo 📍</h2>
-        </div>
+        <h2 class="text-xl font-bold text-gray-800">Cerca de Neuquén 📍</h2>
         <div id="pet-list" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
     </section>
 
     <section id="sec-upload" class="p-6 hidden max-w-md mx-auto">
         <div class="bg-white p-6 rounded-3xl shadow-xl space-y-4">
-            <h2 class="text-xl font-bold">Nueva Publicación</h2>
+            <h2 class="text-xl font-bold">Publicar Mascota</h2>
             <form id="form-upload" onsubmit="handleUpload(event)" class="space-y-3">
-                <input type="text" name="name" placeholder="Nombre de la mascota" class="w-full p-3 bg-gray-50 rounded-xl" required>
-                <select name="status" class="w-full p-3 bg-gray-50 rounded-xl">
-                    <option value="adopcion">En Adopción</option>
-                    <option value="perdido">Perdido</option>
-                </select>
+                <div class="grid grid-cols-2 gap-2">
+                    <input type="text" name="name" placeholder="Nombre" class="p-3 bg-gray-50 rounded-xl" required>
+                    <select name="status" class="p-3 bg-gray-50 rounded-xl">
+                        <option value="adopcion">En Adopción</option>
+                        <option value="perdido">Perdido</option>
+                    </select>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <input type="text" name="raza" placeholder="Raza" class="p-3 bg-gray-50 rounded-xl">
+                    <input type="text" name="edad" placeholder="Edad" class="p-3 bg-gray-50 rounded-xl">
+                </div>
                 <input type="text" name="barrio" placeholder="Barrio" class="w-full p-3 bg-gray-50 rounded-xl" required>
+                <p class="text-[10px] font-bold text-orange-500 uppercase tracking-widest">Toca el mapa para marcar ubicación:</p>
                 <div id="map-upload" class="w-full h-48"></div>
                 <input type="hidden" name="latitud" id="lat-input">
                 <input type="hidden" name="longitud" id="lng-input">
                 <input type="file" name="file" class="text-sm" required>
-                <button class="w-full bg-orange-500 text-white py-4 rounded-2xl font-bold">Publicar</button>
+                <button id="btn-submit" class="w-full bg-orange-500 text-white py-4 rounded-2xl font-bold">Publicar Ahora</button>
             </form>
         </div>
     </section>
@@ -59,44 +63,44 @@
         <div class="bg-white p-8 rounded-3xl shadow-xl">
             <div id="auth-forms">
                 <div class="flex gap-4 mb-6">
-                    <button onclick="toggleAuth('login')" id="btn-t-login" class="flex-1 pb-2 border-b-2 border-orange-500 font-bold">Login</button>
-                    <button onclick="toggleAuth('reg')" id="btn-t-reg" class="flex-1 pb-2 text-gray-400">Registro</button>
+                    <button onclick="toggleAuth('login')" id="t-login" class="flex-1 pb-2 border-b-2 border-orange-500 font-bold">Entrar</button>
+                    <button onclick="toggleAuth('reg')" id="t-reg" class="flex-1 pb-2 text-gray-400">Registrarse</button>
                 </div>
                 <form id="f-login" onsubmit="handleLogin(event)" class="space-y-3">
                     <input type="email" name="email" placeholder="Email" class="w-full p-3 bg-gray-50 rounded-xl" required>
                     <input type="password" name="password" placeholder="Clave" class="w-full p-3 bg-gray-50 rounded-xl" required>
-                    <button class="w-full bg-orange-500 text-white py-4 rounded-2xl font-bold">Entrar</button>
+                    <button class="w-full bg-orange-500 text-white py-4 rounded-2xl font-bold">Ingresar</button>
                 </form>
                 <form id="f-reg" onsubmit="handleReg(event)" class="space-y-3 hidden">
                     <input type="email" name="email" placeholder="Email" class="w-full p-3 bg-gray-50 rounded-xl" required>
                     <input type="password" name="password" placeholder="Clave" class="w-full p-3 bg-gray-50 rounded-xl" required>
-                    <input type="text" name="telefono" placeholder="WhatsApp (299...)" class="w-full p-3 bg-gray-50 rounded-xl" required>
-                    <button class="w-full bg-green-500 text-white py-4 rounded-2xl font-bold">Registrarme</button>
+                    <input type="text" name="telefono" placeholder="WhatsApp" class="w-full p-3 bg-gray-50 rounded-xl" required>
+                    <button class="w-full bg-green-500 text-white py-4 rounded-2xl font-bold">Crear Cuenta</button>
                 </form>
             </div>
             <div id="user-info" class="hidden text-center">
                 <p id="u-mail" class="font-bold mb-4"></p>
-                <button onclick="logout()" class="text-red-500 text-sm">Cerrar Sesión</button>
+                <button onclick="logout()" class="text-red-500">Cerrar Sesión</button>
             </div>
         </div>
     </section>
 
     <section id="sec-admin" class="p-4 hidden space-y-6">
-        <h2 class="text-2xl font-bold text-purple-800">Panel de Control</h2>
+        <h2 class="text-2xl font-bold text-purple-800">Moderación</h2>
+        <div>
+            <h3 class="font-bold mb-2">Solicitudes de Usuario</h3>
+            <div id="admin-user-list" class="space-y-2"></div>
+        </div>
         <div>
             <h3 class="font-bold mb-2">Mascotas Pendientes</h3>
             <div id="admin-pet-list" class="space-y-2"></div>
-        </div>
-        <div>
-            <h3 class="font-bold mb-2">Usuarios Pendientes</h3>
-            <div id="admin-user-list" class="space-y-2"></div>
         </div>
     </section>
 
     <nav class="fixed bottom-0 w-full bg-white/90 backdrop-blur-md border-t p-4 flex justify-around items-center z-[1000]">
         <button onclick="showSection('home')" class="text-orange-500 text-xl"><i class="fas fa-home"></i></button>
-        <button onclick="checkAuthUpload()" class="bg-orange-500 text-white w-14 h-14 rounded-full -mt-10 shadow-lg border-4 border-white"><i class="fas fa-plus"></i></button>
-        <button id="nav-admin" onclick="showAdmin()" class="hidden text-purple-500 text-xl"><i class="fas fa-shield-cat"></i></button>
+        <button onclick="checkAuth()" class="bg-orange-500 text-white w-14 h-14 rounded-full -mt-10 shadow-lg border-4 border-white"><i class="fas fa-plus"></i></button>
+        <button id="nav-admin" onclick="showAdmin()" class="hidden text-purple-500 text-xl"><i class="fas fa-user-shield"></i></button>
     </nav>
 
     <script>
@@ -106,8 +110,8 @@
         function showSection(id) {
             document.querySelectorAll('section').forEach(s => s.classList.add('hidden'));
             document.getElementById('sec-' + id).classList.remove('hidden');
-            if (id === 'home') setTimeout(initMainMap, 200);
-            if (id === 'upload') setTimeout(initUploadMap, 200);
+            if (id === 'home') setTimeout(initMainMap, 300);
+            if (id === 'upload') setTimeout(initUploadMap, 300);
         }
 
         function initMainMap() {
@@ -136,46 +140,43 @@
             const pets = await res.json();
             const list = document.getElementById('pet-list');
             list.innerHTML = '';
-            
             mainMap.eachLayer(l => { if(l instanceof L.Marker) mainMap.removeLayer(l); });
 
             pets.forEach(p => {
-                const color = p.status === 'perdido' ? '#ef4444' : '#22c55e';
                 if(p.latitud) {
+                    const color = p.status === 'perdido' ? '#ef4444' : '#22c55e';
                     const icon = L.divIcon({
-                        className: 'custom-icon',
+                        className: 'custom',
                         html: `<div class="pet-marker" style="background-color:${color}"><i class="fas fa-paw"></i></div>`,
                         iconSize: [30,30], iconAnchor: [15,30]
                     });
-                    L.marker([p.latitud, p.longitud], {icon}).addTo(mainMap).bindPopup(`<b>${p.name}</b>`);
+                    L.marker([p.latitud, p.longitud], {icon}).addTo(mainMap).bindPopup(`<b>${p.name}</b><br>${p.barrio}`);
                 }
-
                 list.innerHTML += `
-                    <div class="pet-card shadow-sm overflow-hidden">
-                        <img src="${p.image_url}" class="w-full h-48 object-cover">
+                    <div class="pet-card shadow-sm">
+                        <img src="${p.image_url}" class="w-full h-56 object-cover">
                         <div class="p-4">
-                            <h3 class="font-bold text-lg">${p.name}</h3>
-                            <p class="text-xs text-gray-400 mb-4">${p.barrio}</p>
-                            <a href="https://wa.me/${p.telefono}" class="block bg-green-500 text-white text-center py-3 rounded-xl font-bold">WhatsApp</a>
+                            <div class="flex justify-between items-center mb-2">
+                                <h3 class="font-bold text-lg">${p.name}</h3>
+                                <span class="text-[10px] font-bold px-2 py-1 rounded-full ${p.status==='perdido'?'bg-red-100 text-red-600':'bg-green-100 text-green-600'}">${p.status.toUpperCase()}</span>
+                            </div>
+                            <p class="text-xs text-gray-400 mb-4"><i class="fas fa-map-marker-alt"></i> ${p.barrio} | ${p.raza || 'Mestizo'}</p>
+                            <a href="https://wa.me/${p.telefono}" class="block bg-[#25D366] text-white text-center py-3 rounded-xl font-bold shadow-md shadow-green-100">WhatsApp</a>
                         </div>
                     </div>`;
             });
         }
 
-        async function handleLogin(e) {
+        async function handleUpload(e) {
             e.preventDefault();
-            const res = await fetch('/login', {method: 'POST', body: new FormData(e.target)});
-            if (res.ok) {
-                user = await res.json();
-                localStorage.setItem('user', JSON.stringify(user));
-                location.reload();
-            } else { alert("Acceso denegado o pendiente de aprobación."); }
-        }
-
-        async function handleReg(e) {
-            e.preventDefault();
-            const res = await fetch('/register', {method: 'POST', body: new FormData(e.target)});
-            if (res.ok) { alert("Registrado. El admin debe aprobarte."); showSection('auth'); }
+            if(!document.getElementById('lat-input').value) return alert("Marca la ubicación en el mapa");
+            const btn = document.getElementById('btn-submit');
+            btn.innerText = "Subiendo..."; btn.disabled = true;
+            const fd = new FormData(e.target);
+            fd.append('user_id', user.id);
+            const res = await fetch('/pets/upload', {method: 'POST', body: fd});
+            if (res.ok) { alert("¡Éxito! Espera a que el admin lo apruebe."); showSection('home'); }
+            btn.innerText = "Publicar Ahora"; btn.disabled = false;
         }
 
         async function showAdmin() {
@@ -183,27 +184,46 @@
             const resP = await fetch('/pets?all_pets=true');
             const pets = await resP.json();
             document.getElementById('admin-pet-list').innerHTML = pets.filter(p => !p.is_approved).map(p => `
-                <div class="bg-white p-3 rounded-xl flex justify-between items-center shadow-sm">
-                    <span class="text-sm">${p.name}</span>
-                    <button onclick="approvePet(${p.id})" class="bg-purple-600 text-white px-3 py-1 rounded-lg text-xs">Aprobar</button>
+                <div class="bg-white p-4 rounded-2xl flex justify-between items-center shadow-sm">
+                    <span class="text-sm font-bold">${p.name}</span>
+                    <button onclick="approvePet(${p.id})" class="bg-purple-600 text-white px-4 py-2 rounded-xl text-xs">Aprobar</button>
                 </div>`).join('');
 
             const resU = await fetch('/admin/users/pending');
             const users = await resU.json();
             document.getElementById('admin-user-list').innerHTML = users.map(u => `
-                <div class="bg-white p-3 rounded-xl flex justify-between items-center shadow-sm">
-                    <span class="text-sm">${u.email}</span>
-                    <button onclick="approveUser(${u.id})" class="bg-purple-600 text-white px-3 py-1 rounded-lg text-xs">Admitir</button>
+                <div class="bg-white p-4 rounded-2xl flex justify-between items-center shadow-sm">
+                    <div class="text-sm font-bold">${u.email}</div>
+                    <div class="flex gap-2">
+                        <button onclick="approveUser(${u.id})" class="bg-green-600 text-white px-3 py-2 rounded-xl text-xs">OK</button>
+                        <button onclick="deleteUser(${u.id})" class="text-red-500 text-xs">Borrar</button>
+                    </div>
                 </div>`).join('');
         }
 
         async function approvePet(id) { await fetch('/pets/approve/'+id, {method:'POST'}); showAdmin(); }
         async function approveUser(id) { await fetch('/admin/users/approve/'+id, {method:'POST'}); showAdmin(); }
+        async function deleteUser(id) { if(confirm("¿Borrar?")) await fetch('/admin/users/delete/'+id, {method:'DELETE'}); showAdmin(); }
 
-        function checkAuthUpload() { user ? showSection('upload') : showSection('auth'); }
+        async function handleLogin(e) {
+            e.preventDefault();
+            const res = await fetch('/login', {method: 'POST', body: new FormData(e.target)});
+            if (res.ok) { user = await res.json(); localStorage.setItem('user', JSON.stringify(user)); location.reload(); }
+            else { alert("Acceso denegado. Es posible que aún no estés aprobado."); }
+        }
+
+        async function handleReg(e) {
+            e.preventDefault();
+            const res = await fetch('/register', {method: 'POST', body: new FormData(e.target)});
+            if (res.ok) { alert("Registrado. El admin debe aprobarte."); toggleAuth('login'); }
+        }
+
+        function checkAuth() { user ? showSection('upload') : showSection('auth'); }
         function toggleAuth(t) {
             document.getElementById('f-login').classList.toggle('hidden', t==='reg');
             document.getElementById('f-reg').classList.toggle('hidden', t==='login');
+            document.getElementById('t-login').className = t==='login' ? 'flex-1 pb-2 border-b-2 border-orange-500 font-bold' : 'flex-1 pb-2 text-gray-400';
+            document.getElementById('t-reg').className = t==='reg' ? 'flex-1 pb-2 border-b-2 border-orange-500 font-bold' : 'flex-1 pb-2 text-gray-400';
         }
         function logout() { localStorage.clear(); location.reload(); }
 
@@ -219,3 +239,4 @@
     </script>
 </body>
 </html>
+
