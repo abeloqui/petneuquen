@@ -28,7 +28,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 @app.get("/")
 async def read_index(): return FileResponse('static/index.html')
 
-# --- AUTH ---
+# --- RUTAS DE AUTH ---
 @app.post("/register")
 def register(email: str = Form(...), password: str = Form(...), telefono: str = Form(...), db: Session = Depends(get_db)):
     if db.query(models.User).filter(models.User.email == email).first():
@@ -36,7 +36,7 @@ def register(email: str = Form(...), password: str = Form(...), telefono: str = 
     new_user = models.User(email=email, telefono=telefono, hashed_password=auth.get_password_hash(password), is_verified=False)
     db.add(new_user)
     db.commit()
-    return {"message": "Cuenta creada. Espera aprobación del admin."}
+    return {"message": "Cuenta creada. Espera aprobación."}
 
 @app.post("/login")
 def login(email: str = Form(...), password: str = Form(...), db: Session = Depends(get_db)):
@@ -47,7 +47,7 @@ def login(email: str = Form(...), password: str = Form(...), db: Session = Depen
         raise HTTPException(status_code=403, detail="Cuenta pendiente de aprobación.")
     return {"id": user.id, "role": user.role, "telefono": user.telefono, "email": user.email}
 
-# --- MASCOTAS ---
+# --- RUTAS DE MASCOTAS ---
 @app.get("/pets")
 def list_pets(all_pets: bool = False, db: Session = Depends(get_db)):
     query = db.query(models.Pet, models.User.telefono).join(models.User)
@@ -57,16 +57,18 @@ def list_pets(all_pets: bool = False, db: Session = Depends(get_db)):
 
 @app.post("/pets/upload")
 async def upload(name: str = Form(...), status: str = Form(...), barrio: str = Form(...), 
+                 raza: str = Form(None), edad: str = Form(None),
                  user_id: int = Form(...), latitud: float = Form(None), longitud: float = Form(None),
                  file: UploadFile = File(...), db: Session = Depends(get_db)):
     res = cloudinary.uploader.upload(file.file)
-    new_pet = models.Pet(name=name, status=status, barrio=barrio, image_url=res.get("secure_url"), 
-                         owner_id=user_id, latitud=latitud, longitud=longitud)
+    new_pet = models.Pet(name=name, status=status, barrio=barrio, raza=raza, edad=edad,
+                         image_url=res.get("secure_url"), owner_id=user_id, 
+                         latitud=latitud, longitud=longitud)
     db.add(new_pet)
     db.commit()
     return {"message": "Enviado"}
 
-# --- ADMIN PANEL ---
+# --- PANEL ADMIN ---
 @app.get("/admin/users/pending")
 def pending_users(db: Session = Depends(get_db)):
     return db.query(models.User).filter(models.User.is_verified == False).all()
@@ -77,6 +79,12 @@ def approve_user(u_id: int, db: Session = Depends(get_db)):
     if user: user.is_verified = True
     db.commit()
     return {"status": "ok"}
+
+@app.delete("/admin/users/delete/{u_id}")
+def delete_user(u_id: int, db: Session = Depends(get_db)):
+    user = db.query(models.User).filter(models.User.id == u_id).first()
+    if user: db.delete(user); db.commit()
+    return {"status": "borrado"}
 
 @app.post("/pets/approve/{pid}")
 def approve_pet(pid: int, db: Session = Depends(get_db)):
@@ -92,7 +100,6 @@ def startup():
         if not db.query(models.User).filter(models.User.role == "admin").first():
             admin = models.User(email="admin@huellitas.com", telefono="299000000", 
                                 hashed_password=auth.get_password_hash("admin123"), role="admin", is_verified=True)
-            db.add(admin)
-            db.commit()
+            db.add(admin); db.commit()
     finally: db.close()
-                
+        
