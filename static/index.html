@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Huellitas NQN | Admin Panel</title>
+    <title>Huellitas NQN | Comunidad de Mascotas</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -12,111 +12,158 @@
     <style>
         body { font-family: 'Quicksand', sans-serif; background-color: #fdfbf7; color: #374151; }
         .hidden { display: none; }
-        .container-custom { max-width: 1200px; margin: 0 auto; }
-        .pet-img-container { width: 100%; aspect-ratio: 1 / 1; overflow: hidden; border-radius: 25px; }
-        .pet-img-container img { width: 100%; height: 100%; object-fit: cover; }
-        #main-map { border-radius: 30px; border: 8px solid white; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
-        .mini-map { height: 120px; border-radius: 15px; margin-top: 10px; z-index: 1; border: 2px solid #fff; }
-        .pet-marker { width: 35px; height: 35px; border-radius: 50% 50% 50% 0; border: 3px solid white; transform: rotate(-45deg); display: flex; align-items: center; justify-content: center; color: white; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+        .container-custom { max-width: 1280px; margin: 0 auto; }
+        
+        /* Efectos Pro en Tarjetas */
+        .pet-card { background: white; border-radius: 40px; overflow: hidden; border: 1px solid #f3f4f6; transition: transform 0.3s ease, box-shadow 0.3s ease; cursor: pointer; }
+        .pet-card:hover { transform: translateY(-8px); box-shadow: 0 25px 50px -12px rgba(249, 115, 22, 0.1); }
+        .pet-img-container { width: 100%; aspect-ratio: 1 / 1; overflow: hidden; position: relative; }
+        .pet-img-container img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s ease; }
+        .pet-card:hover .pet-img-container img { transform: scale(1.08); }
+
+        /* Mapa Principal Estilizado */
+        #main-map { border-radius: 40px; border: 8px solid white; box-shadow: 0 15px 40px rgba(0,0,0,0.05); }
+        .mini-map { height: 120px; border-radius: 20px; margin-top: 10px; z-index: 1; border: 3px solid #fff; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); }
+        
+        /* Marcadores del Mapa */
+        .pet-marker { width: 38px; height: 38px; border-radius: 50% 50% 50% 0; border: 3px solid white; transform: rotate(-45deg); display: flex; align-items: center; justify-content: center; color: white; box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
         .pet-marker i { transform: rotate(45deg); }
+
+        /* Grilla de Admin */
+        .admin-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.5rem; }
     </style>
 </head>
 <body class="pb-28">
-    <nav class="p-4 bg-white/90 backdrop-blur-md sticky top-0 z-[1000] shadow-sm">
+    <nav class="p-4 bg-white/80 backdrop-blur-md sticky top-0 z-[1000] shadow-sm">
         <div class="container-custom flex justify-between items-center">
-            <div class="flex items-center gap-2 cursor-pointer" onclick="showSection('home')">
-                <div class="bg-orange-500 p-2 rounded-xl text-white"><i class="fas fa-paw"></i></div>
+            <div class="flex items-center gap-2.5 cursor-pointer" onclick="showSection('home')">
+                <div class="bg-orange-500 p-3 rounded-2xl text-white shadow-lg shadow-orange-100"><i class="fas fa-paw text-xl"></i></div>
                 <h1 class="font-bold text-orange-600 text-2xl tracking-tighter">HuellitasNQN</h1>
             </div>
-            <button id="auth-btn" onclick="showSection('auth')" class="text-gray-400 text-3xl transition-colors"><i class="fas fa-user-circle"></i></button>
+            <button id="auth-btn" onclick="showSection('auth')" class="text-gray-300 hover:text-orange-500 transition-colors text-3xl"><i class="fas fa-user-circle"></i></button>
         </div>
     </nav>
 
     <main class="container-custom px-4">
-        <section id="sec-home" class="py-6 space-y-6">
-            <div id="main-map" class="w-full h-[350px]"></div>
-            <h2 class="text-2xl font-bold text-gray-800">Mascotas en Neuquén</h2>
-            <div id="pet-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8"></div>
+        <section id="sec-home" class="py-6 space-y-10">
+            <div id="main-map" class="w-full h-[400px] md:h-[500px]"></div>
+            <div class="flex flex-col md:flex-row justify-between items-center gap-4">
+                <h2 class="text-3xl font-bold text-gray-800 tracking-tight">Cerca de Neuquén</h2>
+                <div class="flex gap-2 p-1 bg-gray-100 rounded-2xl shadow-inner">
+                    <button onclick="loadPets('todos')" class="px-6 py-2.5 rounded-xl text-xs font-bold hover:bg-white transition-all">Todos</button>
+                    <button onclick="loadPets('perdido')" class="px-6 py-2.5 rounded-xl text-xs font-bold text-red-500 hover:bg-white transition-all">Perdidos</button>
+                    <button onclick="loadPets('adopcion')" class="px-6 py-2.5 rounded-xl text-xs font-bold text-green-600 hover:bg-white transition-all">Adopción</button>
+                </div>
+            </div>
+            <div id="pet-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-10"></div>
         </section>
 
-        <section id="sec-upload" class="py-6 hidden max-w-2xl mx-auto">
-            <div class="bg-white p-8 rounded-[40px] shadow-xl space-y-6 border border-gray-50">
-                <h2 class="text-2xl font-bold text-center">Nueva Publicación</h2>
-                <form id="form-upload" onsubmit="handleUpload(event)" class="space-y-4">
-                    <input type="text" name="name" placeholder="Nombre de la mascota" class="w-full p-4 bg-gray-50 rounded-2xl outline-none" required>
-                    <select name="status" class="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold">
-                        <option value="perdido">🚨 Se perdió</option>
-                        <option value="adopcion">🎁 En Adopción</option>
-                    </select>
-                    <input type="text" name="barrio" placeholder="Barrio" class="w-full p-4 bg-gray-50 rounded-2xl outline-none" required>
-                    <p class="text-xs font-bold text-orange-500 ml-2 italic">Marcá la ubicación en el mapa:</p>
-                    <div id="map-upload" class="w-full h-56 rounded-3xl border-2 border-gray-100"></div>
+        <section id="sec-upload" class="py-8 hidden max-w-2xl mx-auto">
+            <div class="bg-white p-10 rounded-[50px] shadow-2xl space-y-8 border border-gray-50">
+                <div class="text-center space-y-1">
+                    <h2 class="text-3xl font-bold text-gray-800">Nueva Publicación</h2>
+                    <p class="text-gray-400 text-sm">Contanos sobre la mascota para que podamos ayudar</p>
+                </div>
+                <form id="form-upload" onsubmit="handleUpload(event)" class="space-y-5">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <input type="text" name="name" placeholder="Nombre de la mascota" class="w-full p-4 bg-gray-50 rounded-2xl outline-none focus:ring-2 focus:ring-orange-200" required>
+                        <select name="status" class="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold">
+                            <option value="adopcion">🎁 En Adopción</option>
+                            <option value="perdido">🚨 Se perdió</option>
+                        </select>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <input type="text" name="raza" placeholder="Raza" class="w-full p-4 bg-gray-50 rounded-2xl outline-none">
+                        <input type="text" name="edad" placeholder="Edad" class="w-full p-4 bg-gray-50 rounded-2xl outline-none">
+                    </div>
+                    <input type="text" name="barrio" placeholder="Barrio (Ej: Huilliches)" class="w-full p-4 bg-gray-50 rounded-2xl outline-none" required>
+                    
+                    <div class="space-y-2">
+                        <p class="text-xs font-bold text-orange-500 uppercase ml-2 tracking-widest italic"><i class="fas fa-map-pin"></i> Marcá el lugar exacto en el mapa:</p>
+                        <div id="map-upload" class="w-full h-64 rounded-3xl border-4 border-gray-50"></div>
+                    </div>
+                    
                     <input type="hidden" name="latitud" id="lat-input">
                     <input type="hidden" name="longitud" id="lng-input">
-                    <input type="file" name="file" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-orange-50 file:text-orange-700" required>
-                    <button id="btn-submit" class="w-full bg-orange-500 text-white py-5 rounded-3xl font-bold shadow-lg">Publicar Ahora</button>
+                    
+                    <div class="flex items-center justify-center w-full">
+                        <label class="flex flex-col w-full h-32 border-4 border-dashed border-gray-100 hover:bg-gray-50 hover:border-orange-300 rounded-3xl cursor-pointer transition-all">
+                            <div class="flex flex-col items-center justify-center pt-8 space-y-2">
+                                <i class="fas fa-camera text-3xl text-gray-300 transition-colors"></i>
+                                <p class="text-sm text-gray-400 font-bold">Subir Foto</p>
+                            </div>
+                            <input type="file" name="file" class="hidden" required />
+                        </label>
+                    </div>
+                    <button id="btn-submit" class="w-full bg-orange-500 text-white py-5 rounded-3xl font-bold text-lg shadow-xl shadow-orange-100 hover:bg-orange-600 active:scale-95 transition-all">Publicar Mascota</button>
                 </form>
             </div>
         </section>
 
-        <section id="sec-admin" class="py-6 hidden space-y-10">
-            <div class="bg-gradient-to-r from-purple-600 to-indigo-700 p-8 rounded-[40px] text-white shadow-xl">
-                <h2 class="text-3xl font-bold">Panel de Control</h2>
-                <p class="opacity-80">Moderación de usuarios y publicaciones</p>
+        <section id="sec-admin" class="py-8 hidden space-y-12">
+            <div class="bg-gradient-to-r from-purple-700 to-indigo-800 p-10 rounded-[50px] text-white shadow-2xl flex justify-between items-center">
+                <div>
+                    <h2 class="text-4xl font-bold tracking-tight">Panel de Control</h2>
+                    <p class="opacity-80 font-medium">Revisá y aprobá el contenido antes de lanzarlo.</p>
+                </div>
+                <i class="fas fa-user-shield text-6xl opacity-30"></i>
             </div>
             
-            <div class="space-y-4">
-                <h3 class="font-bold text-xl flex items-center gap-2 text-purple-600"><i class="fas fa-user-clock"></i> Solicitudes de Usuario</h3>
-                <div id="admin-user-list" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+            <div class="space-y-6">
+                <h3 class="text-2xl font-bold flex items-center gap-3 text-gray-700"><i class="fas fa-user-clock text-purple-500"></i> Solicitudes de Usuario</h3>
+                <div id="admin-user-list" class="admin-grid"></div>
             </div>
 
-            <div class="space-y-4">
-                <h3 class="font-bold text-xl flex items-center gap-2 text-orange-600"><i class="fas fa-tasks"></i> Moderación de Mascotas</h3>
-                <div id="admin-pet-management" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+            <div class="space-y-6">
+                <h3 class="text-2xl font-bold flex items-center gap-3 text-gray-700"><i class="fas fa-paw text-orange-500"></i> Gestión de Mascotas</h3>
+                <div id="admin-pet-management" class="admin-grid"></div>
             </div>
         </section>
 
-        <section id="sec-auth" class="py-10 hidden max-w-md mx-auto">
-            <div class="bg-white p-8 rounded-[40px] shadow-2xl">
+        <section id="sec-auth" class="py-12 hidden max-w-md mx-auto">
+            <div class="bg-white p-10 rounded-[50px] shadow-2xl border border-gray-50">
                 <div id="auth-forms">
-                    <div class="flex gap-4 mb-8">
-                        <button onclick="toggleAuth('login')" id="t-login" class="flex-1 pb-2 border-b-4 border-orange-500 font-bold">Entrar</button>
-                        <button onclick="toggleAuth('reg')" id="t-reg" class="flex-1 pb-2 text-gray-400 font-bold">Registrarse</button>
+                    <div class="flex gap-4 mb-10 bg-gray-50 p-2 rounded-2xl">
+                        <button onclick="toggleAuth('login')" id="t-login" class="flex-1 py-3 rounded-xl bg-white shadow-sm font-bold text-orange-600 transition-all">Entrar</button>
+                        <button onclick="toggleAuth('reg')" id="t-reg" class="flex-1 py-3 rounded-xl text-gray-400 font-bold transition-all">Registro</button>
                     </div>
-                    <form id="f-login" onsubmit="handleLogin(event)" class="space-y-4">
-                        <input type="email" name="email" placeholder="Email" class="w-full p-4 bg-gray-50 rounded-2xl outline-none" required>
-                        <input type="password" name="password" placeholder="Contraseña" class="w-full p-4 bg-gray-50 rounded-2xl outline-none" required>
-                        <button class="w-full bg-orange-500 text-white py-4 rounded-2xl font-bold">Ingresar</button>
+                    <form id="f-login" onsubmit="handleLogin(event)" class="space-y-5">
+                        <input type="email" name="email" placeholder="Email" class="w-full p-5 bg-gray-50 rounded-2xl outline-none" required>
+                        <input type="password" name="password" placeholder="Contraseña" class="w-full p-5 bg-gray-50 rounded-2xl outline-none" required>
+                        <button class="w-full bg-orange-500 text-white py-5 rounded-2xl font-bold shadow-lg shadow-orange-100">Iniciar Sesión</button>
                     </form>
-                    <form id="f-reg" onsubmit="handleReg(event)" class="space-y-4 hidden">
-                        <input type="email" name="email" placeholder="Email" class="w-full p-4 bg-gray-50 rounded-2xl outline-none" required>
-                        <input type="password" name="password" placeholder="Contraseña" class="w-full p-4 bg-gray-50 rounded-2xl outline-none" required>
-                        <input type="tel" name="telefono" placeholder="WhatsApp (Ej: 2991234567)" class="w-full p-4 bg-gray-50 rounded-2xl outline-none" required>
-                        <button class="w-full bg-green-500 text-white py-4 rounded-2xl font-bold">Crear Cuenta</button>
+                    <form id="f-reg" onsubmit="handleReg(event)" class="space-y-5 hidden">
+                        <input type="email" name="email" placeholder="Email (ejemplo@mail.com)" class="w-full p-5 bg-gray-50 rounded-2xl outline-none" required>
+                        <input type="password" name="password" placeholder="Crear Contraseña" class="w-full p-5 bg-gray-50 rounded-2xl outline-none" required>
+                        <input type="tel" name="telefono" pattern="[0-9]{8,15}" placeholder="WhatsApp (Ej: 2991234567)" class="w-full p-5 bg-gray-50 rounded-2xl outline-none" required>
+                        <button class="w-full bg-green-500 text-white py-5 rounded-2xl font-bold shadow-lg shadow-green-100">Registrarme</button>
                     </form>
                 </div>
-                <div id="user-info" class="hidden text-center space-y-4">
-                    <p id="u-mail" class="font-bold text-gray-700 text-xl"></p>
-                    <button onclick="logout()" class="text-red-500 font-bold hover:underline">Cerrar Sesión</button>
+                <div id="user-info" class="hidden text-center space-y-6">
+                    <div class="w-24 h-24 bg-orange-50 text-orange-500 rounded-full flex items-center justify-center mx-auto text-4xl shadow-inner border-2 border-orange-100">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <p id="u-mail" class="font-bold text-gray-700 text-2xl truncate px-4"></p>
+                    <button onclick="logout()" class="text-red-500 font-bold text-lg hover:underline decoration-2 underline-offset-8">Cerrar Sesión</button>
                 </div>
             </div>
         </section>
     </main>
 
     <div id="admin-modal" class="hidden fixed inset-0 bg-black/80 z-[2000] flex items-center justify-center p-4 backdrop-blur-sm">
-        <div class="bg-white w-full max-w-lg rounded-[40px] overflow-hidden shadow-2xl">
+        <div class="bg-white w-full max-w-xl rounded-[50px] overflow-hidden shadow-2xl transform transition-all">
             <div id="modal-content"></div>
-            <div class="p-6 flex gap-3">
-                <button onclick="closeAdminModal()" class="flex-1 py-4 bg-gray-100 rounded-2xl font-bold text-gray-500">Cerrar</button>
-                <div id="modal-actions" class="flex-1 flex gap-2"></div>
+            <div class="p-8 flex gap-4">
+                <button onclick="closeAdminModal()" class="flex-1 py-4 bg-gray-100 rounded-3xl font-bold text-gray-600 hover:bg-gray-200 transition-colors">Cerrar</button>
+                <div id="modal-actions" class="flex-[2] flex gap-3"></div>
             </div>
         </div>
     </div>
 
-    <nav class="md:hidden fixed bottom-4 left-1/2 -translate-x-1/2 w-[90%] bg-white/90 backdrop-blur-lg border rounded-[30px] p-4 flex justify-around items-center z-[1000] shadow-xl">
-        <button onclick="showSection('home')" class="text-orange-500 text-2xl"><i class="fas fa-home"></i></button>
-        <button onclick="checkAuth()" class="bg-orange-500 text-white w-14 h-14 rounded-full -mt-12 shadow-lg border-4 border-[#fdfbf7] flex items-center justify-center"><i class="fas fa-plus"></i></button>
-        <button id="nav-admin" onclick="showAdmin()" class="hidden text-purple-600 text-2xl"><i class="fas fa-shield-alt"></i></button>
+    <nav class="md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] bg-white/90 backdrop-blur-xl border border-white/20 rounded-[35px] p-4 flex justify-around items-center z-[1000] shadow-[0_20px_50px_rgba(0,0,0,0.1)]">
+        <button onclick="showSection('home')" class="text-orange-500 text-2xl p-2"><i class="fas fa-home"></i></button>
+        <button onclick="checkAuth()" class="bg-orange-500 text-white w-16 h-16 rounded-full -mt-16 shadow-2xl shadow-orange-200 border-[6px] border-[#fdfbf7] flex items-center justify-center hover:scale-110 active:scale-90 transition-all"><i class="fas fa-plus text-xl"></i></button>
+        <button id="nav-admin" onclick="showAdmin()" class="hidden text-purple-600 text-2xl p-2"><i class="fas fa-user-shield"></i></button>
     </nav>
 
     <script>
@@ -127,6 +174,7 @@
         function showSection(id) {
             document.querySelectorAll('section').forEach(s => s.classList.add('hidden'));
             document.getElementById('sec-' + id).classList.remove('hidden');
+            window.scrollTo({top: 0, behavior: 'smooth'});
             if (id === 'home') setTimeout(initMainMap, 300);
             if (id === 'upload') setTimeout(initUploadMap, 300);
         }
@@ -135,7 +183,9 @@
         function initMainMap() {
             if (!mainMap) {
                 mainMap = L.map('main-map', {zoomControl: false}).setView([-38.9517, -68.0611], 13);
+                // Estilo de mapa Voyager (más limpio para diseño premium)
                 L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png').addTo(mainMap);
+                L.control.zoom({ position: 'bottomright' }).addTo(mainMap);
             }
             loadPets();
         }
@@ -154,7 +204,7 @@
         }
 
         // --- LÓGICA DE MASCOTAS ---
-        async function loadPets() {
+        async function loadPets(filter = 'todos') {
             const res = await fetch('/pets');
             const pets = await res.json();
             const list = document.getElementById('pet-list');
@@ -163,30 +213,35 @@
             mainMap.eachLayer(l => { if(l instanceof L.Marker) mainMap.removeLayer(l); });
 
             pets.forEach((p, idx) => {
+                if(filter !== 'todos' && p.status !== filter) return;
+
                 if(p.latitud) {
                     const color = p.status === 'perdido' ? '#ef4444' : '#22c55e';
                     const icon = L.divIcon({
                         className: 'custom',
                         html: `<div class="pet-marker" style="background-color:${color}"><i class="fas fa-paw"></i></div>`,
-                        iconSize: [35,35], iconAnchor: [17,35]
+                        iconSize: [38,38], iconAnchor: [19,38]
                     });
-                    L.marker([p.latitud, p.longitud], {icon}).addTo(mainMap);
+                    L.marker([p.latitud, p.longitud], {icon}).addTo(mainMap)
+                     .bindPopup(`<div class="text-center font-bold p-2"><img src="${p.image_url}" class="w-20 h-20 rounded-xl object-cover mb-2 mx-auto shadow-md"><br><span class="text-orange-600">${p.name}</span></div>`);
                 }
 
                 const miniId = `mini-map-${idx}`;
                 list.innerHTML += `
-                    <div class="bg-white p-4 rounded-[40px] shadow-sm border border-gray-50">
-                        <div class="pet-img-container shadow-md">
-                            <img src="${p.image_url}">
-                        </div>
-                        <div class="py-4 space-y-2">
-                            <div class="flex justify-between items-center">
-                                <h3 class="font-bold text-xl">${p.name}</h3>
-                                <span class="text-[10px] font-bold px-2 py-1 rounded-full ${p.status==='perdido'?'bg-red-100 text-red-500':'bg-green-100 text-green-600'} uppercase">${p.status}</span>
+                    <div class="pet-card shadow-sm group" onclick="mainMap.flyTo([${p.latitud}, ${p.longitud}], 16); window.scrollTo({top: 0, behavior: 'smooth'});">
+                        <div class="pet-img-container shadow-innerrelative">
+                            <img src="${p.image_url}" loading="lazy">
+                            <div class="absolute top-4 left-4 ${p.status==='perdido'?'bg-red-500 shadow-red-200':'bg-green-500 shadow-green-200'} text-white text-[10px] font-bold px-4 py-1.5 rounded-full uppercase tracking-wider shadow-lg">
+                                ${p.status}
                             </div>
-                            <p class="text-sm text-gray-400 font-bold"><i class="fas fa-map-marker-alt text-orange-400"></i> ${p.barrio}</p>
-                            <div id="${miniId}" class="mini-map"></div>
-                            <a href="https://wa.me/${p.telefono}" target="_blank" class="block w-full bg-[#25D366] text-white text-center py-4 rounded-2xl font-bold mt-4 shadow-lg shadow-green-50 transition-transform active:scale-95">WhatsApp</a>
+                        </div>
+                        <div class="p-6 space-y-2">
+                            <h3 class="font-bold text-2xl text-gray-800 tracking-tight">${p.name}</h3>
+                            <p class="text-sm text-gray-400 font-bold"><i class="fas fa-map-marker-alt text-orange-400 mr-1"></i> ${p.barrio}</p>
+                            <div id="${miniId}" class="mini-map shadow-inner border-2 border-gray-50"></div>
+                            <a href="https://wa.me/${p.telefono}?text=Hola! Te escribo por ${p.name} que vi en Huellitas NQN" target="_blank" onclick="event.stopPropagation()" class="block w-full bg-[#25D366] text-white text-center py-4 rounded-2xl font-bold mt-5 shadow-lg shadow-green-50 hover:brightness-110 active:scale-95 transition-all">
+                                <i class="fab fa-whatsapp mr-2 text-xl"></i> Contactar
+                            </a>
                         </div>
                     </div>`;
 
@@ -194,9 +249,9 @@
                     if(p.latitud) {
                         const mini = L.map(miniId, {zoomControl: false, attributionControl: false}).setView([p.latitud, p.longitud], 15);
                         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mini);
-                        L.circle([p.latitud, p.longitud], {radius: 80, color: '#f97316'}).addTo(mini);
+                        L.circle([p.latitud, p.longitud], {radius: 80, color: '#f97316', fillColor: '#f97316', fillOpacity: 0.15}).addTo(mini);
                     }
-                }, 200);
+                }, 400); // Un poco más de tiempo para asegurar renderizado
             });
         }
 
@@ -208,105 +263,27 @@
             const resU = await fetch('/admin/users/pending');
             const users = await resU.json();
             const userContainer = document.getElementById('admin-user-list');
-            
-            if(users.length === 0) {
-                userContainer.innerHTML = '<div class="col-span-full p-4 bg-white rounded-3xl text-center text-gray-400 italic text-sm">No hay nuevas solicitudes.</div>';
-            } else {
+            if(users.length === 0) userContainer.innerHTML = '<div class="col-span-full p-8 bg-white rounded-[30px] text-center text-gray-400 italic text-sm">No hay nuevas solicitudes de usuario.</div>';
+            else {
                 userContainer.innerHTML = users.map(u => `
-                    <div class="bg-white p-5 rounded-3xl flex justify-between items-center shadow-sm border-l-4 border-purple-500">
+                    <div class="bg-white p-6 rounded-[30px] flex justify-between items-center shadow-sm border border-purple-50">
                         <div>
-                            <p class="font-bold text-gray-800 text-sm">${u.email}</p>
-                            <p class="text-[10px] text-gray-400 font-bold">WA: ${u.telefono}</p>
+                            <p class="font-bold text-gray-800">${u.email}</p>
+                            <p class="text-[10px] text-purple-400 font-bold tracking-wider">WA: ${u.telefono}</p>
                         </div>
-                        <div class="flex gap-2">
-                            <button onclick="approveUser(${u.id})" class="bg-purple-600 text-white px-4 py-2 rounded-xl text-[10px] font-bold">ADMITIR</button>
-                            <button onclick="deleteUser(${u.id})" class="text-red-400 p-2 hover:bg-red-50 rounded-lg"><i class="fas fa-trash"></i></button>
+                        <div class="flex gap-2.5">
+                            <button onclick="approveUser(${u.id})" class="bg-purple-600 text-white px-5 py-2.5 rounded-2xl text-[10px] font-bold shadow-lg shadow-purple-100 active:scale-95 transition-all">ADMITIR</button>
+                            <button onclick="deleteUser(${u.id})" class="text-red-400 px-3 hover:bg-red-50 rounded-xl transition-colors"><i class="fas fa-trash-alt"></i></button>
                         </div>
                     </div>`).join('');
             }
 
-            // 2. Mascotas por Moderar
+            // 2. Mascotas (Todas para Moderar)
             const resP = await fetch('/pets?all_pets=true');
             const pets = await resP.json();
             document.getElementById('admin-pet-management').innerHTML = pets.map(p => `
-                <div class="bg-white p-4 rounded-3xl shadow-sm border border-gray-100 flex gap-4 items-center">
-                    <img src="${p.image_url}" class="w-12 h-12 rounded-xl object-cover shadow-sm">
+                <div class="bg-white p-5 rounded-[30px] shadow-sm border border-gray-100 flex gap-4 items-center hover:border-orange-100 transition-colors">
+                    <img src="${p.image_url}" class="w-16 h-16 rounded-2xl object-cover shadow-md">
                     <div class="flex-1 min-w-0">
-                        <p class="font-bold text-sm truncate text-gray-800">${p.name}</p>
-                        <p class="text-[10px] font-bold ${p.is_approved?'text-green-500':'text-orange-500'}">${p.is_approved?'VISIBLE':'PENDIENTE'}</p>
-                    </div>
-                    <button onclick='openPreview(${JSON.stringify(p).replace(/'/g, "&apos;")})' class="bg-gray-100 p-3 rounded-2xl text-gray-400 hover:text-purple-600 transition-colors">
-                        <i class="fas fa-eye text-lg"></i>
-                    </button>
-                </div>`).join('');
-        }
-
-        function openPreview(p) {
-            const modal = document.getElementById('admin-modal');
-            document.getElementById('modal-content').innerHTML = `
-                <img src="${p.image_url}" class="w-full h-72 object-cover">
-                <div class="p-6 space-y-4">
-                    <div class="flex justify-between items-center">
-                        <h3 class="text-2xl font-bold text-gray-800">${p.name}</h3>
-                        <span class="px-3 py-1 rounded-full bg-orange-100 text-orange-600 font-bold text-[10px] uppercase">${p.status}</span>
-                    </div>
-                    <p class="text-sm text-gray-500 italic"><i class="fas fa-map-marker-alt"></i> Barrio: ${p.barrio}</p>
-                    <div class="bg-purple-50 p-4 rounded-2xl border border-purple-100 text-purple-700 font-bold text-xs uppercase">
-                        <i class="fab fa-whatsapp"></i> WhatsApp del Dueño: ${p.telefono}
-                    </div>
-                </div>`;
-            
-            document.getElementById('modal-actions').innerHTML = !p.is_approved ? 
-                `<button onclick="approvePet(${p.id}); closeAdminModal();" class="w-full bg-green-500 text-white rounded-3xl font-bold py-4 shadow-lg active:scale-95 transition-all">APROBAR</button>` :
-                `<button onclick="deletePet(${p.id}); closeAdminModal();" class="w-full bg-red-500 text-white rounded-3xl font-bold py-4 shadow-lg active:scale-95 transition-all">ELIMINAR</button>`;
-            
-            modal.classList.remove('hidden');
-        }
-
-        function closeAdminModal() { document.getElementById('admin-modal').classList.add('hidden'); }
-        async function approvePet(id) { await fetch('/pets/approve/'+id, {method:'POST'}); showAdmin(); }
-        async function deletePet(id) { if(confirm("¿Eliminar publicación?")) { await fetch('/admin/pets/delete/'+id, {method:'DELETE'}); showAdmin(); } }
-        async function approveUser(id) { await fetch('/admin/users/approve/'+id, {method:'POST'}); showAdmin(); }
-        async function deleteUser(id) { if(confirm("¿Rechazar usuario?")) { await fetch('/admin/users/delete/'+id, {method:'DELETE'}); showAdmin(); } }
-
-        // --- AUTH & MISC ---
-        async function handleUpload(e) {
-            e.preventDefault();
-            if(!document.getElementById('lat-input').value) return alert("Hacé clic en el mapa para marcar la ubicación.");
-            const btn = document.getElementById('btn-submit');
-            btn.innerHTML = 'Subiendo...'; btn.disabled = true;
-            const res = await fetch('/pets/upload', {method: 'POST', body: new FormData(e.target)});
-            if (res.ok) { alert("¡Recibido! El administrador revisará la publicación."); showSection('home'); e.target.reset(); }
-            btn.innerText = "Publicar Ahora"; btn.disabled = false;
-        }
-
-        async function handleLogin(e) {
-            e.preventDefault();
-            const res = await fetch('/login', {method: 'POST', body: new FormData(e.target)});
-            if (res.ok) { user = await res.json(); localStorage.setItem('user', JSON.stringify(user)); location.reload(); }
-            else { alert("Email/Clave incorrectos o cuenta pendiente de aprobación."); }
-        }
-
-        async function handleReg(e) {
-            e.preventDefault();
-            const res = await fetch('/register', {method: 'POST', body: new FormData(e.target)});
-            if (res.ok) { alert("¡Registrado! Esperá a que el administrador habilite tu acceso."); toggleAuth('login'); }
-            else { alert("Error al registrar."); }
-        }
-
-        function checkAuth() { user ? showSection('upload') : showSection('auth'); }
-        function toggleAuth(t) {
-            document.getElementById('f-login').classList.toggle('hidden', t==='reg');
-            document.getElementById('f-reg').classList.toggle('hidden', t==='login');
-            document.getElementById('t-login').className = t==='login' ? 'flex-1 pb-2 border-b-4 border-orange-500 font-bold' : 'flex-1 pb-2 text-gray-400 font-bold';
-            document.getElementById('t-reg').className = t==='reg' ? 'flex-1 pb-2 border-b-4 border-orange-500 font-bold' : 'flex-1 pb-2 text-gray-400 font-bold';
-        }
-        function logout() { localStorage.clear(); location.reload(); }
-
-        window.onload = () => {
-            if(user) {
-                document.getElementById('auth-forms').classList.add('hidden');
-                document.getElementById('user-info').classList.remove('hidden');
-                document.getElementById('u-mail').innerText = user.email;
-                
-                if(user.r
+                        <p class="font-bold text-sm text-gray-800 truncate">${p.name}</p>
+                        <p class="text-[9px] font-black tracking-widest uppe
