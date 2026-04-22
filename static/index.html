@@ -3,103 +3,114 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Huellitas - Publicar</title>
+    <title>Huellitas Neuquén</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600;700&display=swap" rel="stylesheet">
-    <style> body { font-family: 'Quicksand', sans-serif; background-color: #fdfbf7; } </style>
+    <style>
+        body { font-family: 'Quicksand', sans-serif; background-color: #f8fafc; }
+        .glass { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px); }
+    </style>
 </head>
-<body class="pb-20">
-    <nav class="p-4 bg-white shadow-sm flex justify-between items-center">
-        <h1 class="text-xl font-bold text-orange-500">🐾 Huellitas</h1>
-        <button onclick="showSection('adopcion')" class="text-xs text-gray-500 underline">Volver al inicio</button>
+<body class="pb-24">
+    <nav class="p-4 glass sticky top-0 z-50 flex justify-between items-center border-b">
+        <h1 class="text-2xl font-bold text-orange-500">🐾 Huellitas</h1>
+        <div id="user-badge" class="hidden text-[10px] bg-orange-100 text-orange-600 px-2 py-1 rounded-lg"></div>
     </nav>
 
-    <section id="sec-publicar" class="p-4 max-w-md mx-auto">
-        <div class="bg-white p-6 rounded-3xl shadow-xl border-t-4 border-orange-400">
-            <h2 class="text-2xl font-bold mb-2 text-gray-800">Nueva Publicación</h2>
-            <p class="text-sm text-gray-500 mb-6">Completá los datos para ayudar a esta mascota.</p>
-
-            <form id="form-upload" onsubmit="handleUpload(event)">
-                <div class="mb-4">
-                    <label class="block text-sm font-bold mb-1 text-gray-600">Nombre de la mascota</label>
-                    <input type="text" id="p-name" placeholder="Ej: Firulais o 'Desconocido'" class="w-full p-3 border rounded-2xl bg-gray-50 focus:outline-orange-400" required>
-                </div>
-
-                <div class="mb-4">
-                    <label class="block text-sm font-bold mb-1 text-gray-600">¿Qué tipo de publicación es?</label>
-                    <select id="p-status" onchange="toggleFields()" class="w-full p-3 border rounded-2xl bg-gray-50">
-                        <option value="adopcion">Busca Hogar (Adopción)</option>
-                        <option value="perdido">Se perdió / Lo encontré (Perdido)</option>
-                    </select>
-                </div>
-
-                <div id="salud-fields" class="mb-4 p-4 bg-orange-50 rounded-2xl">
-                    <p class="text-xs font-bold text-orange-600 mb-3 uppercase tracking-wider">Información de Salud</p>
-                    <label class="flex items-center gap-3 mb-3 cursor-pointer">
-                        <input type="checkbox" id="p-vacunado" class="w-5 h-5 accent-orange-500" onchange="document.getElementById('vacunas-box').classList.toggle('hidden', !this.checked)">
-                        <span class="text-sm text-gray-700">¿Tiene sus vacunas al día?</span>
-                    </label>
-                    <div id="vacunas-box" class="hidden">
-                        <input type="text" id="p-vacunas-detalle" placeholder="¿Cuáles? (Ej: Sextuple, Rabia...)" class="w-full p-3 border rounded-xl text-sm bg-white">
-                    </div>
-                </div>
-
-                <div id="geo-fields" class="mb-6">
-                    <label class="block text-sm font-bold mb-1 text-gray-600">Ubicación</label>
-                    <p class="text-[10px] text-gray-400 mb-2">Para mascotas perdidas es vital marcar dónde fue vista.</p>
-                    <button type="button" onclick="getLocation()" id="btn-geo" class="w-full flex items-center justify-center gap-2 bg-blue-50 text-blue-600 py-3 rounded-2xl font-semibold border border-blue-100 active:scale-95 transition-all">
-                        📍 <span>Capturar Ubicación Actual</span>
-                    </button>
-                    <input type="hidden" id="p-lat">
-                    <input type="hidden" id="p-lon">
-                </div>
-
-                <div class="mb-6">
-                    <label class="block text-sm font-bold mb-1 text-gray-600">Foto Clara</label>
-                    <div class="border-2 border-dashed border-gray-200 rounded-2xl p-4 text-center bg-gray-50">
-                        <input type="file" id="p-file" accept="image/*" class="text-sm w-full" required>
-                    </div>
-                </div>
-
-                <button type="submit" class="w-full bg-orange-500 text-white py-4 rounded-2xl font-bold shadow-lg shadow-orange-200 active:scale-95 transition-all">
-                    Enviar para Aprobación
-                </button>
-                <p class="text-[10px] text-center mt-4 text-gray-400 italic">Un administrador revisará la información antes de publicarla.</p>
-            </form>
+    <div class="p-4 bg-white border-b sticky top-14 z-40">
+        <input type="text" id="search-bar" oninput="debounceSearch()" placeholder="Buscar por nombre..." class="w-full p-3 rounded-2xl bg-gray-100 border-none text-sm focus:ring-2 focus:ring-orange-400">
+        <div class="flex gap-2 mt-3 overflow-x-auto no-scrollbar">
+            <button onclick="changeTab('adopcion')" id="btn-adopcion" class="px-4 py-2 rounded-full text-xs font-bold bg-orange-500 text-white whitespace-nowrap">🏠 En Adopción</button>
+            <button onclick="changeTab('perdido')" id="btn-perdido" class="px-4 py-2 rounded-full text-xs font-bold bg-gray-200 text-gray-600 whitespace-nowrap">🔍 Perdidos</button>
+            <button id="tab-admin" onclick="showAdmin()" class="hidden px-4 py-2 rounded-full text-xs font-bold bg-purple-100 text-purple-600 whitespace-nowrap">🛡️ Admin</button>
         </div>
+    </div>
+
+    <main id="main-content" class="p-4 grid grid-cols-1 gap-6">
+        </main>
+
+    <button onclick="showSection('publicar')" class="fixed bottom-6 right-6 bg-orange-500 text-white w-14 h-14 rounded-full shadow-2xl flex items-center justify-center text-3xl z-50">+</button>
+
+    <section id="sec-login" class="p-8 hidden fixed inset-0 bg-white z-[60]">
+        <h2 class="text-3xl font-bold mb-8">Ingresar</h2>
+        <form id="form-login" class="space-y-4">
+            <input type="email" id="l-email" placeholder="Email" class="w-full p-4 border rounded-2xl">
+            <input type="password" id="l-pass" placeholder="Contraseña" class="w-full p-4 border rounded-2xl">
+            <button type="submit" class="w-full bg-orange-500 text-white py-4 rounded-2xl font-bold shadow-lg">Entrar</button>
+            <button type="button" onclick="showSection('gallery')" class="w-full text-gray-400 py-2">Cancelar</button>
+        </form>
     </section>
 
     <script>
-        function toggleFields() {
-            const status = document.getElementById('p-status').value;
-            // Podés ocultar o mostrar cosas específicas según si es adopción o perdido
+        let currentTab = 'adopcion';
+        let currentUser = JSON.parse(localStorage.getItem('user'));
+        let searchTimeout;
+
+        async function loadPets(status = currentTab, query = '') {
+            const url = `/pets?status=${status}&q=${query}`;
+            const res = await fetch(url);
+            const pets = await res.json();
+            renderPets(pets, false);
         }
 
-        function getLocation() {
-            const btn = document.getElementById('btn-geo');
-            btn.innerText = "Buscando satélite...";
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(
-                    (pos) => {
-                        document.getElementById('p-lat').value = pos.coords.latitude;
-                        document.getElementById('p-lon').value = pos.coords.longitude;
-                        btn.classList.replace('bg-blue-50', 'bg-green-50');
-                        btn.classList.replace('text-blue-600', 'text-green-600');
-                        btn.innerText = "✅ Ubicación Guardada";
-                    },
-                    (err) => {
-                        alert("No pudimos obtener tu GPS. Asegurate de dar permisos.");
-                        btn.innerText = "📍 Reintentar Ubicación";
-                    }
-                );
-            }
+        function renderPets(pets, isAdminView) {
+            const container = document.getElementById('main-content');
+            container.innerHTML = pets.length ? '' : '<p class="text-center text-gray-400 mt-10">No encontramos resultados 🐾</p>';
+            
+            pets.forEach(p => {
+                const badgeColor = p.status === 'adopcion' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600';
+                container.innerHTML += `
+                    <div class="bg-white rounded-[2.5rem] overflow-hidden shadow-sm border border-gray-100">
+                        <img src="${p.image_url}" class="w-full h-64 object-cover">
+                        <div class="p-6">
+                            <div class="flex justify-between items-start mb-2">
+                                <h3 class="text-xl font-bold text-gray-800">${p.name}</h3>
+                                <span class="text-[10px] px-3 py-1 rounded-full font-bold uppercase ${badgeColor}">${p.status}</span>
+                            </div>
+                            <p class="text-sm text-gray-500 mb-4">${p.vacunado ? '✅ Vacunado: ' + p.vacunas_detalle : '⏳ Vacunas pendientes'}</p>
+                            ${isAdminView ? `
+                                <div class="flex gap-2">
+                                    <button onclick="approve(${p.id})" class="flex-1 bg-green-500 text-white py-2 rounded-xl text-xs font-bold">APROBAR</button>
+                                    <button onclick="deletePet(${p.id})" class="flex-1 bg-red-100 text-red-500 py-2 rounded-xl text-xs font-bold">BORRAR</button>
+                                </div>
+                            ` : `
+                                <button class="w-full bg-orange-50 text-orange-600 py-3 rounded-2xl text-sm font-bold">Contactar</button>
+                            `}
+                        </div>
+                    </div>
+                `;
+            });
         }
 
-        async function handleUpload(e) {
-            e.preventDefault();
-            // Aquí irá el código Fetch que conectará con tu main.py
-            alert("¡Formulario enviado! Esperando aprobación del admin.");
+        function debounceSearch() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                loadPets(currentTab, document.getElementById('search-bar').value);
+            }, 500);
         }
+
+        async function showAdmin() {
+            const res = await fetch('/pets?all_pets=true');
+            const pets = await res.json();
+            renderPets(pets.filter(p => !p.is_approved), true);
+        }
+
+        async function approve(id) {
+            await fetch(`/pets/approve/${id}`, { method: 'POST' });
+            showAdmin();
+        }
+
+        function changeTab(tab) {
+            currentTab = tab;
+            document.getElementById('btn-adopcion').className = tab === 'adopcion' ? 'px-4 py-2 rounded-full text-xs font-bold bg-orange-500 text-white' : 'px-4 py-2 rounded-full text-xs font-bold bg-gray-200 text-gray-600';
+            document.getElementById('btn-perdido').className = tab === 'perdido' ? 'px-4 py-2 rounded-full text-xs font-bold bg-orange-500 text-white' : 'px-4 py-2 rounded-full text-xs font-bold bg-gray-200 text-gray-600';
+            loadPets(tab);
+        }
+
+        window.onload = () => {
+            if(currentUser?.role === 'admin') document.getElementById('tab-admin').classList.remove('hidden');
+            loadPets();
+        };
     </script>
 </body>
 </html>
