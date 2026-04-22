@@ -3,19 +3,13 @@ from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Form
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
+import cloudinary, cloudinary.uploader
 from database import SessionLocal, engine
-import models, auth, cloudinary, cloudinary.uploader
+import models, auth
 
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
-
-# Configuración Cloudinary
-cloudinary.config(
-    cloud_name=os.environ.get("CLOUDINARY_CLOUD_NAME"),
-    api_key=os.environ.get("CLOUDINARY_API_KEY"),
-    api_secret=os.environ.get("CLOUDINARY_API_SECRET")
-)
 
 def get_db():
     db = SessionLocal()
@@ -25,12 +19,30 @@ def get_db():
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 @app.get("/")
-async def read_index():
-    return FileResponse('static/index.html')
+async def read_index(): return FileResponse('static/index.html')
 
-# Endpoint para el Panel Principal (Muestra las últimas 5 aprobadas)
-@app.get("/pets/featured")
-def featured_pets(db: Session = Depends(get_db)):
-    return db.query(models.Pet).filter(models.Pet.is_approved == True).order_by(models.Pet.id.desc()).limit(5).all()
+# --- BUSCADOR ROBUSTO ---
+@app.get("/pets/search")
+def search_pets(status: str = None, barrio: str = None, q: str = None, db: Session = Depends(get_db)):
+    query = db.query(models.Pet).filter(models.Pet.is_approved == True)
+    if status: query = query.filter(models.Pet.status == status)
+    if barrio: query = query.filter(models.Pet.barrio == barrio)
+    if q: query = query.filter(models.Pet.name.ilike(f"%{q}%"))
+    return query.all()
 
-# --- TODO EL RESTO DE ENDPOINTS (Login, Upload, Approve, etc) IGUAL QUE ANTES ---
+# --- UPLOAD CON TELÉFONO ---
+@app.post("/pets/upload")
+async def upload_pet(
+    name: str = Form(...), barrio: str = Form(...), user_id: int = Form(...),
+    status: str = Form(...), file: UploadFile = File(...), db: Session = Depends(get_db)
+):
+    # Lógica de subida...
+    res = cloudinary.uploader.upload(file.file)
+    new_pet = models.Pet(
+        name=name, barrio=barrio, image_url=res.get("secure_url"),
+        status=status, owner_id=user_id, is_approved=False
+    )
+    db.add(new_pet)
+    db.commit()
+    return {"status": "enviado_revision"}
+    
