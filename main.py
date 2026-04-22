@@ -8,8 +8,10 @@ import cloudinary.uploader
 from database import SessionLocal, engine
 import models, auth
 
+# Iniciamos base de datos
 models.Base.metadata.create_all(bind=engine)
 
+# Cloudinary
 cloudinary.config(
   cloud_name = os.environ.get("CLOUDINARY_CLOUD_NAME"),
   api_key = os.environ.get("CLOUDINARY_API_KEY"),
@@ -23,67 +25,60 @@ def get_db():
     try: yield db
     finally: db.close()
 
-if not os.path.exists("static"): os.makedirs("static")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 @app.get("/")
 async def read_index(): return FileResponse('static/index.html')
 
-# --- API DE MASCOTAS ---
-
-@app.get("/pets")
-def list_pets(status: str = None, all_pets: bool = False, db: Session = Depends(get_db)):
-    # Si all_pets es True, es para el panel de admin (ve todo)
-    query = db.query(models.Pet)
-    if not all_pets:
-        query = query.filter(models.Pet.is_approved == True)
-    if status:
-        query = query.filter(models.Pet.status == status)
-    return query.all()
-
-@app.post("/pets/approve/{pet_id}")
-def approve_pet(pet_id: int, admin_id: int, db: Session = Depends(get_db)):
-    admin = db.query(models.User).filter(models.User.id == admin_id, models.User.role == "admin").first()
-    if not admin: raise HTTPException(status_code=403, detail="No autorizado")
-    
-    pet = db.query(models.Pet).filter(models.Pet.id == pet_id).first()
-    pet.is_approved = True
-    db.commit()
-    return {"message": "Mascota aprobada y visible"}
+# --- API ---
 
 @app.post("/pets/upload")
 async def upload_pet(
-    name: str = Form(...), species: str = Form(...), user_id: int = Form(...),
-    status: str = Form(...), vacunado: bool = Form(False),
-    vacunas_detalle: str = Form(None), lat: float = Form(None),
-    lon: float = Form(None), file: UploadFile = File(...),
+    name: str = Form(...),
+    status: str = Form(...), # 'adopcion' o 'perdido'
+    user_id: int = Form(...),
+    vacunado: bool = Form(False),
+    vacunas_detalle: str = Form(None),
+    lat: float = Form(None),
+    lon: float = Form(None),
+    file: UploadFile = File(...),
     db: Session = Depends(get_db)
 ):
+    # Verificación de usuario (Debe estar verificado por vos)
     user = db.query(models.User).filter(models.User.id == user_id).first()
-    if not user: raise HTTPException(status_code=403, detail="Usuario inexistente")
+    if not user or not user.is_verified:
+        raise HTTPException(status_code=403, detail="Tu cuenta no está autorizada para publicar.")
 
+    # Subida a la nube
     res = cloudinary.uploader.upload(file.file)
+    
     new_pet = models.Pet(
-        name=name, species=species, image_url=res.get("secure_url"),
-        status=status, vacunado=vacunado, vacunas_detalle=vacunas_detalle,
-        lat=lat, lon=lon, owner_id=user_id, is_approved=False
+        name=name,
+        species="Mascota", # Generalizamos para simplificar
+        image_url=res.get("secure_url"),
+        status=status,
+        vacunado=vacunado,
+        vacunas_detalle=vacunas_detalle,
+        lat=lat,
+        lon=lon,
+        is_approved=False, # <-- IMPORTANTE: Nadie ve nada hasta que vos apruebes
+        owner_id=user_id
     )
     db.add(new_pet)
     db.commit()
-    return {"message": "Enviado a revisión"}
+    return {"message": "Enviado con éxito. El admin lo revisará pronto."}
 
-# --- USUARIOS Y ADMIN ---
-
+# Login simple para el celu
 @app.post("/login")
 def login(email: str = Form(...), password: str = Form(...), db: Session = Depends(get_db)):
     user = db.query(models.User).filter(models.User.email == email).first()
     if not user or not auth.verify_password(password, user.hashed_password):
-        raise HTTPException(status_code=401, detail="Credenciales incorrectas")
-    return {"id": user.id, "email": user.email, "role": user.role, "is_verified": user.is_verified}
+        raise HTTPException(status_code=401, detail="Error de acceso")
+    return {"id": user.id, "role": user.role, "is_verified": user.is_verified}
 
+# Endpoint secreto para crearte vos mismo
 @app.post("/setup-admin-secreto")
 def setup_admin(db: Session = Depends(get_db)):
-    # USÁ ESTO UNA SOLA VEZ
     admin = models.User(
         email="tu-email@gmail.com", 
         hashed_password=auth.get_password_hash("admin123"), 
@@ -92,5 +87,5 @@ def setup_admin(db: Session = Depends(get_db)):
     )
     db.add(admin)
     db.commit()
-    return {"message": "Admin creado. Entrá con admin123"}
+    return {"message": "Admin creado. Clave: admin123"}
   
