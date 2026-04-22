@@ -5,165 +5,217 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Huellitas NQN</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
         body { font-family: 'Quicksand', sans-serif; background-color: #fdfbf7; }
         .hidden { display: none; }
+        #main-map, #map-upload { border-radius: 24px; border: 4px solid white; box-shadow: 0 8px 20px rgba(0,0,0,0.05); }
+        .pet-card { background: white; border-radius: 24px; transition: transform 0.2s; border: 1px solid #f3f4f6; }
+        .pet-card:hover { transform: translateY(-5px); box-shadow: 0 12px 25px rgba(0,0,0,0.05); }
+        .pet-marker { width: 30px; height: 30px; border-radius: 50% 50% 50% 0; border: 2px solid white; transform: rotate(-45deg); display: flex; align-items: center; justify-content: center; color: white; }
+        .pet-marker i { transform: rotate(45deg); }
     </style>
 </head>
 <body class="pb-24">
-    <nav class="p-4 bg-white shadow-sm flex justify-between items-center sticky top-0 z-50">
+    <nav class="p-4 bg-white/80 backdrop-blur-md sticky top-0 z-[1000] flex justify-between items-center shadow-sm">
         <div class="flex items-center gap-2" onclick="showSection('home')">
             <div class="bg-orange-500 p-2 rounded-xl text-white"><i class="fas fa-paw"></i></div>
-            <h1 class="font-bold text-orange-600 text-xl">HuellitasNQN</h1>
+            <h1 class="font-bold text-orange-600 text-xl tracking-tight">HuellitasNQN</h1>
         </div>
         <button id="auth-btn" onclick="showSection('auth')" class="text-gray-400 text-2xl"><i class="fas fa-user-circle"></i></button>
     </nav>
 
     <section id="sec-home" class="p-4 space-y-6">
-        <div id="pet-list" class="grid grid-cols-1 gap-6"></div>
+        <div id="main-map" class="w-full h-80 z-10"></div>
+        <div class="flex justify-between items-center">
+            <h2 class="text-xl font-bold text-gray-800">Cerca tuyo 📍</h2>
+        </div>
+        <div id="pet-list" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
     </section>
 
     <section id="sec-upload" class="p-6 hidden max-w-md mx-auto">
-        <div class="bg-white p-6 rounded-3xl shadow-xl">
-            <h2 class="text-xl font-bold mb-4">Publicar Mascota</h2>
-            <form id="form-upload" onsubmit="handleUpload(event)" class="space-y-4">
-                <input type="text" name="name" placeholder="Nombre" class="w-full p-3 bg-gray-50 rounded-xl" required>
+        <div class="bg-white p-6 rounded-3xl shadow-xl space-y-4">
+            <h2 class="text-xl font-bold">Nueva Publicación</h2>
+            <form id="form-upload" onsubmit="handleUpload(event)" class="space-y-3">
+                <input type="text" name="name" placeholder="Nombre de la mascota" class="w-full p-3 bg-gray-50 rounded-xl" required>
                 <select name="status" class="w-full p-3 bg-gray-50 rounded-xl">
                     <option value="adopcion">En Adopción</option>
-                    <option value="perdido">Mascota Perdida</option>
+                    <option value="perdido">Perdido</option>
                 </select>
-                <input type="text" name="barrio" placeholder="Barrio (Ej: Confluencia)" class="w-full p-3 bg-gray-50 rounded-xl" required>
-                <input type="file" name="file" class="w-full text-sm text-gray-500" required>
-                <button class="w-full bg-orange-500 text-white py-4 rounded-2xl font-bold">Enviar a Revisión</button>
+                <input type="text" name="barrio" placeholder="Barrio" class="w-full p-3 bg-gray-50 rounded-xl" required>
+                <div id="map-upload" class="w-full h-48"></div>
+                <input type="hidden" name="latitud" id="lat-input">
+                <input type="hidden" name="longitud" id="lng-input">
+                <input type="file" name="file" class="text-sm" required>
+                <button class="w-full bg-orange-500 text-white py-4 rounded-2xl font-bold">Publicar</button>
             </form>
         </div>
     </section>
 
     <section id="sec-auth" class="p-6 hidden max-w-md mx-auto">
-        <div class="bg-white p-6 rounded-3xl shadow-xl text-center">
+        <div class="bg-white p-8 rounded-3xl shadow-xl">
             <div id="auth-forms">
-                <div class="flex mb-6 border-b">
-                    <button onclick="toggleAuth('login')" class="flex-1 py-2 font-bold text-orange-500 border-b-2 border-orange-500" id="t-login">Login</button>
-                    <button onclick="toggleAuth('reg')" class="flex-1 py-2 text-gray-400 font-bold" id="t-reg">Registro</button>
+                <div class="flex gap-4 mb-6">
+                    <button onclick="toggleAuth('login')" id="btn-t-login" class="flex-1 pb-2 border-b-2 border-orange-500 font-bold">Login</button>
+                    <button onclick="toggleAuth('reg')" id="btn-t-reg" class="flex-1 pb-2 text-gray-400">Registro</button>
                 </div>
-                <form id="f-login" onsubmit="handleLogin(event)">
-                    <input type="email" name="email" placeholder="Email" class="w-full p-3 mb-3 bg-gray-50 rounded-xl" required>
-                    <input type="password" name="password" placeholder="Clave" class="w-full p-3 mb-6 bg-gray-50 rounded-xl" required>
+                <form id="f-login" onsubmit="handleLogin(event)" class="space-y-3">
+                    <input type="email" name="email" placeholder="Email" class="w-full p-3 bg-gray-50 rounded-xl" required>
+                    <input type="password" name="password" placeholder="Clave" class="w-full p-3 bg-gray-50 rounded-xl" required>
                     <button class="w-full bg-orange-500 text-white py-4 rounded-2xl font-bold">Entrar</button>
                 </form>
-                <form id="f-reg" class="hidden" onsubmit="handleReg(event)">
-                    <input type="email" name="email" placeholder="Email" class="w-full p-3 mb-3 bg-gray-50 rounded-xl" required>
-                    <input type="password" name="password" placeholder="Clave" class="w-full p-3 mb-3 bg-gray-50 rounded-xl" required>
-                    <input type="text" name="telefono" placeholder="WhatsApp (Ej: 2991234567)" class="w-full p-3 mb-6 bg-gray-50 rounded-xl" required>
-                    <button class="w-full bg-green-500 text-white py-4 rounded-2xl font-bold">Crear Cuenta</button>
+                <form id="f-reg" onsubmit="handleReg(event)" class="space-y-3 hidden">
+                    <input type="email" name="email" placeholder="Email" class="w-full p-3 bg-gray-50 rounded-xl" required>
+                    <input type="password" name="password" placeholder="Clave" class="w-full p-3 bg-gray-50 rounded-xl" required>
+                    <input type="text" name="telefono" placeholder="WhatsApp (299...)" class="w-full p-3 bg-gray-50 rounded-xl" required>
+                    <button class="w-full bg-green-500 text-white py-4 rounded-2xl font-bold">Registrarme</button>
                 </form>
             </div>
-            <div id="user-info" class="hidden">
-                <p id="user-email" class="font-bold mb-4"></p>
-                <button onclick="logout()" class="text-red-500">Cerrar Sesión</button>
+            <div id="user-info" class="hidden text-center">
+                <p id="u-mail" class="font-bold mb-4"></p>
+                <button onclick="logout()" class="text-red-500 text-sm">Cerrar Sesión</button>
             </div>
         </div>
     </section>
 
-    <section id="sec-admin" class="p-4 hidden">
-        <h2 class="text-xl font-bold mb-4 text-purple-700">Moderación</h2>
-        <div id="admin-list" class="space-y-4"></div>
+    <section id="sec-admin" class="p-4 hidden space-y-6">
+        <h2 class="text-2xl font-bold text-purple-800">Panel de Control</h2>
+        <div>
+            <h3 class="font-bold mb-2">Mascotas Pendientes</h3>
+            <div id="admin-pet-list" class="space-y-2"></div>
+        </div>
+        <div>
+            <h3 class="font-bold mb-2">Usuarios Pendientes</h3>
+            <div id="admin-user-list" class="space-y-2"></div>
+        </div>
     </section>
 
-    <div class="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-md border-t p-4 flex justify-around items-center">
-        <button onclick="showSection('home')" class="text-orange-500"><i class="fas fa-home text-2xl"></i></button>
-        <button onclick="checkAuthToUpload()" class="bg-orange-500 text-white w-14 h-14 rounded-full -mt-10 shadow-lg flex items-center justify-center text-2xl border-4 border-white">+</button>
-        <button id="btn-admin" onclick="showAdmin()" class="hidden text-purple-500"><i class="fas fa-shield-alt text-2xl"></i></button>
-    </div>
+    <nav class="fixed bottom-0 w-full bg-white/90 backdrop-blur-md border-t p-4 flex justify-around items-center z-[1000]">
+        <button onclick="showSection('home')" class="text-orange-500 text-xl"><i class="fas fa-home"></i></button>
+        <button onclick="checkAuthUpload()" class="bg-orange-500 text-white w-14 h-14 rounded-full -mt-10 shadow-lg border-4 border-white"><i class="fas fa-plus"></i></button>
+        <button id="nav-admin" onclick="showAdmin()" class="hidden text-purple-500 text-xl"><i class="fas fa-shield-cat"></i></button>
+    </nav>
 
     <script>
         let user = JSON.parse(localStorage.getItem('user'));
+        let mainMap, uploadMap, uploadMarker;
 
         function showSection(id) {
-            ['home', 'upload', 'auth', 'admin'].forEach(s => document.getElementById('sec-'+s).classList.add('hidden'));
-            document.getElementById('sec-'+id).classList.remove('hidden');
+            document.querySelectorAll('section').forEach(s => s.classList.add('hidden'));
+            document.getElementById('sec-' + id).classList.remove('hidden');
+            if (id === 'home') setTimeout(initMainMap, 200);
+            if (id === 'upload') setTimeout(initUploadMap, 200);
         }
 
-        function toggleAuth(type) {
-            document.getElementById('f-login').classList.toggle('hidden', type === 'reg');
-            document.getElementById('f-reg').classList.toggle('hidden', type === 'login');
-            document.getElementById('t-login').className = type === 'login' ? 'flex-1 py-2 font-bold text-orange-500 border-b-2 border-orange-500' : 'flex-1 py-2 text-gray-400 font-bold';
-            document.getElementById('t-reg').className = type === 'reg' ? 'flex-1 py-2 font-bold text-orange-500 border-b-2 border-orange-500' : 'flex-1 py-2 text-gray-400 font-bold';
+        function initMainMap() {
+            if (!mainMap) {
+                mainMap = L.map('main-map', {zoomControl: false}).setView([-38.9517, -68.0611], 13);
+                L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png').addTo(mainMap);
+            }
+            loadPets();
         }
 
-        async function handleLogin(e) {
-            e.preventDefault();
-            const res = await fetch('/login', { method: 'POST', body: new FormData(e.target) });
-            if (res.ok) {
-                user = await res.json();
-                localStorage.setItem('user', JSON.stringify(user));
-                initSession();
-                showSection('home');
-            } else { alert("Datos incorrectos"); }
-        }
-
-        async function handleUpload(e) {
-            e.preventDefault();
-            const fd = new FormData(e.target);
-            fd.append('user_id', user.id);
-            const res = await fetch('/pets/upload', { method: 'POST', body: fd });
-            if (res.ok) { alert("Enviado. Espera aprobación."); showSection('home'); }
+        function initUploadMap() {
+            if (!uploadMap) {
+                uploadMap = L.map('map-upload').setView([-38.9517, -68.0611], 13);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(uploadMap);
+                uploadMap.on('click', e => {
+                    if (uploadMarker) uploadMarker.setLatLng(e.latlng);
+                    else uploadMarker = L.marker(e.latlng).addTo(uploadMap);
+                    document.getElementById('lat-input').value = e.latlng.lat;
+                    document.getElementById('lng-input').value = e.latlng.lng;
+                });
+            }
         }
 
         async function loadPets() {
             const res = await fetch('/pets');
             const pets = await res.json();
-            document.getElementById('pet-list').innerHTML = pets.map(p => `
-                <div class="bg-white rounded-3xl shadow-sm overflow-hidden border border-orange-50">
-                    <img src="${p.image_url}" class="w-full h-72 object-cover">
-                    <div class="p-6">
-                        <div class="flex justify-between items-center mb-4">
-                            <h3 class="text-2xl font-bold">${p.name}</h3>
-                            <span class="bg-orange-100 text-orange-600 text-[10px] px-3 py-1 rounded-full font-bold uppercase">${p.barrio}</span>
+            const list = document.getElementById('pet-list');
+            list.innerHTML = '';
+            
+            mainMap.eachLayer(l => { if(l instanceof L.Marker) mainMap.removeLayer(l); });
+
+            pets.forEach(p => {
+                const color = p.status === 'perdido' ? '#ef4444' : '#22c55e';
+                if(p.latitud) {
+                    const icon = L.divIcon({
+                        className: 'custom-icon',
+                        html: `<div class="pet-marker" style="background-color:${color}"><i class="fas fa-paw"></i></div>`,
+                        iconSize: [30,30], iconAnchor: [15,30]
+                    });
+                    L.marker([p.latitud, p.longitud], {icon}).addTo(mainMap).bindPopup(`<b>${p.name}</b>`);
+                }
+
+                list.innerHTML += `
+                    <div class="pet-card shadow-sm overflow-hidden">
+                        <img src="${p.image_url}" class="w-full h-48 object-cover">
+                        <div class="p-4">
+                            <h3 class="font-bold text-lg">${p.name}</h3>
+                            <p class="text-xs text-gray-400 mb-4">${p.barrio}</p>
+                            <a href="https://wa.me/${p.telefono}" class="block bg-green-500 text-white text-center py-3 rounded-xl font-bold">WhatsApp</a>
                         </div>
-                        <a href="https://wa.me/${p.telefono}?text=Hola! Vi a ${p.name} en Huellitas" class="block bg-[#25D366] text-white text-center py-4 rounded-2xl font-bold shadow-lg">
-                            <i class="fab fa-whatsapp"></i> Contactar
-                        </a>
-                    </div>
-                </div>
-            `).join('');
+                    </div>`;
+            });
+        }
+
+        async function handleLogin(e) {
+            e.preventDefault();
+            const res = await fetch('/login', {method: 'POST', body: new FormData(e.target)});
+            if (res.ok) {
+                user = await res.json();
+                localStorage.setItem('user', JSON.stringify(user));
+                location.reload();
+            } else { alert("Acceso denegado o pendiente de aprobación."); }
+        }
+
+        async function handleReg(e) {
+            e.preventDefault();
+            const res = await fetch('/register', {method: 'POST', body: new FormData(e.target)});
+            if (res.ok) { alert("Registrado. El admin debe aprobarte."); showSection('auth'); }
         }
 
         async function showAdmin() {
             showSection('admin');
-            const res = await fetch('/pets?all_pets=true');
-            const pets = await res.json();
-            document.getElementById('admin-list').innerHTML = pets.filter(p => !p.is_approved).map(p => `
-                <div class="bg-white p-4 rounded-2xl flex items-center gap-4 shadow">
-                    <img src="${p.image_url}" class="w-16 h-16 rounded-xl object-cover">
-                    <div class="flex-1">
-                        <p class="font-bold text-sm">${p.name}</p>
-                        <button onclick="approve(${p.id})" class="bg-green-500 text-white px-4 py-1 rounded-full text-xs font-bold mt-1">APROBAR</button>
-                    </div>
-                </div>
-            `).join('');
+            const resP = await fetch('/pets?all_pets=true');
+            const pets = await resP.json();
+            document.getElementById('admin-pet-list').innerHTML = pets.filter(p => !p.is_approved).map(p => `
+                <div class="bg-white p-3 rounded-xl flex justify-between items-center shadow-sm">
+                    <span class="text-sm">${p.name}</span>
+                    <button onclick="approvePet(${p.id})" class="bg-purple-600 text-white px-3 py-1 rounded-lg text-xs">Aprobar</button>
+                </div>`).join('');
+
+            const resU = await fetch('/admin/users/pending');
+            const users = await resU.json();
+            document.getElementById('admin-user-list').innerHTML = users.map(u => `
+                <div class="bg-white p-3 rounded-xl flex justify-between items-center shadow-sm">
+                    <span class="text-sm">${u.email}</span>
+                    <button onclick="approveUser(${u.id})" class="bg-purple-600 text-white px-3 py-1 rounded-lg text-xs">Admitir</button>
+                </div>`).join('');
         }
 
-        async function approve(id) {
-            await fetch(`/pets/approve/${id}`, { method: 'POST' });
-            showAdmin();
-            loadPets();
-        }
+        async function approvePet(id) { await fetch('/pets/approve/'+id, {method:'POST'}); showAdmin(); }
+        async function approveUser(id) { await fetch('/admin/users/approve/'+id, {method:'POST'}); showAdmin(); }
 
-        function initSession() {
-            if (user) {
+        function checkAuthUpload() { user ? showSection('upload') : showSection('auth'); }
+        function toggleAuth(t) {
+            document.getElementById('f-login').classList.toggle('hidden', t==='reg');
+            document.getElementById('f-reg').classList.toggle('hidden', t==='login');
+        }
+        function logout() { localStorage.clear(); location.reload(); }
+
+        window.onload = () => {
+            if(user) {
                 document.getElementById('auth-forms').classList.add('hidden');
                 document.getElementById('user-info').classList.remove('hidden');
-                document.getElementById('user-email').innerText = user.email;
-                if (user.role === 'admin') document.getElementById('btn-admin').classList.remove('hidden');
+                document.getElementById('u-mail').innerText = user.email;
+                if(user.role === 'admin') document.getElementById('nav-admin').classList.remove('hidden');
             }
-        }
-
-        function checkAuthToUpload() { user ? showSection('upload') : showSection('auth'); }
-        function logout() { localStorage.removeItem('user'); location.reload(); }
-
-        window.onload = () => { initSession(); loadPets(); };
+            showSection('home');
+        };
     </script>
 </body>
 </html>
