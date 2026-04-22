@@ -141,6 +141,16 @@ def delete_pet(pet_id: int, db: Session = Depends(get_db)):
     db.commit()
     return {"message": "Eliminada"}
 
+# ... (tus otros imports y código)
+
+@app.get("/reset-db-secreto")
+def reset_db():
+    db_path = "database.db"
+    if os.path.exists(db_path):
+        os.remove(db_path)
+        return {"message": "Base de datos borrada. Reiniciá el servicio en Render para crearla de cero."}
+    return {"message": "No se encontró la base de datos."}
+  
 # --- EVENTO DE ARRANQUE (ROOT USER) ---
 
 @app.on_event("startup")
