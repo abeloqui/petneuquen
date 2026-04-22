@@ -1,5 +1,4 @@
 from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, Float
-from sqlalchemy.orm import relationship
 from database import Base
 
 class User(Base):
@@ -8,15 +7,17 @@ class User(Base):
     email = Column(String, unique=True, index=True)
     hashed_password = Column(String)
     telefono = Column(String)
-    role = Column(String, default="user") # "user" o "admin"
-    is_verified = Column(Boolean, default=False) # Moderación de nuevos usuarios
+    role = Column(String, default="user") 
+    is_verified = Column(Boolean, default=False) 
 
 class Pet(Base):
     __tablename__ = "pets"
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String)
-    status = Column(String) # "perdido" o "adopcion"
+    status = Column(String) 
     barrio = Column(String)
+    raza = Column(String, nullable=True)
+    edad = Column(String, nullable=True)
     image_url = Column(String)
     latitud = Column(Float, nullable=True)
     longitud = Column(Float, nullable=True)
