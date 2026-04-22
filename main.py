@@ -5,22 +5,10 @@ from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Form
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
-
-# --- BLOQUE DE EMERGENCIA PARA RENDER FREE ---
-# Borramos la base de datos corrupta al arrancar para limpiar el error de bcrypt
-db_path = "database.db"
-if os.path.exists(db_path):
-    try:
-        os.remove(db_path)
-        print("✅ Base de datos previa eliminada para limpiar errores de hash.")
-    except Exception as e:
-        print(f"⚠️ No se pudo eliminar la DB: {e}")
-
-# Ahora importamos el resto de nuestros módulos
 from database import SessionLocal, engine
 import models, auth
 
-# Crear tablas
+# Crear tablas si no existen (esto no borra datos existentes)
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Huellitas NQN")
@@ -40,7 +28,7 @@ def get_db():
     finally:
         db.close()
 
-# Servir archivos estáticos (HTML, JS, CSS)
+# Servir archivos estáticos
 if not os.path.exists("static"):
     os.makedirs("static")
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -83,10 +71,8 @@ def login(email: str = Form(...), password: str = Form(...), db: Session = Depen
 
 @app.get("/pets")
 def list_pets(status: str = None, all_pets: bool = False, db: Session = Depends(get_db)):
-    # Traemos la mascota y el teléfono del dueño haciendo un Join
     query = db.query(models.Pet, models.User.telefono).join(models.User)
     
-    # Si no es admin, solo mostrar lo aprobado
     if not all_pets:
         query = query.filter(models.Pet.is_approved == True)
     
@@ -94,7 +80,6 @@ def list_pets(status: str = None, all_pets: bool = False, db: Session = Depends(
         query = query.filter(models.Pet.status == status)
     
     results = query.all()
-    # Formateamos la respuesta para el frontend
     return [{**p.__dict__, "telefono": tel} for p, tel in results]
 
 @app.post("/pets/upload")
@@ -107,16 +92,14 @@ async def upload_pet(
     db: Session = Depends(get_db)
 ):
     try:
-        # Subir imagen a Cloudinary
         res = cloudinary.uploader.upload(file.file)
-        
         new_pet = models.Pet(
             name=name,
             status=status,
             barrio=barrio,
             image_url=res.get("secure_url"),
             owner_id=user_id,
-            is_approved=False # Espera aprobación del admin
+            is_approved=False 
         )
         db.add(new_pet)
         db.commit()
@@ -139,22 +122,19 @@ def approve_pet(pet_id: int, db: Session = Depends(get_db)):
 def startup_event():
     db = SessionLocal()
     try:
-        # Verificamos si existe el admin
         admin = db.query(models.User).filter(models.User.role == "admin").first()
         if not admin:
-            print("Generando administrador inicial...")
             new_admin = models.User(
                 email="admin@huellitas.com",
                 telefono="299000000",
-                hashed_password=auth.get_password_hash("admin123"), # Clave segura y corta
+                hashed_password=auth.get_password_hash("admin123"),
                 role="admin",
                 is_verified=True
             )
             db.add(new_admin)
             db.commit()
-            print("✅ Admin creado: admin@huellitas.com / admin123")
     except Exception as e:
-        print(f"❌ Error en el inicio: {e}")
+        print(f"Error en el inicio: {e}")
     finally:
         db.close()
-      
+        
