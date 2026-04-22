@@ -3,242 +3,153 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Huellitas NQN | Comunidad de Mascotas</title>
+    <title>Huellitas NQN</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
-        body { font-family: 'Quicksand', sans-serif; background-color: #f8fafc; color: #1e293b; overflow-x: hidden; }
-        .hidden { display: none; }
-        .container-custom { max-width: 1200px; margin: 0 auto; }
-        
-        /* Tarjetas estilo App */
-        .pet-card { background: white; border-radius: 32px; overflow: hidden; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); border: 1px solid #f1f5f9; }
-        .pet-card:hover { transform: translateY(-8px); box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.08); }
-        
+        body { font-family: 'Quicksand', sans-serif; background-color: #f8fafc; color: #1e293b; }
+        .hidden { display: none !important; }
+        #main-map, #map-upload { border-radius: 24px; z-index: 10; border: 4px solid white; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1); }
+        .pet-card { background: white; border-radius: 28px; overflow: hidden; transition: all 0.3s ease; border: 1px solid #f1f5f9; cursor: pointer; }
+        .pet-card:hover { transform: translateY(-5px); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05); }
         .img-wrapper { position: relative; width: 100%; aspect-ratio: 1/1; overflow: hidden; }
-        .img-wrapper img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s ease; }
-        .pet-card:hover .img-wrapper img { transform: scale(1.05); }
-
-        /* Mapa Principal */
-        #main-map { border-radius: 32px; border: 4px solid white; box-shadow: 0 10px 30px rgba(0,0,0,0.08); z-index: 10; }
-        
-        /* Marcadores */
-        .pet-marker { width: 34px; height: 34px; border-radius: 50% 50% 50% 0; border: 3px solid white; transform: rotate(-45deg); display: flex; align-items: center; justify-content: center; color: white; box-shadow: 0 4px 8px rgba(0,0,0,0.15); }
-        .pet-marker i { transform: rotate(45deg); font-size: 14px; }
-
-        /* Animación de carga */
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
-        .animate-pulse-custom { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        .img-wrapper img { width: 100%; height: 100%; object-fit: cover; }
+        .pet-marker { width: 30px; height: 30px; border-radius: 50% 50% 50% 0; border: 2px solid white; transform: rotate(-45deg); display: flex; align-items: center; justify-content: center; color: white; }
+        .pet-marker i { transform: rotate(45deg); font-size: 12px; }
     </style>
 </head>
 <body class="pb-24">
 
     <nav class="p-4 bg-white/80 backdrop-blur-md sticky top-0 z-[1000] border-b border-slate-100">
-        <div class="container-custom flex justify-between items-center">
+        <div class="max-w-6xl mx-auto flex justify-between items-center">
             <div class="flex items-center gap-2 cursor-pointer" onclick="showSection('home')">
-                <div class="bg-orange-500 p-2.5 rounded-xl text-white shadow-lg shadow-orange-200"><i class="fas fa-paw"></i></div>
-                <h1 class="font-bold text-slate-800 text-xl tracking-tight">Huellitas<span class="text-orange-500">NQN</span></h1>
+                <div class="bg-orange-500 p-2 rounded-lg text-white"><i class="fas fa-paw"></i></div>
+                <h1 class="font-bold text-slate-800 text-xl">Huellitas<span class="text-orange-500">NQN</span></h1>
             </div>
-            <button id="auth-btn" onclick="showSection('auth')" class="text-slate-400 hover:text-orange-500 transition-colors text-2xl">
-                <i class="fas fa-user-circle"></i>
-            </button>
+            <button onclick="showSection('auth')" class="text-slate-400 text-2xl"><i class="fas fa-user-circle"></i></button>
         </div>
     </nav>
 
-    <main class="container-custom px-4 pt-6">
+    <main class="max-w-6xl mx-auto px-4 pt-6">
         
-        <section id="sec-home" class="space-y-8">
-            <div id="main-map" class="w-full h-[300px] md:h-[450px]"></div>
-            
-            <div class="flex flex-col md:flex-row justify-between items-center gap-4">
-                <h2 class="text-2xl font-bold text-slate-800">Mascotas activas</h2>
-                <div class="flex gap-2 p-1 bg-slate-100 rounded-2xl">
-                    <button onclick="loadPets('todos')" class="px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider hover:bg-white transition-all">Todos</button>
-                    <button onclick="loadPets('perdido')" class="px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider text-red-500 hover:bg-white transition-all">Perdidos</button>
-                    <button onclick="loadPets('adopcion')" class="px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider text-green-600 hover:bg-white transition-all">Adopción</button>
+        <section id="sec-home" class="space-y-6">
+            <div id="main-map" class="w-full h-[350px]"></div>
+            <div class="flex justify-between items-center">
+                <h2 class="text-xl font-bold">Mascotas en la zona</h2>
+                <div class="flex gap-1 bg-slate-100 p-1 rounded-xl text-[10px] font-black uppercase">
+                    <button onclick="loadPets('todos')" class="px-3 py-1.5 rounded-lg hover:bg-white transition-all">Todos</button>
+                    <button onclick="loadPets('perdido')" class="px-3 py-1.5 rounded-lg text-red-500 hover:bg-white">Perdidos</button>
                 </div>
             </div>
-
-            <div id="pet-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 min-h-[200px]">
-                </div>
+            <div id="pet-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"></div>
         </section>
 
-        <section id="sec-upload" class="hidden max-w-xl mx-auto py-4">
-            <div class="bg-white p-8 rounded-[40px] shadow-sm border border-slate-100 space-y-6">
-                <div class="text-center">
-                    <h2 class="text-2xl font-bold text-slate-800">Subir nueva mascota</h2>
-                    <p class="text-slate-400 text-sm">Completa los datos para que la comunidad ayude</p>
-                </div>
+        <section id="sec-upload" class="hidden max-w-lg mx-auto py-4">
+            <div class="bg-white p-6 rounded-[32px] shadow-sm border border-slate-100 space-y-4">
+                <h2 class="text-xl font-bold text-center">Publicar Mascota</h2>
                 <form id="form-upload" onsubmit="handleUpload(event)" class="space-y-4">
-                    <div class="grid grid-cols-2 gap-4">
-                        <input type="text" name="name" placeholder="Nombre" class="w-full p-4 bg-slate-50 rounded-2xl outline-none border border-transparent focus:border-orange-300 transition-all" required>
-                        <select name="status" class="w-full p-4 bg-slate-50 rounded-2xl outline-none font-bold text-slate-600">
-                            <option value="perdido">🚨 Se perdió</option>
-                            <option value="adopcion">🎁 En Adopción</option>
+                    <div class="grid grid-cols-2 gap-3">
+                        <input type="text" name="name" placeholder="Nombre" class="w-full p-3 bg-slate-50 rounded-xl outline-none border border-transparent focus:border-orange-300" required>
+                        <select name="status" class="p-3 bg-slate-50 rounded-xl outline-none font-bold">
+                            <option value="perdido">Perdido</option>
+                            <option value="adopcion">Adopción</option>
                         </select>
                     </div>
-                    <div class="grid grid-cols-2 gap-4">
-                        <input type="text" name="raza" placeholder="Raza / Tipo" class="w-full p-4 bg-slate-50 rounded-2xl outline-none">
-                        <input type="text" name="edad" placeholder="Edad aprox." class="w-full p-4 bg-slate-50 rounded-2xl outline-none">
-                    </div>
-                    <input type="text" name="barrio" placeholder="Barrio (Ej: Huilliches)" class="w-full p-4 bg-slate-50 rounded-2xl outline-none" required>
-                    
-                    <div class="space-y-2">
-                        <p class="text-[10px] font-bold text-orange-500 uppercase ml-2 tracking-widest italic"><i class="fas fa-map-pin"></i> Marcá la ubicación exacta:</p>
-                        <div id="map-upload" class="w-full h-56 rounded-3xl border border-slate-100"></div>
-                    </div>
-                    
+                    <input type="text" name="barrio" placeholder="Barrio" class="w-full p-3 bg-slate-50 rounded-xl outline-none" required>
+                    <p class="text-[10px] font-bold text-orange-500 uppercase tracking-widest">Toca el mapa para ubicar:</p>
+                    <div id="map-upload" class="w-full h-48"></div>
                     <input type="hidden" name="latitud" id="lat-input">
                     <input type="hidden" name="longitud" id="lng-input">
-                    
-                    <label class="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-slate-200 rounded-3xl cursor-pointer hover:bg-orange-50 hover:border-orange-200 transition-all">
-                        <i class="fas fa-camera text-2xl text-slate-300 mb-2"></i>
-                        <span class="text-xs font-bold text-slate-400 uppercase tracking-widest">Seleccionar Foto</span>
-                        <input type="file" name="file" class="hidden" required />
-                    </label>
-
-                    <button id="btn-submit" class="w-full bg-orange-500 text-white py-5 rounded-2xl font-bold shadow-lg shadow-orange-100 transition-transform active:scale-95">Publicar Mascota</button>
+                    <input type="file" name="file" class="text-xs block w-full file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-orange-50 file:text-orange-600" required>
+                    <button id="btn-submit" class="w-full bg-orange-500 text-white py-4 rounded-xl font-bold shadow-lg shadow-orange-100">Publicar Ahora</button>
                 </form>
             </div>
         </section>
 
-        <section id="sec-admin" class="hidden space-y-8">
-            <div class="bg-indigo-600 p-8 rounded-[40px] text-white shadow-xl flex justify-between items-center">
-                <div>
-                    <h2 class="text-2xl font-bold">Panel de Control</h2>
-                    <p class="opacity-80 text-sm">Gestiona usuarios y publicaciones activas</p>
-                </div>
-                <i class="fas fa-shield-alt text-4xl opacity-30"></i>
+        <section id="sec-admin" class="hidden space-y-6">
+            <div class="bg-indigo-600 p-6 rounded-[32px] text-white flex justify-between items-center">
+                <h2 class="text-xl font-bold">Panel Admin</h2>
+                <i class="fas fa-shield-alt text-2xl opacity-50"></i>
             </div>
-            
-            <div class="space-y-4">
-                <h3 class="text-lg font-bold text-slate-700 flex items-center gap-2"><i class="fas fa-user-clock text-indigo-500"></i> Usuarios Pendientes</h3>
-                <div id="admin-user-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
-            </div>
-
-            <div class="space-y-4">
-                <h3 class="text-lg font-bold text-slate-700 flex items-center gap-2"><i class="fas fa-paw text-orange-500"></i> Gestionar Publicaciones</h3>
-                <div id="admin-pet-management" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
-            </div>
+            <div id="admin-user-list" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+            <div id="admin-pet-management" class="grid grid-cols-1 md:grid-cols-3 gap-3"></div>
         </section>
 
         <section id="sec-auth" class="hidden max-w-sm mx-auto py-10">
-            <div class="bg-white p-8 rounded-[40px] shadow-sm border border-slate-100">
+            <div class="bg-white p-8 rounded-[32px] shadow-sm border border-slate-100 text-center">
                 <div id="auth-forms">
-                    <div class="flex gap-2 mb-8 bg-slate-50 p-1.5 rounded-2xl">
-                        <button onclick="toggleAuth('login')" id="t-login" class="flex-1 py-3 rounded-xl bg-white shadow-sm font-bold text-orange-600 transition-all">Entrar</button>
-                        <button onclick="toggleAuth('reg')" id="t-reg" class="flex-1 py-3 rounded-xl text-slate-400 font-bold transition-all">Registro</button>
-                    </div>
-                    
-                    <form id="f-login" onsubmit="handleLogin(event)" class="space-y-4">
-                        <input type="email" name="email" placeholder="Tu Email" class="w-full p-4 bg-slate-50 rounded-2xl outline-none border border-transparent focus:border-orange-200" required>
-                        <input type="password" name="password" placeholder="Contraseña" class="w-full p-4 bg-slate-50 rounded-2xl outline-none border border-transparent focus:border-orange-200" required>
-                        <button class="w-full bg-orange-500 text-white py-5 rounded-2xl font-bold shadow-lg shadow-orange-100">Iniciar Sesión</button>
+                    <h2 class="text-xl font-bold mb-6">Ingresar</h2>
+                    <form id="f-login" onsubmit="handleLogin(event)" class="space-y-4 text-left">
+                        <input type="email" name="email" placeholder="Email" class="w-full p-4 bg-slate-50 rounded-2xl outline-none" required>
+                        <input type="password" name="password" placeholder="Contraseña" class="w-full p-4 bg-slate-50 rounded-2xl outline-none" required>
+                        <button class="w-full bg-orange-500 text-white py-4 rounded-2xl font-bold">Entrar</button>
+                        <button type="button" onclick="toggleAuth('reg')" class="w-full text-slate-400 text-sm mt-2">No tengo cuenta, registrarme</button>
                     </form>
-                    
-                    <form id="f-reg" onsubmit="handleReg(event)" class="space-y-4 hidden">
-                        <input type="email" name="email" placeholder="Email" class="w-full p-4 bg-slate-50 rounded-2xl outline-none border border-transparent focus:border-green-200" required>
-                        <input type="password" name="password" placeholder="Crear Contraseña" class="w-full p-4 bg-slate-50 rounded-2xl outline-none border border-transparent focus:border-green-200" required>
-                        <input type="tel" name="telefono" placeholder="WhatsApp (Ej: 2991234567)" class="w-full p-4 bg-slate-50 rounded-2xl outline-none border border-transparent focus:border-green-200" required>
-                        <p class="text-[10px] text-slate-400 text-center px-4 italic">Un administrador debe aprobar tu cuenta antes de que puedas publicar.</p>
-                        <button class="w-full bg-green-500 text-white py-5 rounded-2xl font-bold shadow-lg shadow-green-100">Solicitar Registro</button>
+                    <form id="f-reg" onsubmit="handleReg(event)" class="space-y-4 text-left hidden">
+                        <input type="email" name="email" placeholder="Email" class="w-full p-4 bg-slate-50 rounded-2xl outline-none" required>
+                        <input type="password" name="password" placeholder="Contraseña" class="w-full p-4 bg-slate-50 rounded-2xl outline-none" required>
+                        <input type="tel" name="telefono" placeholder="WhatsApp" class="w-full p-4 bg-slate-50 rounded-2xl outline-none" required>
+                        <button class="w-full bg-green-500 text-white py-4 rounded-2xl font-bold">Registrarme</button>
+                        <button type="button" onclick="toggleAuth('login')" class="w-full text-slate-400 text-sm mt-2">Ya tengo cuenta</button>
                     </form>
                 </div>
-                
-                <div id="user-info" class="hidden text-center space-y-6 py-4">
-                    <div class="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto text-slate-300 border border-slate-100 shadow-inner">
-                        <i class="fas fa-user text-3xl"></i>
-                    </div>
-                    <div>
-                        <p id="u-mail" class="font-bold text-slate-700 text-lg truncate px-2"></p>
-                        <p class="text-xs text-slate-400 font-bold uppercase tracking-widest">Usuario Activo</p>
-                    </div>
-                    <button onclick="logout()" class="text-red-400 text-sm font-bold hover:underline decoration-2 underline-offset-4">Cerrar Sesión</button>
+                <div id="user-info" class="hidden space-y-4">
+                    <p id="u-mail" class="font-bold text-slate-700"></p>
+                    <button onclick="logout()" class="text-red-400 font-bold">Cerrar Sesión</button>
                 </div>
             </div>
         </section>
     </main>
 
     <div id="public-modal" class="hidden fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[2000] flex items-center justify-center p-4">
-        <div class="bg-white w-full max-w-2xl rounded-[40px] overflow-hidden shadow-2xl transform transition-all duration-300">
-            <div class="relative">
-                <img id="p-modal-img" src="" class="w-full h-80 md:h-[450px] object-cover">
-                <button onclick="closePublicModal()" class="absolute top-6 right-6 bg-black/20 hover:bg-black/40 text-white w-10 h-10 rounded-full backdrop-blur-md transition-all flex items-center justify-center">
-                    <i class="fas fa-times"></i>
-                </button>
-                <div id="p-modal-status" class="absolute bottom-6 left-6 text-white text-[10px] font-black px-4 py-2 rounded-full uppercase tracking-widest shadow-xl"></div>
-            </div>
-            <div class="p-8 space-y-4">
+        <div class="bg-white w-full max-w-lg rounded-[32px] overflow-hidden shadow-2xl">
+            <img id="p-modal-img" src="" class="w-full h-64 object-cover">
+            <div class="p-6 space-y-4">
                 <div class="flex justify-between items-start">
-                    <div>
-                        <h3 id="p-modal-name" class="text-3xl font-bold text-slate-800 tracking-tight"></h3>
-                        <p id="p-modal-location" class="text-slate-400 font-bold"><i class="fas fa-map-marker-alt text-orange-500 mr-1"></i></p>
-                    </div>
-                    <button onclick="copyShareLink()" class="text-slate-300 hover:text-indigo-500 transition-colors text-xl p-2" title="Copiar enlace">
-                        <i class="fas fa-share-alt"></i>
-                    </button>
+                    <h3 id="p-modal-name" class="text-2xl font-bold text-slate-800"></h3>
+                    <button onclick="closePublicModal()" class="text-slate-300 text-xl"><i class="fas fa-times"></i></button>
                 </div>
-                
-                <div class="grid grid-cols-2 gap-4 py-4 border-y border-slate-50">
-                    <div class="bg-slate-50 p-3 rounded-2xl">
-                        <p class="text-[9px] uppercase font-black text-slate-400 tracking-widest">Raza / Tipo</p>
-                        <p id="p-modal-raza" class="font-bold text-slate-700 text-sm truncate">-</p>
-                    </div>
-                    <div class="bg-slate-50 p-3 rounded-2xl">
-                        <p class="text-[9px] uppercase font-black text-slate-400 tracking-widest">Edad aprox.</p>
-                        <p id="p-modal-edad" class="font-bold text-slate-700 text-sm truncate">-</p>
-                    </div>
-                </div>
-
-                <div class="flex flex-col md:flex-row gap-3 pt-2">
-                    <button id="p-modal-map-btn" class="flex-1 bg-slate-100 text-slate-600 py-4 rounded-2xl font-bold hover:bg-slate-200 transition-all uppercase text-[10px] tracking-widest">Ver en Mapa</button>
-                    <a id="p-modal-wa-btn" href="" target="_blank" class="flex-[2] bg-[#25D366] text-white text-center py-4 rounded-2xl font-bold shadow-lg shadow-green-100 flex items-center justify-center gap-2 hover:brightness-110 transition-all">
-                        <i class="fab fa-whatsapp text-xl"></i> CONTACTAR DUEÑO
-                    </a>
+                <p id="p-modal-location" class="text-slate-400 font-bold text-sm"></p>
+                <div class="flex gap-2">
+                    <button id="p-modal-map-btn" class="flex-1 bg-slate-100 py-4 rounded-xl font-bold text-xs">VER EN MAPA</button>
+                    <a id="p-modal-wa-btn" href="" target="_blank" class="flex-1 bg-[#25D366] text-white text-center py-4 rounded-xl font-bold text-xs">WHATSAPP</a>
                 </div>
             </div>
         </div>
     </div>
 
     <div id="admin-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[2000] flex items-center justify-center p-4">
-        <div class="bg-white w-full max-w-md rounded-[40px] overflow-hidden shadow-2xl">
+        <div class="bg-white w-full max-w-sm rounded-[32px] overflow-hidden shadow-2xl p-6 space-y-4">
             <div id="modal-content"></div>
-            <div class="p-6 flex gap-3" id="modal-actions"></div>
-            <button onclick="closeAdminModal()" class="w-full p-4 text-slate-400 font-bold text-[10px] uppercase tracking-widest hover:text-slate-600 transition-colors">Cerrar Panel</button>
+            <div id="modal-actions" class="flex gap-2"></div>
+            <button onclick="closeAdminModal()" class="w-full text-slate-400 font-bold text-xs uppercase pt-2">Cerrar</button>
         </div>
     </div>
 
-    <nav class="md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] bg-white/90 backdrop-blur-lg rounded-[35px] p-4 flex justify-around items-center z-[1000] shadow-xl border border-white/50">
-        <button onclick="showSection('home')" class="text-slate-400 p-2 hover:text-orange-500 transition-colors"><i class="fas fa-home text-xl"></i></button>
-        <button onclick="checkAuth()" class="bg-orange-500 text-white w-14 h-14 rounded-2xl -mt-14 shadow-lg shadow-orange-200 flex items-center justify-center transition-all hover:scale-110 active:scale-90">
-            <i class="fas fa-plus text-xl"></i>
-        </button>
-        <button id="nav-admin" onclick="showAdmin()" class="hidden text-indigo-500 p-2 hover:text-indigo-700 transition-colors"><i class="fas fa-shield-alt text-xl"></i></button>
+    <nav class="fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] md:w-auto md:min-w-[300px] bg-white/90 backdrop-blur-lg rounded-full p-3 flex justify-around items-center z-[1000] shadow-2xl border border-white/50">
+        <button onclick="showSection('home')" class="text-slate-400 px-4"><i class="fas fa-home text-lg"></i></button>
+        <button onclick="checkAuth()" class="bg-orange-500 text-white w-12 h-12 rounded-full shadow-lg flex items-center justify-center transition-transform active:scale-90"><i class="fas fa-plus"></i></button>
+        <button id="nav-admin" onclick="showAdmin()" class="hidden text-indigo-500 px-4"><i class="fas fa-shield-alt text-lg"></i></button>
     </nav>
 
     <script>
         let user = JSON.parse(localStorage.getItem('user'));
         let mainMap, uploadMap, uploadMarker;
 
-        // --- NAVEGACIÓN DE SECCIONES ---
         function showSection(id) {
             document.querySelectorAll('section').forEach(s => s.classList.add('hidden'));
             document.getElementById('sec-' + id).classList.remove('hidden');
-            window.scrollTo({top: 0, behavior: 'smooth'});
-            if (id === 'home') setTimeout(initMainMap, 150);
-            if (id === 'upload') setTimeout(initUploadMap, 150);
+            if (id === 'home') setTimeout(initMainMap, 100);
+            if (id === 'upload') setTimeout(initUploadMap, 100);
         }
 
-        // --- INICIALIZACIÓN DE MAPAS ---
         function initMainMap() {
             if (!mainMap) {
                 mainMap = L.map('main-map', {zoomControl: false}).setView([-38.9517, -68.0611], 13);
-                L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-                    attribution: '© CartoDB'
-                }).addTo(mainMap);
+                L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png').addTo(mainMap);
             }
             loadPets();
         }
@@ -253,45 +164,136 @@
                     document.getElementById('lat-input').value = e.latlng.lat;
                     document.getElementById('lng-input').value = e.latlng.lng;
                 });
+            } else {
+                uploadMap.invalidateSize(); // Fix para que el mapa se vea bien al mostrar sección
             }
         }
 
-        // --- CARGA DE MASCOTAS ---
         async function loadPets(filter = 'todos') {
+            const res = await fetch('/pets');
+            const pets = await res.json();
             const list = document.getElementById('pet-list');
-            list.innerHTML = '<div class="col-span-full py-10 text-center animate-pulse-custom text-slate-400 font-bold tracking-widest">CARGANDO MASCOTAS...</div>';
+            list.innerHTML = '';
             
-            try {
-                const res = await fetch('/pets');
-                const pets = await res.json();
-                list.innerHTML = '';
+            mainMap.eachLayer(l => { if(l instanceof L.Marker) mainMap.removeLayer(l); });
+
+            pets.forEach(p => {
+                if(filter !== 'todos' && p.status !== filter) return;
+
+                const color = p.status === 'perdido' ? '#ef4444' : '#22c55e';
+                const icon = L.divIcon({
+                    className: 'custom',
+                    html: `<div class="pet-marker" style="background-color:${color}"><i class="fas fa-paw"></i></div>`,
+                    iconSize: [30,30], iconAnchor: [15,30]
+                });
                 
-                mainMap.eachLayer(l => { if(l instanceof L.Marker) mainMap.removeLayer(l); });
+                if(p.latitud) {
+                    L.marker([p.latitud, p.longitud], {icon}).addTo(mainMap).on('click', () => openPublicModal(p));
+                }
 
-                pets.forEach(p => {
-                    if(filter !== 'todos' && p.status !== filter) return;
-
-                    if(p.latitud) {
-                        const color = p.status === 'perdido' ? '#ef4444' : '#22c55e';
-                        const icon = L.divIcon({
-                            className: 'custom',
-                            html: `<div class="pet-marker" style="background-color:${color}"><i class="fas fa-paw"></i></div>`,
-                            iconSize: [34,34], iconAnchor: [17,34]
-                        });
-                        L.marker([p.latitud, p.longitud], {icon}).addTo(mainMap)
-                         .on('click', () => openPublicModal(p));
-                    }
-
-                    list.innerHTML += `
-                        <div class="pet-card shadow-sm cursor-pointer group" onclick='openPublicModal(${JSON.stringify(p).replace(/'/g, "&apos;")})'>
-                            <div class="img-wrapper">
-                                <img src="${p.image_url}" loading="lazy">
-                                <div class="absolute top-3 left-3 ${p.status==='perdido'?'bg-red-500 shadow-red-200':'bg-green-500 shadow-green-200'} text-white text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-widest shadow-lg">
-                                    ${p.status}
-                                </div>
+                list.innerHTML += `
+                    <div class="pet-card shadow-sm" onclick='openPublicModal(${JSON.stringify(p).replace(/'/g, "&apos;")})'>
+                        <div class="img-wrapper">
+                            <img src="${p.image_url}">
+                            <div class="absolute top-2 left-2 ${p.status==='perdido'?'bg-red-500':'bg-green-500'} text-white text-[8px] font-black px-2 py-1 rounded-full uppercase shadow-lg">
+                                ${p.status}
                             </div>
-                            <div class="p-5">
-                                <h3 class="font-bold text-lg text-slate-800 tracking-tight">${p.name}</h3>
-                                <p class="text-xs text-slate-400 font-bold mb-4 flex items-center gap-1">
-                                    <i class="fas fa-map-marker-alt text-orange-400"></i> ${p.barrio}
-   
+                        </div>
+                        <div class="p-4">
+                            <h3 class="font-bold text-slate-800 truncate">${p.name}</h3>
+                            <p class="text-[10px] text-slate-400 font-bold"><i class="fas fa-map-marker-alt text-orange-400 mr-1"></i> ${p.barrio}</p>
+                        </div>
+                    </div>`;
+            });
+        }
+
+        function openPublicModal(p) {
+            document.getElementById('p-modal-img').src = p.image_url;
+            document.getElementById('p-modal-name').innerText = p.name;
+            document.getElementById('p-modal-location').innerText = p.barrio + ", Neuquén";
+            document.getElementById('p-modal-wa-btn').href = `https://wa.me/${p.telefono}`;
+            document.getElementById('p-modal-map-btn').onclick = () => {
+                closePublicModal();
+                mainMap.flyTo([p.latitud, p.longitud], 16);
+                window.scrollTo({top: 0, behavior: 'smooth'});
+            };
+            document.getElementById('public-modal').classList.remove('hidden');
+        }
+
+        function closePublicModal() { document.getElementById('public-modal').classList.add('hidden'); }
+
+        async function showAdmin() {
+            showSection('admin');
+            const resU = await fetch('/admin/users/pending');
+            const users = await resU.json();
+            document.getElementById('admin-user-list').innerHTML = users.map(u => `
+                <div class="bg-white p-3 rounded-2xl flex justify-between items-center shadow-sm border border-slate-100 text-xs">
+                    <p class="font-bold truncate">${u.email}</p>
+                    <button onclick="approveUser(${u.id})" class="bg-indigo-600 text-white px-3 py-1 rounded-lg">Aprobar</button>
+                </div>`).join('');
+
+            const resP = await fetch('/pets?all_pets=true');
+            const pets = await resP.json();
+            document.getElementById('admin-pet-management').innerHTML = pets.map(p => `
+                <div class="bg-white p-2 rounded-2xl shadow-sm border border-slate-50 flex gap-2 items-center text-xs">
+                    <img src="${p.image_url}" class="w-8 h-8 rounded-lg object-cover">
+                    <div class="flex-1 min-w-0"><p class="font-bold truncate">${p.name}</p></div>
+                    <button onclick='openAdminPreview(${JSON.stringify(p).replace(/'/g, "&apos;")})' class="text-slate-300"><i class="fas fa-edit"></i></button>
+                </div>`).join('');
+        }
+
+        function openAdminPreview(p) {
+            document.getElementById('modal-content').innerHTML = `
+                <img src="${p.image_url}" class="w-full h-40 object-cover rounded-xl mb-4">
+                <h3 class="text-lg font-bold">${p.name}</h3>
+                <p class="text-slate-400 text-sm">${p.barrio}</p>`;
+            
+            let btnAction = !p.is_approved ? 
+                `<button onclick="approvePet(${p.id}); closeAdminModal();" class="flex-1 bg-green-500 text-white rounded-xl font-bold py-3">APROBAR</button>` :
+                `<button onclick="deletePet(${p.id}); closeAdminModal();" class="flex-1 bg-slate-800 text-white rounded-xl font-bold py-3">FINALIZAR</button>`;
+            
+            document.getElementById('modal-actions').innerHTML = btnAction + `<button onclick="deletePet(${p.id}); closeAdminModal();" class="bg-red-50 text-red-400 rounded-xl px-4"><i class="fas fa-trash"></i></button>`;
+            document.getElementById('admin-modal').classList.remove('hidden');
+        }
+
+        function closeAdminModal() { document.getElementById('admin-modal').classList.add('hidden'); }
+        async function approvePet(id) { await fetch('/pets/approve/'+id, {method:'POST'}); showAdmin(); }
+        async function deletePet(id) { if(confirm("¿Eliminar?")) { await fetch('/admin/pets/delete/'+id, {method:'DELETE'}); showAdmin(); } }
+        async function approveUser(id) { await fetch('/admin/users/approve/'+id, {method:'POST'}); showAdmin(); }
+        async function handleLogin(e) {
+            e.preventDefault();
+            const res = await fetch('/login', {method: 'POST', body: new FormData(e.target)});
+            if (res.ok) { user = await res.json(); localStorage.setItem('user', JSON.stringify(user)); location.reload(); }
+            else alert("Error login");
+        }
+        async function handleReg(e) {
+            e.preventDefault();
+            const res = await fetch('/register', {method: 'POST', body: new FormData(e.target)});
+            if (res.ok) { alert("Registrado! Esperá aprobación."); toggleAuth('login'); }
+        }
+        async function handleUpload(e) {
+            e.preventDefault();
+            if(!document.getElementById('lat-input').value) return alert("Marcá el mapa");
+            const fd = new FormData(e.target); fd.append('user_id', user.id);
+            const res = await fetch('/pets/upload', {method: 'POST', body: fd});
+            if (res.ok) { alert("¡Enviado!"); location.reload(); }
+        }
+        function checkAuth() { user ? showSection('upload') : showSection('auth'); }
+        function toggleAuth(t) {
+            document.getElementById('f-login').classList.toggle('hidden', t==='reg');
+            document.getElementById('f-reg').classList.toggle('hidden', t==='login');
+        }
+        function logout() { localStorage.clear(); location.reload(); }
+
+        window.onload = () => {
+            if(user) {
+                document.getElementById('auth-forms').classList.add('hidden');
+                document.getElementById('user-info').classList.remove('hidden');
+                document.getElementById('u-mail').innerText = user.email;
+                if(user.role === 'admin') document.getElementById('nav-admin').classList.remove('hidden');
+            }
+            showSection('home');
+        };
+    </script>
+</body>
+</html>
