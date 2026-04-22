@@ -1,88 +1,160 @@
 import os
+import cloudinary
+import cloudinary.uploader
 from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Form
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
-import cloudinary, cloudinary.uploader
+
+# --- BLOQUE DE EMERGENCIA PARA RENDER FREE ---
+# Borramos la base de datos corrupta al arrancar para limpiar el error de bcrypt
+db_path = "database.db"
+if os.path.exists(db_path):
+    try:
+        os.remove(db_path)
+        print("✅ Base de datos previa eliminada para limpiar errores de hash.")
+    except Exception as e:
+        print(f"⚠️ No se pudo eliminar la DB: {e}")
+
+# Ahora importamos el resto de nuestros módulos
 from database import SessionLocal, engine
 import models, auth
 
+# Crear tablas
 models.Base.metadata.create_all(bind=engine)
 
-app = FastAPI()
+app = FastAPI(title="Huellitas NQN")
 
-# Configuración de Cloudinary (Usa tus variables de entorno en Render)
+# Configuración de Cloudinary
 cloudinary.config(
-  cloud_name = os.environ.get("CLOUDINARY_CLOUD_NAME"),
-  api_key = os.environ.get("CLOUDINARY_API_KEY"),
-  api_secret = os.environ.get("CLOUDINARY_API_SECRET")
+    cloud_name=os.environ.get("CLOUDINARY_CLOUD_NAME"),
+    api_key=os.environ.get("CLOUDINARY_API_KEY"),
+    api_secret=os.environ.get("CLOUDINARY_API_SECRET")
 )
 
+# Dependencia de Base de Datos
 def get_db():
     db = SessionLocal()
-    try: yield db
-    finally: db.close()
+    try:
+        yield db
+    finally:
+        db.close()
 
+# Servir archivos estáticos (HTML, JS, CSS)
+if not os.path.exists("static"):
+    os.makedirs("static")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 @app.get("/")
-async def read_index(): return FileResponse('static/index.html')
+async def read_index():
+    return FileResponse('static/index.html')
 
-# --- RUTA SECRETA PARA LIMPIAR DB EN RENDER FREE ---
-@app.get("/reset-db-secreto")
-def reset_db():
-    if os.path.exists("database.db"):
-        os.remove("database.db")
-        return {"status": "Base de datos eliminada. Reinicia el servicio en el panel de Render."}
-    return {"status": "No existe el archivo de base de datos."}
+# --- RUTAS DE AUTENTICACIÓN ---
 
-# --- AUTH ---
 @app.post("/register")
 def register(email: str = Form(...), password: str = Form(...), telefono: str = Form(...), db: Session = Depends(get_db)):
     if db.query(models.User).filter(models.User.email == email).first():
-        raise HTTPException(status_code=400, detail="Email ya registrado")
-    new_user = models.User(email=email, telefono=telefono, hashed_password=auth.get_password_hash(password))
+        raise HTTPException(status_code=400, detail="El email ya está registrado")
+    
+    new_user = models.User(
+        email=email,
+        telefono=telefono,
+        hashed_password=auth.get_password_hash(password),
+        is_verified=True
+    )
     db.add(new_user)
     db.commit()
-    return {"message": "Cuenta creada"}
+    return {"message": "Usuario registrado con éxito"}
 
 @app.post("/login")
 def login(email: str = Form(...), password: str = Form(...), db: Session = Depends(get_db)):
     user = db.query(models.User).filter(models.User.email == email).first()
     if not user or not auth.verify_password(password, user.hashed_password):
-        raise HTTPException(status_code=401, detail="Error de acceso")
-    return {"id": user.id, "role": user.role, "telefono": user.telefono}
+        raise HTTPException(status_code=401, detail="Credenciales incorrectas")
+    
+    return {
+        "id": user.id,
+        "email": user.email,
+        "role": user.role,
+        "telefono": user.telefono
+    }
 
-# --- MASCOTAS ---
+# --- RUTAS DE MASCOTAS ---
+
 @app.get("/pets")
-def list_pets(all_pets: bool = False, db: Session = Depends(get_db)):
+def list_pets(status: str = None, all_pets: bool = False, db: Session = Depends(get_db)):
+    # Traemos la mascota y el teléfono del dueño haciendo un Join
     query = db.query(models.Pet, models.User.telefono).join(models.User)
-    if not all_pets: query = query.filter(models.Pet.is_approved == True)
+    
+    # Si no es admin, solo mostrar lo aprobado
+    if not all_pets:
+        query = query.filter(models.Pet.is_approved == True)
+    
+    if status:
+        query = query.filter(models.Pet.status == status)
+    
     results = query.all()
+    # Formateamos la respuesta para el frontend
     return [{**p.__dict__, "telefono": tel} for p, tel in results]
 
 @app.post("/pets/upload")
-async def upload(name: str = Form(...), status: str = Form(...), barrio: str = Form(...), user_id: int = Form(...), file: UploadFile = File(...), db: Session = Depends(get_db)):
-    res = cloudinary.uploader.upload(file.file)
-    new_pet = models.Pet(name=name, status=status, barrio=barrio, image_url=res.get("secure_url"), owner_id=user_id)
-    db.add(new_pet)
-    db.commit()
-    return {"message": "Enviado a revisión"}
+async def upload_pet(
+    name: str = Form(...),
+    status: str = Form(...),
+    barrio: str = Form(...),
+    user_id: int = Form(...),
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db)
+):
+    try:
+        # Subir imagen a Cloudinary
+        res = cloudinary.uploader.upload(file.file)
+        
+        new_pet = models.Pet(
+            name=name,
+            status=status,
+            barrio=barrio,
+            image_url=res.get("secure_url"),
+            owner_id=user_id,
+            is_approved=False # Espera aprobación del admin
+        )
+        db.add(new_pet)
+        db.commit()
+        return {"message": "Mascota enviada correctamente"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/pets/approve/{pid}")
-def approve(pid: int, db: Session = Depends(get_db)):
-    pet = db.query(models.Pet).filter(models.Pet.id == pid).first()
+@app.post("/pets/approve/{pet_id}")
+def approve_pet(pet_id: int, db: Session = Depends(get_db)):
+    pet = db.query(models.Pet).filter(models.Pet.id == pet_id).first()
+    if not pet:
+        raise HTTPException(status_code=404, detail="No encontrado")
     pet.is_approved = True
     db.commit()
-    return {"status": "aprobado"}
+    return {"message": "Aprobado"}
+
+# --- EVENTO DE INICIO: CREAR ADMIN ---
 
 @app.on_event("startup")
-def startup():
+def startup_event():
     db = SessionLocal()
     try:
-        if not db.query(models.User).filter(models.User.role == "admin").first():
-            admin = models.User(email="admin@huellitas.com", telefono="299000000", hashed_password=auth.get_password_hash("admin123"), role="admin")
-            db.add(admin)
+        # Verificamos si existe el admin
+        admin = db.query(models.User).filter(models.User.role == "admin").first()
+        if not admin:
+            print("Generando administrador inicial...")
+            new_admin = models.User(
+                email="admin@huellitas.com",
+                telefono="299000000",
+                hashed_password=auth.get_password_hash("admin123"), # Clave segura y corta
+                role="admin",
+                is_verified=True
+            )
+            db.add(new_admin)
             db.commit()
-    finally: db.close()
+            print("✅ Admin creado: admin@huellitas.com / admin123")
+    except Exception as e:
+        print(f"❌ Error en el inicio: {e}")
+    finally:
+        db.close()
       
