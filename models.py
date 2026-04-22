@@ -13,7 +13,7 @@ class Pet(Base):
     __tablename__ = "pets"
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String)
-    species = Column(String)
+    species = Column(String, default="Mascota")
     image_url = Column(String)
     status = Column(String) # 'adopcion' o 'perdido'
     vacunado = Column(Boolean, default=False)
