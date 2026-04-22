@@ -1,4 +1,5 @@
 import os
+import re
 import cloudinary
 import cloudinary.uploader
 from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Form
@@ -23,31 +24,39 @@ def get_db():
     try: yield db
     finally: db.close()
 
+def validar_datos(email, telefono):
+    email_regex = r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$'
+    if not re.match(email_regex, email):
+        raise HTTPException(status_code=400, detail="El formato del email no es válido.")
+    if not str(telefono).isdigit() or len(str(telefono)) < 8:
+        raise HTTPException(status_code=400, detail="El teléfono debe ser numérico y tener al menos 8 dígitos.")
+
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 @app.get("/")
 async def read_index(): return FileResponse('static/index.html')
 
-# --- RUTAS DE AUTH ---
+# --- AUTH ---
 @app.post("/register")
 def register(email: str = Form(...), password: str = Form(...), telefono: str = Form(...), db: Session = Depends(get_db)):
+    validar_datos(email, telefono)
     if db.query(models.User).filter(models.User.email == email).first():
-        raise HTTPException(status_code=400, detail="Email ya registrado")
-    new_user = models.User(email=email, telefono=telefono, hashed_password=auth.get_password_hash(password), is_verified=False)
+        raise HTTPException(status_code=400, detail="Este email ya está registrado.")
+    new_user = models.User(email=email, telefono=telefono, hashed_password=auth.get_password_hash(password))
     db.add(new_user)
     db.commit()
-    return {"message": "Cuenta creada. Espera aprobación."}
+    return {"message": "Registro exitoso"}
 
 @app.post("/login")
 def login(email: str = Form(...), password: str = Form(...), db: Session = Depends(get_db)):
     user = db.query(models.User).filter(models.User.email == email).first()
     if not user or not auth.verify_password(password, user.hashed_password):
-        raise HTTPException(status_code=401, detail="Error de acceso")
+        raise HTTPException(status_code=401, detail="Credenciales incorrectas")
     if not user.is_verified and user.role != "admin":
-        raise HTTPException(status_code=403, detail="Cuenta pendiente de aprobación.")
+        raise HTTPException(status_code=403, detail="Tu cuenta está pendiente de aprobación por el administrador.")
     return {"id": user.id, "role": user.role, "telefono": user.telefono, "email": user.email}
 
-# --- RUTAS DE MASCOTAS ---
+# --- MASCOTAS ---
 @app.get("/pets")
 def list_pets(all_pets: bool = False, db: Session = Depends(get_db)):
     query = db.query(models.Pet, models.User.telefono).join(models.User)
@@ -68,16 +77,15 @@ async def upload(name: str = Form(...), status: str = Form(...), barrio: str = F
     db.commit()
     return {"message": "Enviado"}
 
-# --- PANEL ADMIN ---
+# --- ADMIN ---
 @app.get("/admin/users/pending")
 def pending_users(db: Session = Depends(get_db)):
-    return db.query(models.User).filter(models.User.is_verified == False).all()
+    return db.query(models.User).filter(models.User.is_verified == False, models.User.role != "admin").all()
 
 @app.post("/admin/users/approve/{u_id}")
 def approve_user(u_id: int, db: Session = Depends(get_db)):
     user = db.query(models.User).filter(models.User.id == u_id).first()
-    if user: user.is_verified = True
-    db.commit()
+    if user: user.is_verified = True; db.commit()
     return {"status": "ok"}
 
 @app.delete("/admin/users/delete/{u_id}")
@@ -89,9 +97,20 @@ def delete_user(u_id: int, db: Session = Depends(get_db)):
 @app.post("/pets/approve/{pid}")
 def approve_pet(pid: int, db: Session = Depends(get_db)):
     pet = db.query(models.Pet).filter(models.Pet.id == pid).first()
-    if pet: pet.is_approved = True
-    db.commit()
+    if pet: pet.is_approved = True; db.commit()
     return {"status": "ok"}
+
+@app.post("/admin/pets/unapprove/{pid}")
+def unapprove_pet(pid: int, db: Session = Depends(get_db)):
+    pet = db.query(models.Pet).filter(models.Pet.id == pid).first()
+    if pet: pet.is_approved = False; db.commit()
+    return {"status": "oculto"}
+
+@app.delete("/admin/pets/delete/{pid}")
+def delete_pet(pid: int, db: Session = Depends(get_db)):
+    pet = db.query(models.Pet).filter(models.Pet.id == pid).first()
+    if pet: db.delete(pet); db.commit()
+    return {"status": "borrado"}
 
 @app.on_event("startup")
 def startup():
@@ -102,4 +121,4 @@ def startup():
                                 hashed_password=auth.get_password_hash("admin123"), role="admin", is_verified=True)
             db.add(admin); db.commit()
     finally: db.close()
-        
+               
