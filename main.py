@@ -101,13 +101,18 @@ def get_pets():
         return jsonify([])
 
 # --- ADMINISTRACIÓN ---
+# --- ADMINISTRACIÓN ---
+
 @app.route('/admin/pending', methods=['GET'])
-def get_pending():
+def get_admin_data():
     try:
+        # Traemos usuarios pendientes de aprobación
         users = supabase.table("users").select("*").eq("is_approved", False).execute()
-        pets = supabase.table("pets").select("*").eq("is_approved", False).execute()
+        # Traemos TODAS las mascotas para poder borrarlas o aprobarlas
+        pets = supabase.table("pets").select("*").order("is_approved").execute() 
         return jsonify({"users": users.data, "pets": pets.data})
-    except:
+    except Exception as e:
+        print(f"Error en admin data: {e}")
         return jsonify({"users": [], "pets": []})
 
 @app.route('/admin/approve/<type>/<id>', methods=['POST'])
@@ -122,10 +127,12 @@ def approve(type, id):
 @app.route('/admin/delete/pet/<id>', methods=['DELETE'])
 def delete_pet(id):
     try:
+        # Borra la mascota de la base de datos
         supabase.table("pets").delete().eq("id", id).execute()
-        return jsonify({"msg": "OK"})
-    except:
-        return jsonify({"msg": "Error"}), 500
+        return jsonify({"msg": "Mascota eliminada"})
+    except Exception as e:
+        return jsonify({"msg": f"Error al borrar: {str(e)}"}), 500
+        
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
