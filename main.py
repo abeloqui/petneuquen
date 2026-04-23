@@ -85,17 +85,23 @@ def register():
 @app.route('/pets', methods=['GET'])
 def get_pets():
     try:
-        # Traemos mascotas y el teléfono del dueño (si existe)
-        res = supabase.table("pets").select("*, users(telefono)").eq("is_approved", True).execute()
-        pets = []
+        # Traemos todas las mascotas para filtrar con seguridad en el servidor
+        res = supabase.table("pets").select("*, users(telefono)").execute()
+        pets_aprobadas = []
+        
         for p in res.data:
-            # Si no hay usuario vinculado, usamos el tuyo por defecto para que no falle el link de WA
-            tel = p.get('users', {}).get('telefono') if p.get('users') else "2996894360"
-            p['telefono_contacto'] = tel
-            pets.append(p)
-        return jsonify(pets)
-    except: return jsonify([])
-
+            # Forzamos la validación del estado de aprobación sin importar si es TRUE o true
+            if p.get('is_approved') == True or str(p.get('is_approved')).lower() == 'true':
+                # Si no hay usuario o teléfono, usamos tu número de respaldo para que no rompa el link
+                tel = p.get('users', {}).get('telefono') if p.get('users') else "2996894360"
+                p['telefono_contacto'] = tel
+                pets_aprobadas.append(p)
+        
+        return jsonify(pets_aprobadas)
+    except Exception as e:
+        print(f"Error en GET pets: {e}")
+        return jsonify([])
+        
 @app.route('/pets/upload', methods=['POST'])
 def upload_pet():
     f = request.files.get('file')
