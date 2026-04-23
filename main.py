@@ -1,112 +1,130 @@
+# main.py
 import os
-import re
-import cloudinary
-import cloudinary.uploader
-from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Form
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
-from sqlalchemy.orm import Session
-from database import SessionLocal, engine
-import models, auth
+import sqlite3
+from flask import Flask, request, jsonify, send_from_directory
+from werkzeug.utils import secure_filename
 
-models.Base.metadata.create_all(bind=engine)
-app = FastAPI()
+app = Flask(__name__)
+app.config['UPLOAD_FOLDER'] = 'static/uploads'
+app.config['DATABASE'] = 'database.db'
 
-cloudinary.config(
-    cloud_name=os.environ.get("CLOUDINARY_CLOUD_NAME"),
-    api_key=os.environ.get("CLOUDINARY_API_KEY"),
-    api_secret=os.environ.get("CLOUDINARY_API_SECRET")
-)
+# Crear carpetas necesarias
+if not os.path.exists(app.config['UPLOAD_FOLDER']):
+    os.makedirs(app.config['UPLOAD_FOLDER'])
 
 def get_db():
-    db = SessionLocal()
-    try: yield db
-    finally: db.close()
+    conn = sqlite3.connect(app.config['DATABASE'])
+    conn.row_factory = sqlite3.Row
+    return conn
 
-def validar_datos(email, telefono):
-    email_regex = r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$'
-    if not re.match(email_regex, email):
-        raise HTTPException(status_code=400, detail="Email inválido.")
-    tel_limpio = "".join(filter(str.isdigit, str(telefono)))
-    if len(tel_limpio) < 8:
-        raise HTTPException(status_code=400, detail="Teléfono muy corto.")
-
-app.mount("/static", StaticFiles(directory="static"), name="static")
-
-@app.get("/")
-async def read_index(): return FileResponse('static/index.html')
-
-@app.post("/register")
-def register(email: str = Form(...), password: str = Form(...), telefono: str = Form(...), db: Session = Depends(get_db)):
-    validar_datos(email, telefono)
-    if db.query(models.User).filter(models.User.email == email).first():
-        raise HTTPException(status_code=400, detail="Email ya registrado.")
-    new_user = models.User(email=email, telefono=telefono, hashed_password=auth.get_password_hash(password), is_verified=False)
-    db.add(new_user); db.commit()
-    return {"message": "Pendiente de aprobación"}
-
-@app.post("/login")
-def login(email: str = Form(...), password: str = Form(...), db: Session = Depends(get_db)):
-    user = db.query(models.User).filter(models.User.email == email).first()
-    if not user or not auth.verify_password(password, user.hashed_password):
-        raise HTTPException(status_code=401, detail="Credenciales incorrectas.")
-    if not user.is_verified and user.role != "admin":
-        raise HTTPException(status_code=403, detail="Cuenta no aprobada aún.")
-    return {"id": user.id, "role": user.role, "telefono": user.telefono, "email": user.email}
-
-@app.get("/pets")
-def list_pets(all_pets: bool = False, db: Session = Depends(get_db)):
-    query = db.query(models.Pet, models.User.telefono).join(models.User)
-    if not all_pets: query = query.filter(models.Pet.is_approved == True)
-    results = query.all()
-    return [{**p.__dict__, "telefono": tel} for p, tel in results]
-
-@app.post("/pets/upload")
-async def upload(name: str = Form(...), status: str = Form(...), barrio: str = Form(...), 
-                 raza: str = Form(None), edad: str = Form(None),
-                 user_id: int = Form(...), latitud: float = Form(None), longitud: float = Form(None),
-                 file: UploadFile = File(...), db: Session = Depends(get_db)):
-    res = cloudinary.uploader.upload(file.file)
-    new_pet = models.Pet(name=name, status=status, barrio=barrio, raza=raza, edad=edad,
-                         image_url=res.get("secure_url"), owner_id=user_id, 
-                         latitud=latitud, longitud=longitud, is_approved=False)
-    db.add(new_pet); db.commit()
-    return {"status": "ok"}
-
-@app.get("/admin/users/pending")
-def pending_users(db: Session = Depends(get_db)):
-    return db.query(models.User).filter(models.User.is_verified == False, models.User.role != "admin").all()
-
-@app.post("/admin/users/approve/{u_id}")
-def approve_user(u_id: int, db: Session = Depends(get_db)):
-    user = db.query(models.User).filter(models.User.id == u_id).first(); 
-    if user: user.is_verified = True; db.commit()
-    return {"status": "ok"}
-
-@app.delete("/admin/users/delete/{u_id}")
-def delete_user(u_id: int, db: Session = Depends(get_db)):
-    user = db.query(models.User).filter(models.User.id == u_id).first()
-    if user: db.delete(user); db.commit()
-    return {"status": "ok"}
-
-@app.post("/pets/approve/{pid}")
-def approve_pet(pid: int, db: Session = Depends(get_db)):
-    pet = db.query(models.Pet).filter(models.Pet.id == pid).first()
-    if pet: pet.is_approved = True; db.commit()
-    return {"status": "ok"}
-
-@app.delete("/admin/pets/delete/{pid}")
-def delete_pet(pid: int, db: Session = Depends(get_db)):
-    pet = db.query(models.Pet).filter(models.Pet.id == pid).first()
-    if pet: db.delete(pet); db.commit()
-    return {"status": "ok"}
-
-@app.on_event("startup")
-def startup():
-    db = SessionLocal()
+# Inicialización de tablas (Todo lo que veníamos trabajando)
+with get_db() as conn:
+    conn.execute('''CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        email TEXT UNIQUE,
+        password TEXT,
+        telefono TEXT,
+        role TEXT DEFAULT 'user',
+        is_approved INTEGER DEFAULT 0
+    )''')
+    conn.execute('''CREATE TABLE IF NOT EXISTS pets (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER,
+        name TEXT,
+        status TEXT,
+        barrio TEXT,
+        latitud REAL,
+        longitud REAL,
+        image_url TEXT,
+        is_approved INTEGER DEFAULT 0
+    )''')
+    # Admin por defecto (admin@huellitas.com / admin123)
     try:
-        if not db.query(models.User).filter(models.User.role == "admin").first():
-            admin = models.User(email="admin@huellitas.com", telefono="299000000", 
-                                hashed_password=auth.get_password_hash("admin123"), role="admin", is_verified=True)
-            db.add(admin); db.commit()
-    finally: db.close()
+        conn.execute("INSERT INTO users (email, password, role, is_approved) VALUES (?, ?, ?, ?)",
+                     ('admin@huellitas.com', 'admin123', 'admin', 1))
+    except:
+        pass
+    conn.commit()
+
+# --- RUTAS ---
+@app.route('/')
+def index():
+    return send_from_directory('static', 'index.html')
+
+@app.route('/register', methods=['POST'])
+def register():
+    data = request.form
+    try:
+        with get_db() as conn:
+            conn.execute("INSERT INTO users (email, password, telefono) VALUES (?, ?, ?)",
+                         (data['email'], data['password'], data['telefono']))
+            conn.commit()
+        return jsonify({"msg": "Registrado"}), 201
+    except:
+        return jsonify({"msg": "Error"}), 400
+
+@app.route('/login', methods=['POST'])
+def login():
+    data = request.form
+    with get_db() as conn:
+        user = conn.execute("SELECT * FROM users WHERE email = ? AND password = ? AND is_approved = 1",
+                            (data['email'], data['password'])).fetchone()
+    if user:
+        return jsonify({"id": user['id'], "email": user['email'], "role": user['role']})
+    return jsonify({"msg": "No autorizado"}), 401
+
+@app.route('/pets/upload', methods=['POST'])
+def upload_pet():
+    file = request.files['file']
+    filename = secure_filename(file.filename)
+    file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+    data = request.form
+    with get_db() as conn:
+        conn.execute('''INSERT INTO pets (user_id, name, status, barrio, latitud, longitud, image_url) 
+                        VALUES (?, ?, ?, ?, ?, ?, ?)''',
+                     (data['user_id'], data['name'], data['status'], data['barrio'], 
+                      data['latitud'], data['longitud'], f"/static/uploads/{filename}"))
+        conn.commit()
+    return jsonify({"msg": "OK"}), 201
+
+@app.route('/pets', methods=['GET'])
+def get_pets():
+    all_pets = request.args.get('all_pets')
+    with get_db() as conn:
+        if all_pets:
+            pets = conn.execute("SELECT p.*, u.telefono FROM pets p JOIN users u ON p.user_id = u.id").fetchall()
+        else:
+            pets = conn.execute("SELECT p.*, u.telefono FROM pets p JOIN users u ON p.user_id = u.id WHERE p.is_approved = 1").fetchall()
+    return jsonify([dict(p) for p in pets])
+
+# Rutas de Admin
+@app.route('/admin/users/pending', methods=['GET'])
+def pending_users():
+    with get_db() as conn:
+        users = conn.execute("SELECT * FROM users WHERE is_approved = 0").fetchall()
+    return jsonify([dict(u) for u in users])
+
+@app.route('/admin/users/approve/<int:id>', methods=['POST'])
+def approve_user(id):
+    with get_db() as conn:
+        conn.execute("UPDATE users SET is_approved = 1 WHERE id = ?", (id,))
+        conn.commit()
+    return jsonify({"msg": "OK"})
+
+@app.route('/pets/approve/<int:id>', methods=['POST'])
+def approve_pet(id):
+    with get_db() as conn:
+        conn.execute("UPDATE pets SET is_approved = 1 WHERE id = ?", (id,))
+        conn.commit()
+    return jsonify({"msg": "OK"})
+
+@app.route('/admin/pets/delete/<int:id>', methods=['DELETE'])
+def delete_pet(id):
+    with get_db() as conn:
+        conn.execute("DELETE FROM pets WHERE id = ?", (id,))
+        conn.commit()
+    return jsonify({"msg": "OK"})
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
+    
