@@ -132,12 +132,17 @@
             }
             loadPets();
         }
-
-        async function loadPets() {
-            const res = await fetch('/pets');
-            allPets = await res.json();
-            applyFilters();
-        }
+async function loadPets() {
+    try {
+        const res = await fetch('/pets');
+        allPets = await res.json();
+        console.log("Mascotas cargadas:", allPets); // Esto te sirve para ver en la consola si llegan
+        applyFilters(); // <--- Esto dibuja las mascotas en el mapa y la lista
+    } catch (error) {
+        console.error("Error cargando mascotas:", error);
+    }
+}
+        
 
         function applyFilters() {
             const term = document.getElementById('search').value.toLowerCase();
