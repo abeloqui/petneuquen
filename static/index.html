@@ -224,6 +224,16 @@
         async function approvePet(id) { await fetch(`/admin/approve/pet/${id}`, {method:'POST'}); showAdmin(); }
         async function approveUser(id) { await fetch(`/admin/approve/user/${id}`, {method:'POST'}); showAdmin(); }
         async function deletePet(id) { if(confirm("¿Eliminar publicación?")) { await fetch(`/admin/delete/pet/${id}`, {method:'DELETE'}); showAdmin(); } }
+        async function approvePet(id) {
+    const res = await fetch(`/admin/approve/pet/${id}`, { method: 'POST' });
+    if (res.ok) {
+        alert("¡Mascota aprobada!");
+        // Cargamos los datos de nuevo antes de volver al home
+        await loadPets(); 
+        showAdmin(); // Refresca la vista de admin
+    }
+        }
+        
 
         function checkAuth() { user ? showSection('upload') : showSection('auth'); }
         function logout() { localStorage.clear(); location.reload(); }
