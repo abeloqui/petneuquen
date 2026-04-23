@@ -66,15 +66,22 @@ def upload_pet():
     except Exception as e: return jsonify({"msg": str(e)}), 500
 
 @app.route('/pets', methods=['GET'])
+@app.route('/pets', methods=['GET'])
 def get_pets():
     try:
+        # Traemos solo las que tienen is_approved en True
         res = supabase.table("pets").select("*, users(telefono)").eq("is_approved", True).execute()
+        
         pets = []
         for p in res.data:
-            p['telefono'] = p['users']['telefono'] if p.get('users') else "S/N"
+            # Manejo de error por si el usuario no tiene teléfono
+            p['telefono'] = p['users']['telefono'] if p.get('users') else "Sin contacto"
             pets.append(p)
         return jsonify(pets)
-    except: return jsonify([])
+    except Exception as e:
+        print(f"Error al obtener mascotas: {e}")
+        return jsonify([])
+      
 
 # Endpoints de Admin simplificados para que no fallen
 @app.route('/admin/pending', methods=['GET'])
