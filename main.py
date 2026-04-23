@@ -1,4 +1,3 @@
-# main.py
 import os
 import sqlite3
 from flask import Flask, request, jsonify, send_from_directory
@@ -17,7 +16,7 @@ def get_db():
     conn.row_factory = sqlite3.Row
     return conn
 
-# Inicialización de tablas (Todo lo que veníamos trabajando)
+# Inicialización de tablas
 with get_db() as conn:
     conn.execute('''CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -38,7 +37,6 @@ with get_db() as conn:
         image_url TEXT,
         is_approved INTEGER DEFAULT 0
     )''')
-    # Admin por defecto (admin@huellitas.com / admin123)
     try:
         conn.execute("INSERT INTO users (email, password, role, is_approved) VALUES (?, ?, ?, ?)",
                      ('admin@huellitas.com', 'admin123', 'admin', 1))
@@ -46,7 +44,6 @@ with get_db() as conn:
         pass
     conn.commit()
 
-# --- RUTAS ---
 @app.route('/')
 def index():
     return send_from_directory('static', 'index.html')
@@ -59,7 +56,7 @@ def register():
             conn.execute("INSERT INTO users (email, password, telefono) VALUES (?, ?, ?)",
                          (data['email'], data['password'], data['telefono']))
             conn.commit()
-        return jsonify({"msg": "Registrado"}), 201
+        return jsonify({"msg": "OK"}), 201
     except:
         return jsonify({"msg": "Error"}), 400
 
@@ -97,7 +94,6 @@ def get_pets():
             pets = conn.execute("SELECT p.*, u.telefono FROM pets p JOIN users u ON p.user_id = u.id WHERE p.is_approved = 1").fetchall()
     return jsonify([dict(p) for p in pets])
 
-# Rutas de Admin
 @app.route('/admin/users/pending', methods=['GET'])
 def pending_users():
     with get_db() as conn:
