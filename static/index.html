@@ -181,30 +181,72 @@
             if(res.ok) { alert("¡Enviado! Esperando aprobación."); location.reload(); }
             else alert("Error al subir.");
         }
+// Reemplaza tu función showAdmin y agrega deletePet en el script del index.html
 
-        async function showAdmin() {
-            showSection('admin');
-            const res = await fetch('/admin/pending');
-            const data = await res.json();
-            const container = document.getElementById('admin-content');
-            container.innerHTML = '<h4 class="text-xs font-bold text-slate-400 mb-2">PENDIENTES</h4>';
-            data.pets.forEach(p => {
-                container.innerHTML += `
-                    <div class="bg-white p-4 rounded-3xl flex items-center gap-4 shadow-sm">
-                        <img src="${p.image_url}" class="w-12 h-12 rounded-xl object-cover">
-                        <div class="flex-1"><p class="font-bold text-sm">${p.name}</p></div>
-                        <button onclick="approveAction('pet', ${p.id})" class="bg-green-500 text-white p-2 rounded-lg"><i class="fas fa-check"></i></button>
-                    </div>`;
-            });
-            data.users.forEach(u => {
-                container.innerHTML += `
-                    <div class="bg-white p-4 rounded-3xl flex items-center justify-between shadow-sm">
-                        <p class="text-xs font-bold">${u.email}</p>
-                        <button onclick="approveAction('user', ${u.id})" class="bg-indigo-500 text-white px-4 py-2 rounded-xl text-[10px]">APROBAR</button>
-                    </div>`;
-            });
+async function showAdmin() {
+    showSection('admin');
+    const res = await fetch('/admin/pending');
+    const data = await res.json();
+    const container = document.getElementById('admin-content');
+    
+    container.innerHTML = '';
+
+    // SECCIÓN DE USUARIOS PENDIENTES
+    if(data.users.length > 0) {
+        container.innerHTML += '<h4 class="text-xs font-bold text-slate-400 mb-2 mt-4">USUARIOS PENDIENTES</h4>';
+        data.users.forEach(u => {
+            container.innerHTML += `
+                <div class="bg-white p-4 rounded-3xl flex items-center justify-between shadow-sm mb-2">
+                    <p class="text-xs font-bold">${u.email}</p>
+                    <button onclick="approveAction('user', ${u.id})" class="bg-indigo-500 text-white px-4 py-2 rounded-xl text-[10px]">APROBAR</button>
+                </div>`;
+        });
+    }
+
+    // SECCIÓN DE TODAS LAS MASCOTAS
+    container.innerHTML += '<h4 class="text-xs font-bold text-slate-400 mb-2 mt-6">GESTIONAR PUBLICACIONES</h4>';
+    data.pets.forEach(p => {
+        const statusColor = p.is_approved ? 'text-green-500' : 'text-orange-500';
+        const statusText = p.is_approved ? 'Publicado' : 'Pendiente';
+        
+        container.innerHTML += `
+            <div class="bg-white p-4 rounded-3xl flex items-center gap-4 shadow-sm mb-3">
+                <img src="${p.image_url}" class="w-14 h-14 rounded-2xl object-cover">
+                <div class="flex-1">
+                    <p class="font-bold text-sm">${p.name}</p>
+                    <p class="text-[10px] ${statusColor} font-bold uppercase">${statusText}</p>
+                </div>
+                <div class="flex gap-2">
+                    ${!p.is_approved ? `
+                        <button onclick="approveAction('pet', ${p.id})" class="bg-green-500 text-white w-10 h-10 rounded-xl flex items-center justify-center">
+                            <i class="fas fa-check"></i>
+                        </button>
+                    ` : ''}
+                    <button onclick="deletePet(${p.id})" class="bg-red-100 text-red-500 w-10 h-10 rounded-xl flex items-center justify-center">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </div>
+            </div>`;
+    });
+}
+
+async function deletePet(id) {
+    if(!confirm("¿Estás seguro de que quieres borrar esta publicación?")) return;
+    
+    try {
+        const res = await fetch(`/admin/delete/pet/${id}`, { method: 'DELETE' });
+        if(res.ok) {
+            alert("Publicación eliminada correctamente.");
+            showAdmin(); // Refresca la lista
+            loadPets();  // Actualiza el home en segundo plano
+        } else {
+            alert("No se pudo eliminar.");
         }
-
+    } catch (err) {
+        console.error(err);
+    }
+}
+        
         async function approveAction(type, id) {
             await fetch(`/admin/approve/${type}/${id}`, {method:'POST'});
             showAdmin();
