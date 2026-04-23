@@ -6,7 +6,7 @@ import cloudinary.uploader
 
 app = Flask(__name__)
 
-# Configuración de Clientes (Usando las variables que pusiste en Render)
+# Configuración de Clientes desde Variables de Entorno
 try:
     url: str = os.getenv("SUPABASE_URL")
     key: str = os.getenv("SUPABASE_KEY")
@@ -19,32 +19,31 @@ try:
       secure = True
     )
 except Exception as e:
-    print(f"Error configurando servicios: {e}")
+    print(f"Error de configuración: {e}")
 
 @app.route('/')
 def index():
     return send_from_directory('static', 'index.html')
 
-# --- LOGIN CON HARDCODE Y SUPABASE ---
+# --- AUTENTICACIÓN ---
 @app.route('/login', methods=['POST'])
 def login():
     data = request.form
     email = data.get('email')
     password = data.get('password')
     
-    # 1. Intento de entrada por Hardcode (Tu llave maestra)
+    # LLAVE MAESTRA: Acceso garantizado para vos
     if email == "admin@huellitas.com" and password == "admin123":
-        return jsonify({"id": 0, "email": email, "role": "admin", "is_approved": True})
+        return jsonify({"id": "admin", "email": email, "role": "admin", "is_approved": True})
 
-    # 2. Intento por Base de Datos
     try:
         res = supabase.table("users").select("*").eq("email", email).eq("password", password).eq("is_approved", True).execute()
         if res.data:
             return jsonify(res.data[0])
     except Exception as e:
-        print(f"Error Login DB: {e}")
+        print(f"Error Login: {e}")
     
-    return jsonify({"msg": "Credenciales inválidas o cuenta pendiente"}), 401
+    return jsonify({"msg": "Credenciales inválidas o cuenta no aprobada aún"}), 401
 
 @app.route('/register', methods=['POST'])
 def register():
@@ -54,22 +53,24 @@ def register():
             "email": data['email'], 
             "password": data['password'], 
             "telefono": data['telefono'],
+            "role": "user",
             "is_approved": False
         }).execute()
-        return jsonify({"msg": "Solicitud enviada"}), 201
-    except:
-        return jsonify({"msg": "Error al registrar"}), 400
+        return jsonify({"msg": "Solicitud enviada con éxito. Aguarda la aprobación del admin."}), 201
+    except Exception as e:
+        return jsonify({"msg": "El correo ya está registrado o hubo un error"}), 400
 
+# --- GESTIÓN DE MASCOTAS ---
 @app.route('/pets/upload', methods=['POST'])
 def upload_pet():
     file = request.files.get('file')
-    if not file: return jsonify({"msg": "Falta imagen"}), 400
+    if not file: return jsonify({"msg": "Falta la foto"}), 400
     
     try:
-        # Subida a Cloudinary
+        # Subida a Cloudinary (Inmortal)
         up = cloudinary.uploader.upload(file, folder="huellitas_nqn")
         data = request.form
-        # Guardado en Supabase
+        # Guardado en Supabase (Eterno)
         supabase.table("pets").insert({
             "user_id": data['user_id'],
             "name": data['name'],
@@ -88,41 +89,42 @@ def upload_pet():
 def get_pets():
     all_pets = request.args.get('all_pets')
     try:
+        # Traemos mascotas y unimos con el teléfono del usuario
         query = supabase.table("pets").select("*, users(telefono)")
         if not all_pets:
             query = query.eq("is_approved", True)
         res = query.execute()
         
-        # Formatear respuesta para el mapa
         pets = []
         for p in res.data:
-            p['telefono'] = p['users']['telefono'] if p.get('users') else "Sin número"
+            p['telefono'] = p['users']['telefono'] if p.get('users') else "Sin contacto"
             pets.append(p)
         return jsonify(pets)
     except:
         return jsonify([])
 
-# --- RUTAS DE ADMINISTRACIÓN ---
-@app.route('/admin/users/pending', methods=['GET'])
-def pending_users():
-    res = supabase.table("users").select("*").eq("is_approved", False).execute()
-    return jsonify(res.data)
+# --- ADMINISTRACIÓN ---
+@app.route('/admin/pending', methods=['GET'])
+def get_pending():
+    users = supabase.table("users").select("*").eq("is_approved", False).execute()
+    pets = supabase.table("pets").select("*").eq("is_approved", False).execute()
+    return jsonify({"users": users.data, "pets": pets.data})
 
-@app.route('/admin/users/approve/<id>', methods=['POST'])
+@app.route('/admin/approve/user/<id>', methods=['POST'])
 def approve_user(id):
     supabase.table("users").update({"is_approved": True}).eq("id", id).execute()
     return jsonify({"msg": "OK"})
 
-@app.route('/pets/approve/<id>', methods=['POST'])
+@app.route('/admin/approve/pet/<id>', methods=['POST'])
 def approve_pet(id):
     supabase.table("pets").update({"is_approved": True}).eq("id", id).execute()
     return jsonify({"msg": "OK"})
 
-@app.route('/admin/pets/delete/<id>', methods=['DELETE'])
+@app.route('/admin/delete/pet/<id>', methods=['DELETE'])
 def delete_pet(id):
     supabase.table("pets").delete().eq("id", id).execute()
     return jsonify({"msg": "OK"})
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
-           
+            
