@@ -112,11 +112,18 @@
         let mainMap, uploadMap, uploadMarker, allPets = [];
 
         function showSection(id) {
-            document.querySelectorAll('section').forEach(s => s.classList.add('hidden'));
-            document.getElementById('sec-' + id).classList.remove('hidden');
-            if(id === 'home') setTimeout(initMainMap, 300);
-            if(id === 'upload') setTimeout(initUploadMap, 300);
+    document.querySelectorAll('section').forEach(s => s.classList.add('hidden'));
+    document.getElementById('sec-' + id).classList.remove('hidden');
+    
+    if(id === 'home') {
+        setTimeout(() => {
+            initMainMap();
+            loadPets(); // <--- Esto es clave
+        }, 300);
+    }
+    if(id === 'upload') setTimeout(initUploadMap, 300);
         }
+        
 
         function initMainMap() {
             if(!mainMap) {
