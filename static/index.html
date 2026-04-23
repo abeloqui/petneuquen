@@ -129,41 +129,60 @@
         }
 
         async function loadPets() {
-            try {
-                const res = await fetch('/pets');
-                allPets = await res.json();
-                applyFilters();
-            } catch (e) { console.error(e); }
-        }
+    try {
+        const res = await fetch('/pets');
+        allPets = await res.json();
+        console.log("Mascotas recibidas:", allPets); // Esto te servirá para ver el error en consola (F12)
+        applyFilters();
+    } catch (e) { 
+        console.error("Error al cargar:", e);
+    }
+}
 
-        function applyFilters() {
-            const term = document.getElementById('search').value.toLowerCase();
-            const status = document.getElementById('filter-status').value;
-            const list = document.getElementById('pet-list');
-            list.innerHTML = '';
+function applyFilters() {
+    const term = document.getElementById('search').value.toLowerCase();
+    const status = document.getElementById('filter-status').value;
+    const list = document.getElementById('pet-list');
+    
+    // Limpiar lista y mapa
+    list.innerHTML = '';
+    mainMap.eachLayer(l => { if(l instanceof L.Marker || l instanceof L.CircleMarker) mainMap.removeLayer(l); });
+
+    const filtered = allPets.filter(p => 
+        (status === 'todos' || p.status === status) && 
+        (p.barrio || "").toLowerCase().includes(term)
+    );
+
+    if (filtered.length > 0) {
+        filtered.forEach(p => {
+            const color = p.status === 'perdido' ? '#ef4444' : '#10b981';
             
-            mainMap.eachLayer(l => { if(l instanceof L.Marker || l instanceof L.CircleMarker) mainMap.removeLayer(l); });
+            // Agregar marcador al mapa
+            L.circleMarker([p.latitud, p.longitud], {
+                color: color, 
+                radius: 8, 
+                fillOpacity: 0.8, 
+                weight: 3
+            }).addTo(mainMap).bindPopup(`<b>${p.name}</b><br>${p.barrio}`);
+            
+            // Agregar Card a la lista
+            list.innerHTML += `
+                <div class="bg-white rounded-[2rem] overflow-hidden shadow-sm border border-slate-50">
+                    <img src="${p.image_url}" class="w-full h-36 object-cover" onerror="this.src='https://placehold.co/400x400?text=${p.name}'">
+                    <div class="p-3 text-center">
+                        <p class="font-bold text-slate-800 text-sm">${p.name}</p>
+                        <p class="text-[10px] text-slate-400 uppercase font-black mb-3">${p.barrio || 'Neuquén'}</p>
+                        <a href="https://wa.me/${p.telefono_contacto}" target="_blank" class="block bg-green-50 text-green-600 py-3 rounded-2xl text-[10px] font-black uppercase">WhatsApp</a>
+                    </div>
+                </div>`;
+        });
+    } else {
+        list.innerHTML = '<p class="col-span-2 text-center text-slate-400 py-10 text-xs font-bold uppercase">No hay publicaciones disponibles</p>';
+    }
+         }
+        
 
-            const filtered = allPets.filter(p => (status === 'todos' || p.status === status) && p.barrio.toLowerCase().includes(term));
-
-            if(filtered.length === 0) list.innerHTML = '<p class="col-span-2 text-center text-slate-400 py-10 text-xs font-bold uppercase">No hay publicaciones aprobadas</p>';
-
-            filtered.forEach(p => {
-                const color = p.status === 'perdido' ? '#ef4444' : '#10b981';
-                L.circleMarker([p.latitud, p.longitud], {color: color, radius: 8, fillOpacity: 0.8, weight: 3}).addTo(mainMap).bindPopup(p.name);
-                
-                list.innerHTML += `
-                    <div class="bg-white rounded-[2rem] overflow-hidden shadow-sm border border-slate-50">
-                        <img src="${p.image_url}" class="w-full h-36 object-cover" onerror="this.src='https://placehold.co/400x400?text=Huellitas'">
-                        <div class="p-3 text-center">
-                            <p class="font-bold text-slate-800 text-sm">${p.name}</p>
-                            <p class="text-[10px] text-slate-400 uppercase font-black mb-3">${p.barrio}</p>
-                            <a href="https://wa.me/${p.telefono_contacto}" target="_blank" class="block bg-green-50 text-green-600 py-3 rounded-2xl text-[10px] font-black uppercase">WhatsApp</a>
-                        </div>
-                    </div>`;
-            });
-        }
-
+        
         async function handleLogin(e) {
             e.preventDefault();
             const res = await fetch('/login', {method:'POST', body:new FormData(e.target)});
