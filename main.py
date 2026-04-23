@@ -8,11 +8,11 @@ from werkzeug.utils import secure_filename
 app = Flask(__name__)
 app.config['DATABASE'] = 'database.db'
 
-# Configuración de Cloudinary (REEMPLAZA CON TUS DATOS)
+# Configuración de Cloudinary usando las variables que pusiste en Render
 cloudinary.config( 
-  cloud_name = "TU_CLOUD_NAME", 
-  api_key = "TU_API_KEY", 
-  api_secret = "TU_API_SECRET",
+  cloud_name = os.getenv("CLOUDINARY_CLOUD_NAME"), 
+  api_key = os.getenv("CLOUDINARY_API_KEY"), 
+  api_secret = os.getenv("CLOUDINARY_API_SECRET"),
   secure = True
 )
 
@@ -21,7 +21,7 @@ def get_db():
     conn.row_factory = sqlite3.Row
     return conn
 
-# Inicialización (Mantiene el admin y las tablas)
+# Inicialización de tablas y Admin
 with get_db() as conn:
     conn.execute('''CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -75,14 +75,13 @@ def register():
     except:
         return jsonify({"msg": "Error"}), 400
 
-# --- ESTA ES LA FUNCIÓN CLAVE ---
 @app.route('/pets/upload', methods=['POST'])
 def upload_pet():
     file = request.files['file']
     if file:
-        # Subir a Cloudinary
+        # Subida directa a la nube
         upload_result = cloudinary.uploader.upload(file, folder="huellitas_nqn")
-        image_url = upload_result['secure_url'] # Link eterno
+        image_url = upload_result['secure_url'] 
         
         data = request.form
         with get_db() as conn:
@@ -104,7 +103,7 @@ def get_pets():
             pets = conn.execute("SELECT p.*, u.telefono FROM pets p JOIN users u ON p.user_id = u.id WHERE p.is_approved = 1").fetchall()
     return jsonify([dict(p) for p in pets])
 
-# Rutas de Admin (Aprobación y Borrado)
+# --- RUTAS ADMIN ---
 @app.route('/admin/users/pending', methods=['GET'])
 def pending_users():
     with get_db() as conn:
@@ -134,4 +133,4 @@ def delete_pet(id):
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
-    
+  
