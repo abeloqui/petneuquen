@@ -30,8 +30,11 @@ try:
 except Exception as e:
     print(f"Error en configuración inicial: {e}")
 
-# --- UTILIDADES ---
+# --- FUNCIÓN DE EMAIL (Manejo de errores mejorado) ---
 def enviar_bienvenida(destinatario):
+    if not MAIL_USERNAME or not MAIL_PASSWORD:
+        print("Error: Credenciales de mail no configuradas en Render.")
+        return False
     try:
         msg = MIMEMultipart()
         msg['From'] = f"Huellitas NQN <{MAIL_USERNAME}>"
@@ -45,24 +48,28 @@ def enviar_bienvenida(destinatario):
                     <h1 style="color: white; margin: 0;">¡Hola! 👋</h1>
                 </div>
                 <div style="padding: 20px; border: 1px solid #eee; border-top: none; border-radius: 0 0 10px 10px;">
-                    <p>Gracias por sumarte a <b>Huellitas NQN</b>. Tu solicitud ha sido recibida.</p>
-                    <p>Un administrador revisará tu perfil para habilitar tu cuenta. Mientras tanto, podés navegar y ver las mascotas perdidas.</p>
-                    <p style="color: #f97316; font-weight: bold;">"Cada reencuentro nace de un corazón solidario."</p>
+                    <p>Gracias por sumarte a <b>Huellitas NQN</b>. Recibimos tu solicitud de registro.</p>
+                    <p>Un administrador revisará tu perfil pronto para habilitar tu acceso. Mientras tanto, podés navegar la plataforma.</p>
+                    <p style="color: #f97316; font-weight: bold; font-size: 1.1em;">"Cada huella cuenta en nuestra comunidad."</p>
+                    <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+                    <p style="font-size: 0.8em; color: #888;">Este es un mensaje automático de Huellitas Neuquén.</p>
                 </div>
             </body>
         </html>
         """
         msg.attach(MIMEText(html, 'html'))
+        
         with smtplib.SMTP('smtp.gmail.com', 587) as server:
             server.starttls()
             server.login(MAIL_USERNAME, MAIL_PASSWORD)
             server.send_raw_message(msg)
+        print(f"Mail enviado correctamente a {destinatario}")
         return True
     except Exception as e:
-        print(f"Error enviando mail: {e}")
+        print(f"Error crítico en envío de mail: {e}")
         return False
 
-# --- RUTAS ---
+# --- RUTAS PRINCIPALES ---
 @app.route('/')
 def serve_index():
     return send_from_directory('static', 'index.html')
@@ -71,13 +78,14 @@ def serve_index():
 def login():
     data = request.form
     email, password = data.get('email'), data.get('password')
+    # Usuario Administrador Maestro
     if email == "admin@huellitas.com" and password == "admin123":
         return jsonify({"id": "admin", "email": email, "role": "admin", "is_approved": True})
     try:
         res = supabase.table("users").select("*").eq("email", email).eq("password", password).eq("is_approved", True).execute()
         if res.data: return jsonify(res.data[0])
     except: pass
-    return jsonify({"msg": "No autorizado o pendiente"}), 401
+    return jsonify({"msg": "No autorizado o cuenta pendiente"}), 401
 
 @app.route('/register', methods=['POST'])
 def register():
@@ -89,27 +97,30 @@ def register():
             "telefono": data['telefono'], "role": "user", "is_approved": False
         }).execute()
         enviar_bienvenida(email)
-        return jsonify({"msg": "Registro exitoso. Revisá tu email."}), 201
+        return jsonify({"msg": "Solicitud enviada. Revisá tu casilla de correo."}), 201
     except Exception as e:
         return jsonify({"msg": str(e)}), 400
 
 @app.route('/pets', methods=['GET'])
 def get_pets():
     try:
-        # Traemos mascotas aprobadas. Si no hay relación con users, igual las muestra.
+        # Traemos solo aprobadas. Usamos el campo users para sacar el teléfono de contacto.
         res = supabase.table("pets").select("*, users(telefono)").eq("is_approved", True).execute()
         pets = []
         for p in res.data:
-            p['telefono'] = p['users']['telefono'] if p.get('users') else "S/N"
+            p['telefono'] = p['users']['telefono'] if p.get('users') and p['users'] else "2990000000"
             pets.append(p)
         return jsonify(pets)
-    except: return jsonify([])
+    except Exception as e:
+        print(f"Error GET pets: {e}")
+        return jsonify([])
 
 @app.route('/pets/upload', methods=['POST'])
 def upload_pet():
     file = request.files.get('file')
     if not file: return jsonify({"msg": "Falta imagen"}), 400
     try:
+        # Subir a Cloudinary
         up = cloudinary.uploader.upload(file, folder="huellitas_nqn")
         data = request.form
         supabase.table("pets").insert({
@@ -117,10 +128,11 @@ def upload_pet():
             "barrio": data['barrio'], "latitud": float(data['latitud']),
             "longitud": float(data['longitud']), "image_url": up['secure_url'], "is_approved": False
         }).execute()
-        return jsonify({"msg": "OK"}), 201
-    except Exception as e: return jsonify({"msg": str(e)}), 500
+        return jsonify({"msg": "Mascota subida, pendiente de aprobación"}), 201
+    except Exception as e:
+        return jsonify({"msg": str(e)}), 500
 
-# --- ADMIN ---
+# --- PANEL DE ADMINISTRACIÓN ---
 @app.route('/admin/data', methods=['GET'])
 def admin_data():
     u = supabase.table("users").select("*").eq("is_approved", False).execute()
@@ -131,20 +143,24 @@ def admin_data():
 def approve(type, id):
     table = "users" if type == "user" else "pets"
     supabase.table(table).update({"is_approved": True}).eq("id", id).execute()
-    return jsonify({"msg": "OK"})
+    return jsonify({"msg": "Aprobado"})
 
 @app.route('/admin/delete/pet/<id>', methods=['DELETE'])
 def delete_pet(id):
     try:
+        # 1. Borrar de Cloudinary primero
         res = supabase.table("pets").select("image_url").eq("id", id).execute()
         if res.data:
-            url_img = res.data[0]['image_url']
-            public_id = "huellitas_nqn/" + url_img.split('/')[-1].split('.')[0]
+            img_url = res.data[0]['image_url']
+            public_id = "huellitas_nqn/" + img_url.split('/')[-1].split('.')[0]
             cloudinary.uploader.destroy(public_id)
+        # 2. Borrar de Supabase
         supabase.table("pets").delete().eq("id", id).execute()
-        return jsonify({"msg": "OK"})
-    except: return jsonify({"msg": "Error"}), 500
+        return jsonify({"msg": "Eliminado"})
+    except:
+        return jsonify({"msg": "Error al borrar"}), 500
 
 if __name__ == '__main__':
+    # Puerto dinámico para Render
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
-    
+        
