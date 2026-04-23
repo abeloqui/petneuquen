@@ -67,18 +67,20 @@ def upload_pet():
 @app.route('/pets', methods=['GET'])
 def get_pets():
     try:
-        # Traemos solo las aprobadas y forzamos la relación con users
+        # Traemos mascotas aprobadas con la info del usuario
         res = supabase.table("pets").select("*, users(telefono)").eq("is_approved", True).execute()
         
         pets = []
         for p in res.data:
-            # Si por alguna razón users es None, evitamos que el código explote
-            p['telefono'] = p['users']['telefono'] if p.get('users') else "Sin teléfono"
+            # APLANAMOS EL DATO: Sacamos el teléfono de la sub-tabla y lo ponemos en la raíz
+            p['telefono'] = p['users']['telefono'] if p.get('users') else "Sin número"
             pets.append(p)
+            
         return jsonify(pets)
     except Exception as e:
-        print(f"Error en GET /pets: {e}")
+        print(f"Error fatal en /pets: {e}")
         return jsonify([])
+      
       
       
 
