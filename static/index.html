@@ -144,28 +144,6 @@ async function loadPets() {
 }
         
 
-        function applyFilters() {
-            const term = document.getElementById('search').value.toLowerCase();
-            const status = document.getElementById('filter-status').value;
-            const list = document.getElementById('pet-list');
-            list.innerHTML = '';
-            mainMap.eachLayer(l => { if(l instanceof L.Marker) mainMap.removeLayer(l); });
-
-            allPets.filter(p => (status === 'todos' || p.status === status) && p.barrio.toLowerCase().includes(term)).forEach(p => {
-                const color = p.status === 'perdido' ? '#ef4444' : '#10b981';
-                L.circleMarker([p.latitud, p.longitud], {color: color, radius: 8, fillOpacity: 0.8}).addTo(mainMap).bindPopup(`<b>${p.name}</b><br>${p.barrio}`);
-                
-                list.innerHTML += `
-                    <div class="bg-white rounded-3xl overflow-hidden shadow-sm border border-slate-50">
-                        <img src="${p.image_url}" class="w-full h-32 object-cover">
-                        <div class="p-3 text-center">
-                            <p class="font-extrabold text-xs uppercase text-slate-400 mb-1">${p.status}</p>
-                            <p class="font-bold text-sm">${p.name}</p>
-                            <p class="text-[10px] text-slate-400 mb-2">${p.barrio}</p>
-                            <a href="https://wa.me/${p.telefono}" class="block bg-green-50 text-green-600 py-2 rounded-xl text-[10px] font-extrabold">CONTACTAR</a>
-                        </div>
-                    </div>`;
-            });
         }
 
         function initUploadMap() {
@@ -179,8 +157,40 @@ async function loadPets() {
                     document.getElementById('lng-in').value = e.latlng.lng;
                 });
             }
-        }
+        
+function applyFilters() {
+    const term = document.getElementById('search').value.toLowerCase();
+    const status = document.getElementById('filter-status').value;
+    const list = document.getElementById('pet-list');
+    
+    list.innerHTML = '';
+    
+    // Limpiamos solo los marcadores, no todo el mapa
+    mainMap.eachLayer(l => { 
+        if(l instanceof L.CircleMarker || l instanceof L.Marker) mainMap.removeLayer(l); 
+    });
 
+    allPets.filter(p => (status === 'todos' || p.status === status) && p.barrio.toLowerCase().includes(term)).forEach(p => {
+        // Dibujamos en el mapa
+        const color = p.status === 'perdido' ? '#ef4444' : '#10b981';
+        L.circleMarker([p.latitud, p.longitud], {color: color, radius: 8, fillOpacity: 0.8})
+         .addTo(mainMap)
+         .bindPopup(`<b>${p.name}</b><br>${p.barrio}`);
+        
+        // Dibujamos en la lista
+        list.innerHTML += `
+            <div class="bg-white rounded-3xl overflow-hidden shadow-sm border border-slate-50">
+                <img src="${p.image_url}" class="w-full h-32 object-cover">
+                <div class="p-3 text-center">
+                    <p class="font-extrabold text-xs uppercase text-slate-400 mb-1">${p.status}</p>
+                    <p class="font-bold text-sm">${p.name}</p>
+                    <p class="text-[10px] text-slate-400 mb-2">${p.barrio}</p>
+                    <a href="https://wa.me/${p.telefono}" target="_blank" class="block bg-green-50 text-green-600 py-2 rounded-xl text-[10px] font-extrabold">CONTACTAR</a>
+                </div>
+            </div>`;
+    });
+}
+            
         async function handleLogin(e) {
             e.preventDefault();
             const res = await fetch('/login', {method:'POST', body:new FormData(e.target)});
