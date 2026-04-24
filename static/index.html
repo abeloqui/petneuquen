@@ -8,7 +8,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;600;900&display=swap');
         
@@ -21,13 +20,11 @@
             --dark: #3D405B;
         }
 
-        /* Estilos Base */
         body { 
             font-family: 'Lexend', sans-serif; 
             background-color: var(--logo-crema); 
             color: var(--dark);
             padding-bottom: 140px;
-            overflow-x: hidden;
         }
 
         .glass { 
@@ -36,7 +33,6 @@
             -webkit-backdrop-filter: blur(15px);
         }
 
-        /* Mapa Principal */
         #main-map { 
             height: 360px; 
             width: 100%; 
@@ -46,7 +42,6 @@
             z-index: 10;
         }
 
-        /* Filtros y Botones */
         .btn-filter { 
             padding: 12px 22px; 
             border-radius: 30px; 
@@ -75,12 +70,8 @@
             width: 100%; 
             outline: none;
             transition: 0.3s;
-            font-size: 14px;
         }
 
-        .custom-input:focus { border-color: var(--logo-amarillo); }
-
-        /* Tarjetas de Mascotas */
         .card-pet { 
             background: white; 
             border-radius: 2.5rem; 
@@ -90,12 +81,10 @@
             position: relative;
             transition: transform 0.3s ease;
         }
-        .card-pet:active { transform: scale(0.97); }
 
         .status-badge {
             position: absolute;
-            top: 14px;
-            left: 14px;
+            top: 14px; left: 14px;
             padding: 6px 14px;
             border-radius: 20px;
             font-size: 8px;
@@ -104,33 +93,73 @@
             text-transform: uppercase;
             letter-spacing: 1px;
             z-index: 20;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
         }
 
-        /* Menú y Secciones */
-        #user-menu {
-            transform-origin: top right;
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .section-container {
-            animation: fadeIn 0.4s ease-out;
-        }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
+        .section-container { animation: fadeIn 0.4s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .hidden { display: none !important; }
-        
-        /* Scrollbar minimalista */
         .scrollbar-hide::-webkit-scrollbar { display: none; }
-        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
 <body>
 
-    <nav class="p-5 glass sticky top-0 z-[1000] flex justify-between items-center border-b border-white/20 shadow-sm">
+    <datalist id="lista-barrios">
+        <option value="14 de Octubre">
+        <option value="Alta Barda">
+        <option value="Altos del Limay">
+        <option value="Área Centro Este">
+        <option value="Área Centro Oeste">
+        <option value="Área Centro Sur">
+        <option value="Bardas Soleadas">
+        <option value="Belgrano">
+        <option value="Bouquet Roldán">
+        <option value="Canal V">
+        <option value="Ciudad Industrial">
+        <option value="Confluencia Rural">
+        <option value="Confluencia Urbana">
+        <option value="Cuenca XV">
+        <option value="Cumelén">
+        <option value="Don Bosco II">
+        <option value="Don Bosco III">
+        <option value="El Progreso">
+        <option value="Esfuerzo">
+        <option value="Esperanza">
+        <option value="Gran Neuquén Norte">
+        <option value="Gran Neuquén Sur">
+        <option value="Gregorio Álvarez">
+        <option value="Hi.Be.Pa">
+        <option value="Huilliches">
+        <option value="Islas Malvinas">
+        <option value="La Sirena">
+        <option value="Limay">
+        <option value="Mariano Moreno">
+        <option value="Melipal">
+        <option value="Militar">
+        <option value="Nuevo">
+        <option value="Parque Industrial">
+        <option value="Platier">
+        <option value="Provinciales Unidas">
+        <option value="Rincón de Emilio">
+        <option value="Río Grande">
+        <option value="San Lorenzo Norte">
+        <option value="San Lorenzo Sur">
+        <option value="Santa Genoveva">
+        <option value="Sapere">
+        <option value="Terrazas del Neuquén">
+        <option value="Toma Norte">
+        <option value="Unión de Mayo">
+        <option value="Valentina Norte Rural">
+        <option value="Valentina Norte Urbana">
+        <option value="Valentina Sur Rural">
+        <option value="Valentina Sur Urbana">
+        <option value="Villa Ceferino">
+        <option value="Villa Farrell">
+        <option value="Villa Florencia">
+        <option value="Villa María">
+        <option value="Z1">
+    </datalist>
+
+    <nav class="p-5 glass sticky top-0 z-[1000] flex justify-between items-center border-b border-white/20">
         <div onclick="location.reload()" class="cursor-pointer flex items-center gap-3">
             <div class="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-md border-2 border-white overflow-hidden">
                 <img src="/static/logo.png" onerror="this.src='https://cdn-icons-png.flaticon.com/512/194/194279.png'" class="w-full h-full object-cover">
@@ -143,15 +172,15 @@
 
         <div class="flex items-center gap-2 relative">
             <span id="admin-badge" class="hidden bg-[#C94C4C] text-white text-[8px] font-black px-2 py-1 rounded-md">ADMIN</span>
-            <button onclick="toggleUserMenu()" id="user-anchor" class="w-12 h-12 rounded-full bg-white text-slate-400 flex items-center justify-center transition-all shadow-md active:scale-90 border border-slate-100">
+            <button onclick="toggleUserMenu()" id="user-anchor" class="w-12 h-12 rounded-full bg-white text-slate-400 flex items-center justify-center shadow-md active:scale-90">
                 <i class="fas fa-user text-xl"></i>
             </button>
             
             <div id="user-menu" class="hidden absolute top-16 right-0 w-52 bg-white rounded-[2.2rem] shadow-2xl border border-slate-100 overflow-hidden z-[2001]">
                 <div class="p-5 border-b border-slate-50 bg-slate-50/50">
-                    <p id="menu-email" class="text-[9px] font-black text-slate-400 truncate uppercase tracking-widest"></p>
+                    <p id="menu-email" class="text-[9px] font-black text-slate-400 truncate tracking-widest uppercase"></p>
                 </div>
-                <button onclick="checkUserPanel(); toggleUserMenu()" class="w-full text-left p-5 text-xs font-bold hover:bg-orange-50 transition-colors flex items-center gap-3" style="color: var(--logo-coral);">
+                <button onclick="checkUserPanel(); toggleUserMenu()" class="w-full text-left p-5 text-xs font-bold hover:bg-orange-50 flex items-center gap-3" style="color: var(--logo-coral);">
                     <i class="fas fa-th-large"></i> Mi Panel
                 </button>
                 <button onclick="logout()" class="w-full text-left p-5 text-xs font-bold border-t border-slate-50 flex items-center gap-3" style="color: var(--logo-rojo);">
@@ -177,7 +206,7 @@
                 <div class="flex gap-3">
                     <div class="relative flex-1">
                         <i class="fas fa-search absolute left-5 top-1/2 -translate-y-1/2 text-slate-300"></i>
-                        <input type="text" id="search" oninput="renderPets()" placeholder="Buscar barrio o nombre..." class="custom-input pl-12">
+                        <input type="text" id="search" list="lista-barrios" oninput="renderPets()" placeholder="Buscar por barrio..." class="custom-input pl-12">
                     </div>
                     <select id="filter-status" onchange="renderPets()" class="custom-input font-bold w-auto px-6" style="color: var(--logo-coral);">
                         <option value="todos">Todos</option>
@@ -205,13 +234,13 @@
                             <option value="adopcion">Adopción</option>
                         </select>
                     </div>
-                    
                     <input type="text" id="especie-otro" placeholder="¿Qué animal es?" class="hidden custom-input border-2 border-orange-100">
                     <input type="text" name="name" placeholder="Nombre de la mascota" class="custom-input" required>
-                    <input type="text" name="barrio" placeholder="¿En qué barrio?" class="custom-input" required>
+                    
+                    <input type="text" name="barrio" list="lista-barrios" placeholder="Elegí el barrio oficial" class="custom-input" required>
                     
                     <div class="space-y-2">
-                        <p class="text-[9px] font-black text-slate-400 uppercase ml-2 tracking-widest">Ubica en el mapa</p>
+                        <p class="text-[9px] font-black text-slate-400 uppercase ml-2 tracking-widest">Toca el mapa para ubicar</p>
                         <div id="map-upload" style="height: 250px;" class="rounded-[2rem] border-4 border-slate-50 shadow-inner"></div>
                         <input type="hidden" name="latitud" id="lat-in">
                         <input type="hidden" name="longitud" id="lng-in">
@@ -222,32 +251,21 @@
                         <input type="file" name="file" accept="image/*" class="w-full text-[10px] font-bold text-slate-400" required>
                     </div>
 
-                    <button type="submit" id="btn-up" class="w-full py-5 rounded-[2rem] font-black uppercase shadow-xl text-white transition-all active:scale-95" style="background: var(--logo-coral);">Subir Reporte</button>
+                    <button type="submit" id="btn-up" class="w-full py-5 rounded-[2rem] font-black uppercase shadow-xl text-white active:scale-95 transition-all" style="background: var(--logo-coral);">Publicar</button>
                 </form>
             </div>
         </section>
 
         <section id="sec-auth" class="section-container hidden">
-            <div class="bg-white p-8 rounded-[3rem] shadow-2xl">
-                <div class="text-center mb-10">
-                    <h2 class="font-black text-3xl tracking-tighter uppercase" style="color: var(--dark);">Ingresar</h2>
-                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2">Bienvenido a la comunidad</p>
-                </div>
-                
+            <div class="bg-white p-8 rounded-[3rem] shadow-2xl text-center">
+                <h2 class="font-black text-3xl tracking-tighter uppercase mb-10" style="color: var(--dark);">Ingresar</h2>
                 <form onsubmit="handleLogin(event)" class="space-y-4">
-                    <div class="relative">
-                        <i class="fas fa-envelope absolute left-5 top-1/2 -translate-y-1/2 text-slate-300"></i>
-                        <input type="email" name="email" placeholder="Tu Email" class="custom-input pl-12" required>
-                    </div>
-                    <div class="relative">
-                        <i class="fas fa-lock absolute left-5 top-1/2 -translate-y-1/2 text-slate-300"></i>
-                        <input type="password" name="password" placeholder="Tu Contraseña" class="custom-input pl-12" required>
-                    </div>
-                    <button class="w-full py-5 rounded-[2rem] font-black uppercase text-white shadow-xl hover:brightness-105 active:scale-95 transition-all" style="background: var(--dark);">Entrar</button>
+                    <input type="email" name="email" placeholder="Email" class="custom-input" required>
+                    <input type="password" name="password" placeholder="Contraseña" class="custom-input" required>
+                    <button class="w-full py-5 rounded-[2rem] font-black uppercase text-white shadow-xl" style="background: var(--dark);">Entrar</button>
                 </form>
-
                 <div class="mt-12 pt-8 border-t border-dashed border-slate-200">
-                    <p class="text-center text-[9px] font-black text-slate-400 mb-6 uppercase tracking-widest">¿No tienes cuenta? Regístrate</p>
+                    <p class="text-[9px] font-black text-slate-400 mb-6 uppercase">¿Nuevo vecino? Regístrate</p>
                     <form onsubmit="handleRegister(event)" class="space-y-4">
                         <input type="email" name="email" placeholder="Email" class="custom-input" required>
                         <input type="password" name="password" placeholder="Contraseña" class="custom-input" required>
@@ -270,8 +288,8 @@
 
         <section id="sec-admin" class="section-container hidden">
             <div class="bg-white p-8 rounded-[3rem] shadow-xl">
-                <h2 class="font-black text-2xl mb-8 uppercase tracking-tighter">Administración</h2>
-                <div class="grid grid-cols-3 gap-3 mb-10 text-center">
+                <h2 class="font-black text-2xl mb-8 uppercase tracking-tighter">Admin Panel</h2>
+                <div class="grid grid-cols-3 gap-3 mb-10 text-center" id="stats">
                     <div class="bg-orange-50 p-5 rounded-[1.5rem]"><p class="text-2xl font-black text-orange-500" id="stat-perdidos">0</p><p class="text-[8px] font-black uppercase">Perdidos</p></div>
                     <div class="bg-emerald-50 p-5 rounded-[1.5rem]"><p class="text-2xl font-black text-emerald-500" id="stat-adopcion">0</p><p class="text-[8px] font-black uppercase">Adopción</p></div>
                     <div class="bg-slate-50 p-5 rounded-[1.5rem]"><p class="text-2xl font-black text-slate-400" id="stat-pendientes">0</p><p class="text-[8px] font-black uppercase">Espera</p></div>
@@ -280,12 +298,11 @@
                 <div id="admin-pets" class="space-y-4"></div>
             </div>
         </section>
-
     </main>
 
     <nav class="fixed bottom-6 left-1/2 -translate-x-1/2 w-[92%] glass shadow-2xl rounded-[3rem] p-3 flex justify-around items-center z-[2000] border-2 border-white">
         <button onclick="showSection('home')" class="w-14 h-14 text-slate-300 hover:text-orange-500 transition-colors"><i class="fas fa-map-marked-alt text-2xl"></i></button>
-        <button onclick="checkAuth()" class="w-16 h-16 rounded-full -mt-14 border-[8px] border-[var(--logo-crema)] shadow-2xl flex items-center justify-center active:scale-90 transition-all text-white" style="background: var(--logo-coral);">
+        <button onclick="checkAuth()" class="w-16 h-16 rounded-full -mt-14 border-[8px] border-[var(--logo-crema)] shadow-2xl flex items-center justify-center text-white active:scale-90 transition-all" style="background: var(--logo-coral);">
             <i class="fas fa-plus text-2xl"></i>
         </button>
         <button onclick="location.reload()" class="w-14 h-14 text-slate-300 hover:text-orange-500 transition-colors"><i class="fas fa-sync-alt text-2xl"></i></button>
@@ -297,19 +314,16 @@
         let currentSpecies = 'todos';
         let user = JSON.parse(localStorage.getItem('user'));
 
-        // --- SISTEMA DE SESIÓN Y UI ---
         function updateAuthUI() {
             const userBtn = document.getElementById('user-anchor');
             const adminBadge = document.getElementById('admin-badge');
             if (user) {
                 userBtn.style.backgroundColor = 'var(--logo-coral)';
                 userBtn.style.color = 'white';
-                userBtn.style.borderColor = 'var(--logo-coral)';
                 if (user.role === 'admin') adminBadge.classList.remove('hidden');
             } else {
                 userBtn.style.backgroundColor = 'white';
                 userBtn.style.color = '#94a3b8';
-                userBtn.style.borderColor = '#f1f5f9';
                 adminBadge.classList.add('hidden');
             }
         }
@@ -321,13 +335,10 @@
             document.getElementById('menu-email').innerText = user.email;
         }
 
-        // --- NAVEGACIÓN ENTRE SECCIONES ---
         function showSection(id) {
             document.querySelectorAll('.section-container').forEach(s => s.classList.add('hidden'));
             const target = document.getElementById('sec-' + id);
             if(target) target.classList.remove('hidden');
-            
-            // Cerrar menú usuario siempre que se cambie de sección
             document.getElementById('user-menu').classList.add('hidden');
 
             if(id === 'home') {
@@ -341,27 +352,22 @@
         }
 
         function checkUserPanel() {
-            if(!user) {
-                showSection('auth');
-            } else if(user.role === 'admin') {
-                showSection('admin');
-                loadAdminData();
-            } else {
+            if(!user) { showSection('auth'); }
+            else if(user.role === 'admin') { showSection('admin'); loadAdminData(); }
+            else { 
                 showSection('profile');
-                // Saludo personalizado André
                 const greeting = document.getElementById('profile-greeting');
                 if(user.email.toLowerCase().includes('andre')) {
                     greeting.innerText = "¡HOLA ANDRÉ! 🐾";
                 } else {
                     greeting.innerText = "MIS REPORTES 🐾";
                 }
-                loadUserPets();
+                loadUserPets(); 
             }
         }
 
         function checkAuth() { user ? showSection('upload') : showSection('auth'); }
 
-        // --- GESTIÓN DE MAPAS (LEAFLET) ---
         function initMainMap() {
             mainMap = L.map('main-map', { zoomControl: false }).setView([-38.951, -68.061], 13);
             L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png').addTo(mainMap);
@@ -384,13 +390,10 @@
             if (mainMap) mainMap.flyTo([lat, lng], 16, { animate: true, duration: 1.5 });
         }
 
-        // --- MASCOTAS: CARGA Y FILTRADO ---
         async function loadPets() {
-            try {
-                const res = await fetch('/pets');
-                allPets = await res.json();
-                renderPets();
-            } catch (e) { console.error("Error cargando mascotas:", e); }
+            const res = await fetch('/pets');
+            allPets = await res.json();
+            renderPets();
         }
 
         function renderPets() {
@@ -398,7 +401,6 @@
             const term = document.getElementById('search').value.toLowerCase();
             const status = document.getElementById('filter-status').value;
             list.innerHTML = "";
-            
             if(mainMap) mainMap.eachLayer(l => { if(l instanceof L.CircleMarker) mainMap.removeLayer(l); });
 
             const filtered = allPets.filter(p => 
@@ -410,19 +412,17 @@
             filtered.forEach(p => {
                 const color = p.status === 'perdido' ? 'var(--logo-rojo)' : 'var(--logo-celeste)';
                 const tel = p.users ? p.users.telefono : '2996894360';
-                
                 if(mainMap) L.circleMarker([p.latitud, p.longitud], {color: color, radius: 9, fillOpacity: 0.8, weight: 3}).addTo(mainMap);
-
                 list.innerHTML += `
                     <div class="card-pet">
                         <span class="status-badge" style="background:${color}">${p.status}</span>
                         <img src="${p.image_url}" onclick="focusOnPet(${p.latitud}, ${p.longitud})" class="w-full h-40 object-cover cursor-pointer">
                         <div class="p-5 text-center">
-                            <p class="font-black text-sm uppercase tracking-tighter" style="color: var(--dark)">${p.name}</p>
-                            <p class="text-[9px] font-bold text-slate-400 mb-4 uppercase tracking-widest">${p.barrio}</p>
+                            <p class="font-black text-sm uppercase tracking-tighter">${p.name}</p>
+                            <p class="text-[9px] font-bold text-slate-400 mb-4 uppercase">${p.barrio}</p>
                             <div class="flex gap-2">
                                 <a href="https://wa.me/${tel}" target="_blank" class="flex-1 text-white text-[10px] py-3 rounded-2xl font-black shadow-md" style="background: var(--logo-celeste)">WHATSAPP</a>
-                                <button onclick="sharePet('${p.name}', '${p.barrio}')" class="bg-slate-50 text-slate-400 px-4 rounded-2xl active:bg-slate-200 transition-colors"><i class="fas fa-share-alt"></i></button>
+                                <button onclick="sharePet('${p.name}', '${p.barrio}')" class="bg-slate-50 text-slate-400 px-4 rounded-2xl"><i class="fas fa-share-alt"></i></button>
                             </div>
                         </div>
                     </div>`;
@@ -434,33 +434,22 @@
             window.open(`https://wa.me/?text=${encodeURIComponent(txt)}`, '_blank');
         }
 
-        // --- AUTH: LOGIN Y REGISTRO ---
         async function handleLogin(e) {
             e.preventDefault();
             const res = await fetch('/login', { method: 'POST', body: new FormData(e.target) });
-            if(res.ok) { 
-                localStorage.setItem('user', JSON.stringify(await res.json())); 
-                location.reload(); 
-            } else { 
-                const d = await res.json(); 
-                alert(d.msg || "Error de ingreso"); 
-            }
+            if(res.ok) { localStorage.setItem('user', JSON.stringify(await res.json())); location.reload(); }
+            else { alert("Error de acceso."); }
         }
 
         async function handleRegister(e) {
             e.preventDefault();
             const res = await fetch('/register', { method: 'POST', body: new FormData(e.target) });
-            if(res.ok) { 
-                alert("¡Solicitud enviada! Te avisaremos por mail apenas aprobemos tu acceso."); 
-                location.reload(); 
-            } else { 
-                alert("Error al procesar el registro."); 
-            }
+            if(res.ok) { alert("Solicitud enviada, André!"); location.reload(); }
+            else { alert("Error al registrar."); }
         }
 
         function logout() { localStorage.removeItem('user'); location.reload(); }
 
-        // --- FORMULARIO DE SUBIDA ---
         function checkOtroEspecie(val) {
             const input = document.getElementById('especie-otro');
             val === 'otro' ? input.classList.remove('hidden') : input.classList.add('hidden');
@@ -468,64 +457,51 @@
 
         async function handleUpload(e) {
             e.preventDefault();
-            if(!document.getElementById('lat-in').value) return alert("Por favor marca la ubicación en el mapa");
-            const btn = document.getElementById('btn-up'); btn.innerText = "SUBIENDO..."; btn.disabled = true;
-            
+            if(!document.getElementById('lat-in').value) return alert("Marcá la ubicación");
+            const btn = document.getElementById('btn-up'); btn.innerText = "Subiendo..."; btn.disabled = true;
             const fd = new FormData(e.target);
-            if(document.getElementById('especie-select').value === 'otro') {
-                fd.set('especie', document.getElementById('especie-otro').value || 'Otro');
-            }
+            if(document.getElementById('especie-select').value === 'otro') fd.set('especie', document.getElementById('especie-otro').value || 'Otro');
             fd.append('user_id', user.id);
-            
-            try {
-                const res = await fetch('/pets/upload', { method: 'POST', body: fd });
-                if(res.ok) { 
-                    alert("¡Excelente! El reporte ya está en revisión."); 
-                    location.reload(); 
-                } else { 
-                    alert("Error al subir."); btn.innerText = "Publicar"; btn.disabled = false; 
-                }
-            } catch(err) { console.error(err); btn.disabled = false; }
+            const res = await fetch('/pets/upload', { method: 'POST', body: fd });
+            if(res.ok) { alert("¡Listo!"); location.reload(); }
+            else { alert("Error"); btn.disabled = false; }
         }
 
-        // --- ADMINISTRACIÓN Y PANEL ---
         async function loadAdminData() {
             const res = await fetch('/admin/data');
             const data = await res.json();
             document.getElementById('stat-perdidos').innerText = data.stats.perdidos;
             document.getElementById('stat-adopcion').innerText = data.stats.adopcion;
             document.getElementById('stat-pendientes').innerText = data.stats.pendientes;
-            
-            document.getElementById('admin-users').innerHTML = '<p class="text-[10px] font-black text-slate-400 uppercase ml-2 tracking-widest mb-3">Nuevos Vecinos</p>' + data.users.map(u => `
-                <div class="bg-white p-4 rounded-3xl flex justify-between items-center shadow-sm border border-slate-50 mb-2">
+            document.getElementById('admin-users').innerHTML = data.users.map(u => `
+                <div class="bg-white p-4 rounded-3xl flex justify-between items-center shadow-sm mb-2">
                     <span class="text-xs font-bold">${u.email}</span>
                     <button onclick="approve('user', ${u.id})" class="bg-emerald-500 text-white text-[10px] px-5 py-2 rounded-2xl font-black">ADMITIR</button>
-                </div>`).join('') || "<p class='text-[10px] text-center p-6 text-slate-300'>Sin usuarios pendientes.</p>";
-
-            document.getElementById('admin-pets').innerHTML = '<p class="text-[10px] font-black text-slate-400 uppercase ml-2 tracking-widest mb-3">Publicaciones en espera</p>' + data.pets.filter(p => !p.is_approved).map(p => `
-                <div class="bg-white p-3 rounded-3xl flex items-center gap-4 shadow-sm border border-slate-50 mb-2">
+                </div>`).join('');
+            document.getElementById('admin-pets').innerHTML = data.pets.filter(p => !p.is_approved).map(p => `
+                <div class="bg-white p-3 rounded-3xl flex items-center gap-4 shadow-sm mb-2">
                     <img src="${p.image_url}" class="w-12 h-12 rounded-2xl object-cover">
                     <span class="flex-1 text-xs font-black">${p.name}</span>
                     <button onclick="approve('pet', ${p.id})" class="bg-orange-500 text-white text-[10px] px-5 py-2 rounded-2xl font-black">APROBAR</button>
-                </div>`).join('') || "<p class='text-[10px] text-center p-6 text-slate-300'>Todo al día.</p>";
+                </div>`).join('');
         }
 
         async function loadUserPets() {
             const res = await fetch(`/my-pets/${user.id}`);
             const pets = await res.json();
             document.getElementById('user-pet-list').innerHTML = pets.map(p => `
-                <div class="bg-slate-50 p-4 rounded-[2rem] flex items-center gap-4 border border-slate-100">
+                <div class="bg-slate-50 p-4 rounded-[2rem] flex items-center gap-4 mb-2">
                     <img src="${p.image_url}" class="w-14 h-14 rounded-2xl object-cover">
                     <div class="flex-1">
                         <p class="font-black text-sm">${p.name}</p>
-                        <p class="text-[9px] font-black uppercase ${p.is_approved ? 'text-emerald-500':'text-orange-400'}">${p.is_approved ? 'Visible en Mapa':'En Revisión'}</p>
+                        <p class="text-[9px] font-black uppercase ${p.is_approved ? 'text-emerald-500':'text-orange-400'}">${p.is_approved ? 'Aprobado':'En revisión'}</p>
                     </div>
-                    <button onclick="deletePet(${p.id})" class="text-red-400 p-3 bg-white rounded-full shadow-sm"><i class="fas fa-trash"></i></button>
-                </div>`).join('') || "<p class='text-center text-slate-300 p-10 text-[10px]'>Aún no has realizado reportes.</p>";
+                    <button onclick="deletePet(${p.id})" class="text-red-400 p-3 bg-white rounded-full"><i class="fas fa-trash"></i></button>
+                </div>`).join('');
         }
 
         async function approve(t, id) { await fetch(`/admin/approve/${t}/${id}`, {method:'POST'}); loadAdminData(); }
-        async function deletePet(id) { if(confirm("¿Borrar definitivamente?")) { await fetch(`/pets/user-delete/${id}`, {method:'DELETE'}); loadUserPets(); } }
+        async function deletePet(id) { if(confirm("¿Borrar?")) { await fetch(`/pets/user-delete/${id}`, {method:'DELETE'}); loadUserPets(); } }
 
         function setSpecies(sp, btn) {
             currentSpecies = sp;
@@ -534,21 +510,7 @@
             renderPets();
         }
 
-        // --- INICIALIZACIÓN ---
-        window.onload = () => {
-            updateAuthUI();
-            showSection('home');
-            
-            // Cerrar menú usuario al tocar afuera
-            document.addEventListener('click', (e) => {
-                const menu = document.getElementById('user-menu');
-                const anchor = document.getElementById('user-anchor');
-                if (user && menu && !menu.contains(e.target) && !anchor.contains(e.target)) {
-                    menu.classList.add('hidden');
-                }
-            });
-        };
+        window.onload = () => { updateAuthUI(); showSection('home'); };
     </script>
 </body>
 </html>
-
