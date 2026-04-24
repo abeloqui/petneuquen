@@ -9,107 +9,148 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Lexend:wght@400;700;900&display=swap');
-        body { font-family: 'Lexend', sans-serif; background: #f8fafc; margin:0; padding-bottom: 120px; }
+        @import url('https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;600;900&display=swap');
+        :root { --primary: #f97316; --bg: #f8fafc; }
+        body { font-family: 'Lexend', sans-serif; background: var(--bg); color: #1e293b; margin:0; padding-bottom: 140px; }
         .hidden { display: none !important; }
-        #main-map { height: 320px; width: 100%; border-radius: 2.5rem; border: 6px solid white; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); }
-        .btn-shadow { box-shadow: 0 10px 15px -3px rgba(249, 115, 22, 0.3); }
+        #main-map { height: 350px; width: 100%; border-radius: 3rem; border: 8px solid white; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.08); }
+        .glass { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.3); }
+        .card-pet { transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        .card-pet:active { transform: scale(0.95); }
+        input, select { border: 2px solid transparent !important; transition: all 0.3s; }
+        input:focus { border-color: var(--primary) !important; box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.1); }
+        @media (max-width: 400px) { .grid-cols-2 { grid-template-cols: 1fr; } }
     </style>
 </head>
 <body>
 
-    <nav class="p-6 bg-white/90 backdrop-blur-md sticky top-0 z-[1000] flex justify-between items-center border-b border-slate-100">
-        <h1 class="font-black text-2xl tracking-tighter cursor-pointer" onclick="location.reload()">Huellitas<span class="text-orange-500">NQN</span></h1>
-        <button onclick="showSection('auth')" class="text-slate-300 text-4xl hover:text-slate-400 transition-colors"><i class="fas fa-user-circle"></i></button>
+    <nav class="p-6 glass sticky top-0 z-[1000] flex justify-between items-center border-b">
+        <div>
+            <h1 class="font-black text-2xl tracking-tighter" onclick="location.reload()">Huellitas<span class="text-orange-500">NQN</span></h1>
+            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Neuquén Capital</p>
+        </div>
+        <button onclick="showSection('auth')" class="w-12 h-12 rounded-2xl bg-slate-50 text-slate-400 flex items-center justify-center text-2xl shadow-inner"><i class="fas fa-user-circle"></i></button>
     </nav>
 
-    <main class="p-4 max-w-xl mx-auto">
-        <section id="sec-home" class="space-y-6">
+    <main class="p-4 max-w-2xl mx-auto overflow-x-hidden">
+        
+        <section id="sec-home" class="space-y-8">
             <div id="main-map"></div>
-            <div class="flex gap-3">
-                <input type="text" id="search" oninput="applyFilters()" placeholder="¿En qué barrio?" class="flex-1 p-5 rounded-3xl bg-white shadow-sm outline-none border-2 border-transparent focus:border-orange-500 transition-all">
-                <select id="filter-status" onchange="applyFilters()" class="p-5 rounded-3xl bg-white shadow-sm font-bold text-orange-500 outline-none">
-                    <option value="todos">Todos</option>
+            <div class="flex flex-col sm:flex-row gap-3">
+                <div class="relative flex-1">
+                    <i class="fas fa-search absolute left-5 top-1/2 -translate-y-1/2 text-slate-300"></i>
+                    <input type="text" id="search" oninput="applyFilters()" placeholder="¿En qué barrio?" class="w-full p-5 pl-14 rounded-3xl bg-white shadow-sm outline-none">
+                </div>
+                <select id="filter-status" onchange="applyFilters()" class="p-5 rounded-3xl bg-white shadow-sm font-bold text-orange-500 outline-none cursor-pointer">
+                    <option value="todos text-slate-400">Todo tipo</option>
                     <option value="perdido">Perdidos</option>
                     <option value="adopcion">Adopción</option>
                 </select>
             </div>
-            <div id="pet-list" class="grid grid-cols-2 gap-4"></div>
+            <div id="pet-list" class="grid grid-cols-2 gap-6"></div>
         </section>
 
         <section id="sec-upload" class="hidden">
-            <div class="bg-white p-8 rounded-[3rem] shadow-xl border border-slate-50">
-                <h2 class="font-black text-2xl mb-2 text-slate-800">Publicar</h2>
-                <p class="text-xs text-slate-400 mb-6 font-bold uppercase tracking-widest">Ayudanos a encontrarlos</p>
-                <form onsubmit="handleUpload(event)" class="space-y-4">
-                    <input type="text" name="name" placeholder="Nombre (o 'Perrito')" class="w-full p-5 bg-slate-50 rounded-2xl outline-none" required>
-                    <select name="status" class="w-full p-5 bg-slate-50 rounded-2xl font-bold text-orange-500">
-                        <option value="perdido">Perdido</option>
-                        <option value="adopcion">En Adopción</option>
-                    </select>
-                    <input type="text" name="barrio" placeholder="Barrio de Neuquén" class="w-full p-5 bg-slate-50 rounded-2xl outline-none" required>
-                    <div id="map-upload" style="height: 200px;" class="rounded-3xl border-4 border-slate-100"></div>
-                    <input type="hidden" name="latitud" id="lat-in" value="">
-                    <input type="hidden" name="longitud" id="lng-in" value="">
-                    <div class="p-6 border-2 border-dashed border-slate-200 rounded-3xl text-center">
-                        <input type="file" name="file" accept="image/*" class="text-xs font-bold text-slate-400" required>
+            <div class="bg-white p-8 rounded-[3.5rem] shadow-2xl border border-white">
+                <div class="mb-8">
+                    <h2 class="font-black text-3xl text-slate-800">Nueva huellita</h2>
+                    <p class="text-sm text-slate-400">Completa los datos para ayudar</p>
+                </div>
+                <form onsubmit="handleUpload(event)" class="space-y-6">
+                    <div class="space-y-2">
+                        <label class="text-xs font-black text-slate-400 uppercase ml-2">Datos básicos</label>
+                        <input type="text" name="name" placeholder="Nombre de la mascota" class="w-full p-5 bg-slate-50 rounded-2xl outline-none" required>
+                        <select name="status" class="w-full p-5 bg-slate-50 rounded-2xl font-bold text-orange-500">
+                            <option value="perdido">Perdido / Encontrado</option>
+                            <option value="adopcion">En Adopción</option>
+                        </select>
+                        <input type="text" name="barrio" placeholder="Barrio (Ej: Huiliches)" class="w-full p-5 bg-slate-50 rounded-2xl outline-none" required>
                     </div>
-                    <button id="btn-up" class="w-full bg-orange-500 text-white py-5 rounded-3xl font-black btn-shadow uppercase">Publicar Ahora</button>
+                    <div class="space-y-2">
+                        <label class="text-xs font-black text-slate-400 uppercase ml-2">Ubicación exacta</label>
+                        <div id="map-upload" style="height: 250px;" class="rounded-[2rem] border-4 border-slate-50 shadow-inner"></div>
+                        <input type="hidden" name="latitud" id="lat-in">
+                        <input type="hidden" name="longitud" id="lng-in">
+                    </div>
+                    <div class="space-y-2">
+                        <label class="text-xs font-black text-slate-400 uppercase ml-2">Foto</label>
+                        <div class="relative group">
+                            <input type="file" name="file" accept="image/*" class="w-full p-10 border-2 border-dashed border-slate-200 rounded-[2rem] text-xs font-bold text-slate-400 text-center" required>
+                        </div>
+                    </div>
+                    <button id="btn-up" class="w-full bg-orange-500 text-white py-6 rounded-[2rem] font-black shadow-xl shadow-orange-100 uppercase tracking-widest active:scale-95 transition-all">Publicar Ahora</button>
                 </form>
             </div>
         </section>
 
-        <section id="sec-auth" class="hidden">
+        <section id="sec-auth" class="hidden space-y-6">
             <div id="auth-forms" class="space-y-8">
-                <div class="bg-white p-8 rounded-[3rem] shadow-sm border">
-                    <h3 class="font-black text-lg mb-4">Ingresar</h3>
+                <div class="bg-white p-10 rounded-[3.5rem] shadow-sm border border-white">
+                    <h3 class="font-black text-2xl mb-6">¡Hola! Ingresá</h3>
                     <form onsubmit="handleLogin(event)" class="space-y-4">
-                        <input type="email" name="email" placeholder="Email" class="w-full p-5 bg-slate-50 rounded-2xl" required>
-                        <input type="password" name="password" placeholder="Contraseña" class="w-full p-5 bg-slate-50 rounded-2xl" required>
-                        <button class="w-full bg-slate-900 text-white py-5 rounded-2xl font-bold uppercase tracking-widest">Entrar</button>
+                        <input type="email" name="email" placeholder="Tu Email" class="w-full p-5 bg-slate-50 rounded-2xl outline-none" required>
+                        <input type="password" name="password" placeholder="Tu Clave" class="w-full p-5 bg-slate-50 rounded-2xl outline-none" required>
+                        <button class="w-full bg-slate-900 text-white py-5 rounded-2xl font-black uppercase tracking-widest">Entrar</button>
                     </form>
                 </div>
-                <div class="bg-white p-8 rounded-[3rem] shadow-sm border border-dashed">
-                    <h3 class="text-xs font-black text-slate-400 uppercase mb-4 tracking-widest">¿Sos nuevo? Pedí acceso</h3>
+                <div class="text-center p-6 border-2 border-dashed border-slate-200 rounded-[3rem]">
+                    <h3 class="text-xs font-black text-slate-400 uppercase mb-6 tracking-widest">¿Sos nuevo? Registrate</h3>
                     <form onsubmit="handleRegister(event)" class="space-y-4">
-                        <input type="email" name="email" placeholder="Tu Email" class="w-full p-5 bg-slate-50 rounded-2xl" required>
-                        <input type="password" name="password" placeholder="Elegí una clave" class="w-full p-5 bg-slate-50 rounded-2xl" required>
-                        <input type="text" name="telefono" placeholder="WhatsApp (Ej: 2994567890)" class="w-full p-5 bg-slate-50 rounded-2xl" required>
+                        <input type="email" name="email" placeholder="Email" class="w-full p-5 bg-slate-50/50 rounded-2xl outline-none" required>
+                        <input type="password" name="password" placeholder="Crear Clave" class="w-full p-5 bg-slate-50/50 rounded-2xl outline-none" required>
+                        <input type="text" name="telefono" placeholder="WhatsApp (Ej: 2991234567)" class="w-full p-5 bg-slate-50/50 rounded-2xl outline-none" required>
                         <button class="w-full bg-white text-slate-500 py-5 rounded-2xl font-bold border-2">REGISTRARME</button>
                     </form>
                 </div>
             </div>
-            <div id="user-info" class="hidden space-y-6">
-                <div class="bg-white p-8 rounded-[3rem] border-2 text-center shadow-sm">
-                    <p id="u-mail" class="font-black text-slate-800 mb-2"></p>
-                    <button onclick="logout()" class="text-red-500 font-bold text-[10px] uppercase tracking-widest">Cerrar Sesión</button>
+            <div id="user-info" class="hidden space-y-8">
+                <div class="bg-white p-10 rounded-[3.5rem] text-center shadow-sm border border-white relative overflow-hidden">
+                    <div class="absolute top-0 left-0 w-full h-1 bg-orange-500"></div>
+                    <p id="u-mail" class="font-black text-xl text-slate-800 mb-4"></p>
+                    <button onclick="logout()" class="text-red-400 font-bold text-[10px] uppercase tracking-widest hover:text-red-600 transition-colors">Cerrar Sesión</button>
                 </div>
                 <div>
-                    <h3 class="font-black text-slate-800 mb-4 ml-4">Mis Mascotas</h3>
-                    <div id="my-pets-list" class="space-y-3"></div>
+                    <h3 class="font-black text-slate-800 mb-6 flex items-center gap-3 px-4 text-xl">
+                        <span class="w-10 h-10 bg-orange-100 text-orange-500 rounded-full flex items-center justify-center text-sm"><i class="fas fa-heart"></i></span>
+                        Mis Mascotas
+                    </h3>
+                    <div id="my-pets-list" class="space-y-4 px-2"></div>
                 </div>
             </div>
         </section>
 
-        <section id="sec-admin" class="hidden space-y-6">
-            <div id="admin-stats" class="grid grid-cols-2 gap-4">
-                <div class="bg-orange-500 p-6 rounded-[2rem] text-white">
-                    <p class="text-[10px] font-bold uppercase opacity-80">Perdidos hoy</p>
-                    <h4 id="stat-perdidos" class="text-3xl font-black">0</h4>
+        <section id="sec-admin" class="hidden space-y-8">
+            <div id="admin-stats" class="grid grid-cols-3 gap-3">
+                <div class="bg-orange-500 p-5 rounded-[2rem] text-white shadow-lg shadow-orange-100">
+                    <p class="text-[8px] font-black uppercase opacity-70">Perdidos</p>
+                    <h4 id="stat-perdidos" class="text-2xl font-black">0</h4>
                 </div>
-                <div class="bg-slate-800 p-6 rounded-[2rem] text-white">
-                    <p class="text-[10px] font-bold uppercase opacity-80">Pendientes</p>
-                    <h4 id="stat-pendientes" class="text-3xl font-black">0</h4>
+                <div class="bg-teal-500 p-5 rounded-[2rem] text-white shadow-lg shadow-teal-100">
+                    <p class="text-[8px] font-black uppercase opacity-70">Adopción</p>
+                    <h4 id="stat-adopcion" class="text-2xl font-black">0</h4>
+                </div>
+                <div class="bg-slate-800 p-5 rounded-[2rem] text-white shadow-lg shadow-slate-200">
+                    <p class="text-[8px] font-black uppercase opacity-70">Pendientes</p>
+                    <h4 id="stat-pendientes" class="text-2xl font-black">0</h4>
                 </div>
             </div>
-            <div id="admin-content" class="space-y-3"></div>
+            
+            <div class="space-y-4">
+                <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest px-4">Usuarios nuevos</h3>
+                <div id="admin-users" class="space-y-3"></div>
+            </div>
+
+            <div class="space-y-4">
+                <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest px-4">Gestionar Publicaciones</h3>
+                <div id="admin-pets" class="space-y-3"></div>
+            </div>
         </section>
     </main>
 
-    <nav class="fixed bottom-8 left-1/2 -translate-x-1/2 w-[85%] bg-white/95 backdrop-blur-lg shadow-2xl rounded-full p-4 flex justify-around items-center z-[2000] border border-white">
-        <button onclick="showSection('home')" class="p-3 text-slate-300 transition-all hover:scale-110"><i class="fas fa-home text-2xl"></i></button>
-        <button onclick="checkAuth()" class="bg-orange-500 text-white p-5 rounded-full -mt-14 border-[6px] border-[#f8fafc] btn-shadow active:scale-90 transition-all"><i class="fas fa-plus text-xl"></i></button>
-        <button id="nav-admin-btn" onclick="showAdmin()" class="hidden p-3 text-indigo-400 transition-all"><i class="fas fa-shield-halved text-2xl"></i></button>
+    <nav class="fixed bottom-8 left-1/2 -translate-x-1/2 w-[90%] glass shadow-[0_25px_50px_rgba(0,0,0,0.15)] rounded-full p-4 flex justify-around items-center z-[2000] border-2 border-white">
+        <button onclick="showSection('home')" class="w-12 h-12 rounded-full text-slate-300 hover:text-orange-500 transition-colors"><i class="fas fa-home text-2xl"></i></button>
+        <button onclick="checkAuth()" class="bg-orange-500 text-white w-16 h-16 rounded-full -mt-16 border-[6px] border-[#f8fafc] shadow-2xl shadow-orange-200 active:scale-90 transition-all flex items-center justify-center"><i class="fas fa-plus text-2xl"></i></button>
+        <button id="nav-admin-btn" onclick="showAdmin()" class="hidden w-12 h-12 rounded-full text-indigo-400 hover:bg-indigo-50 transition-all"><i class="fas fa-shield-halved text-2xl"></i></button>
     </nav>
 
     <script>
@@ -119,6 +160,8 @@
         function showSection(id) {
             document.querySelectorAll('section').forEach(s => s.classList.add('hidden'));
             document.getElementById('sec-' + id).classList.remove('hidden');
+            window.scrollTo({top:0, behavior:'smooth'});
+
             if(id === 'home') {
                 if(!mainMap) {
                     mainMap = L.map('main-map', {zoomControl: false}).setView([-38.951, -68.061], 13);
@@ -162,69 +205,61 @@
             const filtered = allPets.filter(p => (p.barrio.toLowerCase().includes(term) || p.name.toLowerCase().includes(term)) && (status === 'todos' || p.status === status));
             
             filtered.forEach(p => {
-                const color = p.status === 'perdido' ? '#ef4444' : '#10b981';
-                if(mainMap) L.circleMarker([p.latitud, p.longitud], {color: color, radius: 8, fillOpacity: 1, fillColor: 'white'}).addTo(mainMap).bindPopup(`<b>${p.name}</b>`);
+                const color = p.status === 'perdido' ? '#f43f5e' : '#10b981';
+                if(mainMap) L.circleMarker([p.latitud, p.longitud], {color: color, radius: 8, weight: 3, fillOpacity: 1, fillColor: 'white'}).addTo(mainMap).bindPopup(`<b>${p.name}</b>`);
                 
-                // SEGURIDAD: Extraer solo números del teléfono
-                const telRaw = p.users ? p.users.telefono : "2996894360";
-                const telClean = telRaw.replace(/\D/g,'');
+                const telClean = (p.users ? p.users.telefono : "2996894360").replace(/\D/g,'');
                 const waLink = `https://wa.me/${telClean}?text=Hola, te contacto por ${p.name} que vi en Huellitas NQN`;
 
                 list.innerHTML += `
-                    <div class="bg-white rounded-[2.5rem] overflow-hidden shadow-sm border border-white relative">
-                        <button onclick="sharePet('${p.name}', '${p.barrio}')" class="absolute top-2 right-2 bg-white/80 backdrop-blur p-2 rounded-full text-slate-600 z-10"><i class="fas fa-share-nodes"></i></button>
-                        <img src="${p.image_url}" class="w-full h-32 object-cover" onclick="focusOnPet(${p.latitud}, ${p.longitud}, '${p.name}')">
-                        <div class="p-3 text-center">
-                            <p class="font-black text-slate-800 text-xs mb-0.5">${p.name}</p>
-                            <p class="text-[8px] text-slate-400 mb-3 uppercase font-black">${p.barrio}</p>
-                            <a href="${waLink}" target="_blank" class="block w-full bg-orange-500 text-white py-3 rounded-xl text-[9px] font-black uppercase btn-shadow">Contactar</a>
+                    <div class="card-pet bg-white rounded-[2.5rem] overflow-hidden shadow-lg shadow-slate-100 border border-white relative">
+                        <button onclick="sharePet('${p.name}', '${p.barrio}')" class="absolute top-3 right-3 bg-white/90 backdrop-blur w-10 h-10 rounded-2xl text-slate-500 z-10 shadow-sm flex items-center justify-center active:bg-orange-500 active:text-white transition-all"><i class="fas fa-share-nodes"></i></button>
+                        <img src="${p.image_url}" class="w-full h-44 object-cover" onclick="focusOnPet(${p.latitud}, ${p.longitud}, '${p.name}')">
+                        <div class="p-4 text-center">
+                            <p class="font-black text-slate-800 text-sm mb-0.5">${p.name}</p>
+                            <p class="text-[9px] text-slate-400 mb-4 uppercase font-bold tracking-wider"><i class="fas fa-location-dot mr-1"></i>${p.barrio}</p>
+                            <a href="${waLink}" target="_blank" class="block w-full bg-orange-500 text-white py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-orange-100">Contactar</a>
                         </div>
                     </div>`;
             });
         }
 
         function sharePet(name, barrio) {
-            const text = `¡Ayudame a compartir! Buscamos a ${name} en barrio ${barrio}. Miralo acá: ${window.location.href}`;
-            if(navigator.share) {
-                navigator.share({ title: 'Huellitas NQN', text: text, url: window.location.href });
-            } else {
-                window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`);
-            }
+            const text = `🐾 ¡Ayudame compartiendo! Buscamos a ${name} en barrio ${barrio}. Miralo acá: ${window.location.href}`;
+            if(navigator.share) navigator.share({ title: 'Huellitas NQN', text: text, url: window.location.href });
+            else window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`);
         }
 
         function focusOnPet(lat, lng, name) {
             window.scrollTo({ top: 0, behavior: 'smooth' });
             if(mainMap) {
                 mainMap.flyTo([lat, lng], 16, { animate: true, duration: 1.5 });
-                setTimeout(() => { L.popup().setLatLng([lat, lng]).setContent(`<b>${name}</b> está por acá`).openOn(mainMap); }, 1600);
+                setTimeout(() => { L.popup({className: 'custom-popup'}).setLatLng([lat, lng]).setContent(`<b>${name}</b> está por acá`).openOn(mainMap); }, 1600);
             }
         }
 
         async function handleUpload(e) {
             e.preventDefault();
-            // VALIDACIÓN DE UBICACIÓN
-            if(!document.getElementById('lat-in').value) {
-                return alert("⚠️ ¡IMPORTANTE! Toca el mapa para marcar dónde se vio a la mascota por última vez.");
-            }
+            if(!document.getElementById('lat-in').value) return alert("⚠️ ¡Marca la ubicación en el mapa!");
             const btn = document.getElementById('btn-up'); btn.innerText = "SUBIENDO..."; btn.disabled = true;
             const fd = new FormData(e.target); fd.append('user_id', user.id);
             const res = await fetch('/pets/upload', {method:'POST', body:fd});
-            if(res.ok) { alert("¡Publicado! En unos minutos el administrador lo aprobará."); location.reload(); }
-            else { alert("Error al subir."); btn.innerText = "Publicar Ahora"; btn.disabled = false; }
+            if(res.ok) { alert("¡Publicado! Se verá luego de la aprobación."); location.reload(); }
+            else { alert("Error"); btn.innerText = "Publicar Ahora"; btn.disabled = false; }
         }
 
         async function loadMyPets() {
             const container = document.getElementById('my-pets-list');
-            container.innerHTML = '<p class="text-center py-10 text-xs animate-pulse">Cargando...</p>';
+            container.innerHTML = '<p class="text-center py-10 text-xs">Cargando...</p>';
             const res = await fetch(`/my-pets/${user.id}`);
             const data = await res.json();
-            container.innerHTML = data.length ? "" : '<div class="bg-white p-10 rounded-3xl text-center border-2 border-dashed border-slate-100"><p class="text-slate-400 text-xs">No tienes fotos subidas.</p></div>';
+            container.innerHTML = data.length ? "" : '<div class="bg-white p-12 rounded-[3rem] text-center border-2 border-dashed border-slate-100"><p class="text-slate-400 text-xs font-bold">Sin publicaciones aún.</p></div>';
             data.forEach(p => {
                 container.innerHTML += `
-                    <div class="bg-white p-4 rounded-3xl flex items-center gap-4 border shadow-sm">
-                        <img src="${p.image_url}" class="w-16 h-16 rounded-2xl object-cover">
-                        <div class="flex-1"><p class="text-xs font-black">${p.name}</p><p class="text-[9px] font-bold ${p.is_approved ? 'text-green-500' : 'text-orange-500'} uppercase">${p.is_approved ? 'Visible' : 'En Revisión'}</p></div>
-                        <button onclick="deleteMyPet(${p.id})" class="bg-red-50 text-red-400 p-3 rounded-xl"><i class="fas fa-trash-can"></i></button>
+                    <div class="bg-white p-5 rounded-[2.5rem] flex items-center gap-4 border border-white shadow-sm">
+                        <img src="${p.image_url}" class="w-16 h-16 rounded-2xl object-cover shadow-inner">
+                        <div class="flex-1"><p class="text-xs font-black text-slate-800">${p.name}</p><p class="text-[9px] font-bold ${p.is_approved ? 'text-green-500' : 'text-orange-400'} uppercase tracking-widest">${p.is_approved ? 'Visible' : 'En Revisión'}</p></div>
+                        <button onclick="deleteMyPet(${p.id})" class="bg-red-50 text-red-400 w-10 h-10 rounded-xl flex items-center justify-center active:bg-red-500 active:text-white transition-all"><i class="fas fa-trash-can"></i></button>
                     </div>`;
             });
         }
@@ -234,40 +269,18 @@
             const res = await fetch('/admin/data');
             const data = await res.json();
             document.getElementById('stat-perdidos').innerText = data.stats.perdidos;
+            document.getElementById('stat-adopcion').innerText = data.stats.adopcion;
             document.getElementById('stat-pendientes').innerText = data.stats.pendientes;
-            const container = document.getElementById('admin-content');
-            container.innerHTML = '<p class="text-[10px] font-black text-slate-400 uppercase px-2 mb-2">Usuarios por aprobar</p>';
-            data.users.forEach(u => container.innerHTML += `<div class="bg-white p-4 rounded-3xl flex justify-between items-center border shadow-sm text-xs mb-2"><span>${u.email}</span><button onclick="approve('user', ${u.id})" class="text-indigo-600 font-bold">APROBAR</button></div>`);
-            container.innerHTML += '<p class="text-[10px] font-black text-slate-400 uppercase px-2 mt-6 mb-2">Aprobar Publicaciones</p>';
-            data.pets.filter(p => !p.is_approved).forEach(p => {
-                container.innerHTML += `<div class="bg-white p-4 rounded-3xl flex items-center gap-3 border shadow-sm mb-2"><img src="${p.image_url}" class="w-12 h-12 rounded-xl object-cover"><span class="text-xs font-bold flex-1">${p.name}</span><button onclick="approve('pet', ${p.id})" class="bg-green-500 text-white p-3 rounded-xl"><i class="fas fa-check"></i></button><button onclick="adminDel(${p.id})" class="bg-red-50 text-red-500 p-3 rounded-xl ml-1"><i class="fas fa-trash"></i></button></div>`;
-            });
-        }
-
-        async function approve(t, id) { await fetch(`/admin/approve/${t}/${id}`, {method:'POST'}); showAdmin(); }
-        async function adminDel(id) { if(confirm("¿Eliminar definitivamente?")) { await fetch(`/admin/delete/${id}`, {method:'DELETE'}); showAdmin(); } }
-        async function deleteMyPet(id) { if(confirm("¿Eliminar publicación?")) { await fetch(`/pets/user-delete/${id}`, {method:'DELETE'}); loadMyPets(); loadPets(); } }
-        
-        async function handleLogin(e) {
-            e.preventDefault();
-            const res = await fetch('/login', {method:'POST', body:new FormData(e.target)});
-            const data = await res.json();
-            if(res.ok) { user = data; localStorage.setItem('user', JSON.stringify(user)); location.reload(); } else alert(data.msg);
-        }
-        async function handleRegister(e) { e.preventDefault(); const res = await fetch('/register', {method:'POST', body:new FormData(e.target)}); alert((await res.json()).msg); if(res.ok) location.reload(); }
-        
-        function checkAuth() { user ? showSection('upload') : showSection('auth'); }
-        function logout() { localStorage.clear(); location.reload(); }
-        
-        window.onload = () => { 
-            if(user) { 
-                document.getElementById('u-mail').innerText = user.email; 
-                document.getElementById('auth-forms').classList.add('hidden'); 
-                document.getElementById('user-info').classList.remove('hidden'); 
-                if(user.role === 'admin') document.getElementById('nav-admin-btn').classList.remove('hidden'); 
-            } 
-            showSection('home'); 
-        };
-    </script>
-</body>
-</html>
+            
+            const uCont = document.getElementById('admin-users'); uCont.innerHTML = "";
+            data.users.forEach(u => uCont.innerHTML += `<div class="bg-white p-5 rounded-3xl flex justify-between items-center border shadow-sm"><span class="text-xs font-bold">${u.email}</span><button onclick="approve('user', ${u.id})" class="bg-indigo-600 text-white px-5 py-2 rounded-xl text-[10px] font-black uppercase">Aprobar</button></div>`);
+            
+            const pCont = document.getElementById('admin-pets'); pCont.innerHTML = "";
+            data.pets.forEach(p => {
+                pCont.innerHTML += `
+                    <div class="bg-white p-4 rounded-[2rem] flex items-center gap-4 border shadow-sm">
+                        <img src="${p.image_url}" class="w-12 h-12 rounded-xl object-cover">
+                        <div class="flex-1"><p class="text-xs font-black">${p.name}</p><p class="text-[8px] font-black uppercase text-slate-400 tracking-tighter">${p.is_approved ? 'Visible' : 'Pendiente'}</p></div>
+                        <div class="flex gap-2">
+                            ${!p.is_approved ? `<button onclick="approve('pet', ${p.id})" class="bg-green-500 text-white w-10 h-10 rounded-xl flex items-center justify-center shadow-md"><i class="fas fa-check"></i></button>` : ''}
+                            <button onclick="adminDel(${p.id})" class="bg-red-50 text-red-400 w-10 h-10 rounded-xl flex items-cente
