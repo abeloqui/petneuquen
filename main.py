@@ -74,6 +74,9 @@ def get_user_pets_list(user_id):
     res = supabase.table("pets").select("*").eq("user_id", user_id).execute()
     return jsonify(res.data)
 
+
+# ... (mismo inicio de importaciones)
+
 @app.route('/pets/upload', methods=['POST'])
 def upload_pet():
     try:
@@ -82,15 +85,32 @@ def upload_pet():
         if not user_id or user_id == "admin":
             return jsonify({"msg": "Inicia sesión como vecino"}), 400
 
-        up = cloudinary.uploader.upload(f, folder="huellitas", transformation=[{'width': 800, 'crop': "limit"}, {'quality': "auto"}])
+        up = cloudinary.uploader.upload(f, folder="huellitas")
         supabase.table("pets").insert({
-            "user_id": int(user_id), "name": d['name'], "status": d['status'],
-            "barrio": d['barrio'], "latitud": float(d['latitud']),
-            "longitud": float(d['longitud']), "image_url": up['secure_url'], "is_approved": False
+            "user_id": int(user_id), 
+            "name": d['name'], 
+            "status": d['status'],
+            "especie": d.get('especie', 'perro'), # NUEVO CAMPO
+            "barrio": d['barrio'], 
+            "latitud": float(d['latitud']),
+            "longitud": float(d['longitud']), 
+            "image_url": up['secure_url'], 
+            "is_approved": False
         }).execute()
         return jsonify({"msg": "OK"}), 201
     except Exception as e:
         return jsonify({"msg": str(e)}), 500
+
+@app.route('/pets/report/<int:pet_id>', methods=['POST'])
+def report_pet(pet_id):
+    # Simplemente registramos la denuncia (en una app real iría a una tabla 'reports')
+    print(f"ALERTA: Mascota {pet_id} denunciada por contenido inapropiado.")
+    return jsonify({"msg": "Denuncia recibida"}), 200
+
+# ... (resto del código igual)
+
+
+
 
 @app.route('/admin/data', methods=['GET'])
 def admin_data():
