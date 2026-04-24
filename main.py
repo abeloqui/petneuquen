@@ -97,20 +97,43 @@ def upload_pet():
     except Exception as e:
         return jsonify({"msg": str(e)}), 500
 
+
 @app.route('/admin/data', methods=['GET'])
 def admin_data():
     try:
-        u = supabase.table("users").select("*").eq("is_approved", False).execute()
-        p = supabase.table("pets").select("*").execute()
+        # Traemos todos los usuarios y mascotas sin filtros iniciales para contar bien
+        u_res = supabase.table("users").select("*").execute()
+        p_res = supabase.table("pets").select("*").execute()
         
-        # MÉTRICAS RÁPIDAS
+        users_all = u_res.data if u_res.data else []
+        pets_all = p_res.data if p_res.data else []
+
         stats = {
-            "perdidos": len([x for x in p.data if x['status'] == 'perdido' and x['is_approved']]),
-            "pendientes": len([x for x in p.data if not x['is_approved']])
+            # Contamos todos los que tengan status 'perdido', estén aprobados o no
+            "perdidos": len([x for x in pets_all if x.get('status') == 'perdido']),
+            # Contamos los que esperan aprobación
+            "pendientes": len([x for x in pets_all if not x.get('is_approved')])
         }
-        return jsonify({"users": u.data, "pets": p.data, "stats": stats})
-    except:
+        
+        # Usuarios que todavía no fueron aprobados para mostrar en la lista
+        pending_users = [u for u in users_all if not u.get('is_approved')]
+        
+        return jsonify({
+            "users": pending_users, 
+            "pets": pets_all, 
+            "stats": stats
+        })
+    except Exception as e:
+        print(f"Error en admin_data: {e}")
         return jsonify({"users": [], "pets": [], "stats": {"perdidos":0, "pendientes":0}})
+        
+
+
+
+
+
+
+
 
 @app.route('/admin/approve/<t>/<id>', methods=['POST'])
 def approve_item(t, id):
