@@ -20,6 +20,26 @@ app.config['MAIL_DEFAULT_SENDER'] = 'admin@huellitas.com'
 
 mail = Mail(app)
 
+def enviar_mail_confirmacion(email_usuario, nombre_mascota):
+    msg = Message("Recibimos tu publicación en Huellitas NQN",
+                  recipients=[email_usuario])
+    msg.body = f"""
+    ¡Hola! 🐾
+    
+    Te confirmamos que recibimos la publicación de {nombre_mascota}. 
+    Nuestro equipo la revisará y una vez aprobada, aparecerá en el mapa 
+    de Neuquén y se compartirá en nuestras redes sociales oficiales.
+    
+    ¡Gracias por ayudar a las huellitas de la ciudad!
+    Equipo Huellitas NQN.
+    """
+    try:
+        mail.send(msg)
+        return True
+    except Exception as e:
+        print(f"Error enviando mail: {e}")
+        return False
+        
 # --- CONFIGURACIONES ---
 try:
     url = os.getenv("SUPABASE_URL", "").strip()
