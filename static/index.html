@@ -10,22 +10,23 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;600;900&display=swap');
-        body { font-family: 'Lexend', sans-serif; background: #f8fafc; padding-bottom: 140px; }
+        body { font-family: 'Lexend', sans-serif; background: #f8fafc; padding-bottom: 140px; overflow-x: hidden; }
         .hidden { display: none !important; }
         .glass { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); }
-        #main-map { height: 320px; width: 100%; border-radius: 2.5rem; border: 4px solid white; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
-        .btn-filter { padding: 12px 24px; border-radius: 30px; font-size: 13px; font-weight: 700; background: white; color: #94a3b8; white-space: nowrap; transition: 0.2s; border: none; cursor: pointer; }
+        #main-map { height: 340px; width: 100%; border-radius: 2.5rem; border: 4px solid white; box-shadow: 0 15px 35px rgba(0,0,0,0.05); z-index: 10; }
+        .btn-filter { padding: 12px 24px; border-radius: 30px; font-size: 13px; font-weight: 700; background: white; color: #94a3b8; transition: 0.3s; border: none; cursor: pointer; white-space: nowrap; }
         .btn-filter.active { background: #f97316; color: white; box-shadow: 0 4px 15px rgba(249,115,22,0.3); }
-        .custom-input { background: white; border-radius: 20px; padding: 18px; border: none; box-shadow: 0 2px 10px rgba(0,0,0,0.02); }
+        .custom-input { background: white; border-radius: 20px; padding: 18px; border: none; box-shadow: 0 2px 10px rgba(0,0,0,0.02); width: 100%; }
+        .card-pet { background: white; border-radius: 2.5rem; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.03); border: 1px solid #f1f5f9; position: relative; }
     </style>
 </head>
 <body>
-    <nav class="p-6 glass sticky top-0 z-[1000] flex justify-between items-center border-b border-slate-100">
+    <nav class="p-6 glass sticky top-0 z-[1000] flex justify-between items-center border-b border-slate-50">
         <div onclick="location.reload()" class="cursor-pointer">
             <h1 class="font-black text-2xl tracking-tighter">Huellitas<span class="text-orange-500">NQN</span></h1>
-            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">App Vecinal</p>
+            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Neuquén Capital</p>
         </div>
-        <button onclick="checkUserPanel()" class="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center hover:bg-orange-100"><i class="fas fa-user text-xl"></i></button>
+        <button onclick="checkUserPanel()" class="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center hover:bg-orange-100 transition-colors"><i class="fas fa-user text-xl"></i></button>
     </nav>
 
     <main class="p-4 max-w-2xl mx-auto">
@@ -38,8 +39,8 @@
                     <button onclick="setSpecies('gato', this)" class="btn-filter">🐱 Gatos</button>
                 </div>
                 <div class="flex gap-2">
-                    <input type="text" id="search" oninput="renderPets()" placeholder="Buscar barrio..." class="flex-1 custom-input outline-none text-sm">
-                    <select id="filter-status" onchange="renderPets()" class="custom-input font-bold text-orange-500 text-sm outline-none px-4">
+                    <input type="text" id="search" oninput="renderPets()" placeholder="Buscar barrio o nombre..." class="flex-1 custom-input outline-none text-sm">
+                    <select id="filter-status" onchange="renderPets()" class="custom-input font-bold text-orange-500 text-sm outline-none px-4 w-auto">
                         <option value="todos">Todos</option>
                         <option value="perdido">Perdidos</option>
                         <option value="adopcion">Adopción</option>
@@ -51,44 +52,50 @@
 
         <section id="sec-upload" class="section-container hidden">
             <div class="bg-white p-7 rounded-[3rem] shadow-xl">
-                <h2 class="font-black text-2xl mb-6 uppercase text-center">Publicar</h2>
+                <h2 class="font-black text-2xl mb-6 uppercase text-center tracking-tighter">Nueva Publicación</h2>
                 <form onsubmit="handleUpload(event)" class="space-y-5">
                     <div class="grid grid-cols-2 gap-3">
-                        <select name="especie" class="p-4 bg-slate-50 rounded-2xl font-bold text-sm">
-                            <option value="perro">Perro</option>
-                            <option value="gato">Gato</option>
+                        <select name="especie" class="p-4 bg-slate-50 rounded-2xl font-bold text-sm outline-none">
+                            <option value="perro">Es un Perro</option>
+                            <option value="gato">Es un Gato</option>
                         </select>
-                        <select name="status" class="p-4 bg-slate-50 rounded-2xl font-bold text-orange-500 text-sm">
+                        <select name="status" class="p-4 bg-slate-50 rounded-2xl font-bold text-orange-500 text-sm outline-none">
                             <option value="perdido">Perdido</option>
                             <option value="adopcion">Adopción</option>
                         </select>
                     </div>
                     <input type="text" name="name" placeholder="Nombre de la mascota" class="w-full p-4 bg-slate-50 rounded-2xl outline-none" required>
-                    <input type="text" name="barrio" placeholder="Barrio" class="w-full p-4 bg-slate-50 rounded-2xl outline-none" required>
+                    <input type="text" name="barrio" placeholder="¿En qué barrio?" class="w-full p-4 bg-slate-50 rounded-2xl outline-none" required>
                     <div id="map-upload" style="height: 200px;" class="rounded-3xl border-2 border-slate-50"></div>
                     <input type="hidden" name="latitud" id="lat-in">
                     <input type="hidden" name="longitud" id="lng-in">
-                    <input type="file" name="file" accept="image/*" class="w-full text-xs font-bold" required>
-                    <button type="submit" id="btn-up" class="w-full bg-orange-500 text-white py-5 rounded-2xl font-black uppercase shadow-lg">Publicar</button>
+                    <div class="p-4 bg-slate-50 rounded-2xl">
+                        <p class="text-[10px] font-black text-slate-400 mb-2 uppercase">Foto de la mascota</p>
+                        <input type="file" name="file" accept="image/*" class="w-full text-xs" required>
+                    </div>
+                    <button type="submit" id="btn-up" class="w-full bg-orange-500 text-white py-5 rounded-3xl font-black uppercase shadow-lg active:scale-95 transition-transform">Publicar ahora</button>
                 </form>
             </div>
         </section>
 
         <section id="sec-auth" class="section-container hidden">
-            <div class="bg-white p-8 rounded-[3rem] shadow-xl text-center">
-                <h2 class="font-black text-2xl mb-4 uppercase">Ingresar</h2>
+            <div class="bg-white p-8 rounded-[3rem] shadow-xl">
+                <div class="text-center mb-8">
+                    <h2 class="font-black text-3xl tracking-tighter">¡HOLA!</h2>
+                    <p class="text-xs font-bold text-slate-400 uppercase">Ingresá para reportar</p>
+                </div>
                 <form onsubmit="handleLogin(event)" class="space-y-4">
-                    <input type="email" name="email" placeholder="Email" class="w-full custom-input" required>
-                    <input type="password" name="password" placeholder="Contraseña" class="w-full custom-input" required>
-                    <button class="w-full bg-slate-900 text-white py-5 rounded-2xl font-black uppercase">Entrar</button>
+                    <input type="email" name="email" placeholder="Tu Email" class="custom-input" required>
+                    <input type="password" name="password" placeholder="Tu Contraseña" class="custom-input" required>
+                    <button class="w-full bg-slate-900 text-white py-5 rounded-3xl font-black uppercase">Entrar</button>
                 </form>
-                <div class="mt-8 pt-8 border-t border-dashed">
-                    <p class="text-[10px] font-black text-slate-400 mb-4 uppercase">¿Sos nuevo? Registrate</p>
+                <div class="mt-10 pt-10 border-t border-dashed border-slate-200">
+                    <p class="text-center text-[10px] font-black text-slate-400 mb-6 uppercase">¿No tenés cuenta? Registrate</p>
                     <form onsubmit="handleRegister(event)" class="space-y-4">
-                        <input type="email" name="email" placeholder="Email" class="w-full custom-input" required>
-                        <input type="password" name="password" placeholder="Contraseña" class="w-full custom-input" required>
-                        <input type="tel" name="telefono" placeholder="WhatsApp (299...)" class="w-full custom-input" required>
-                        <button class="w-full border-2 border-slate-100 py-5 rounded-2xl font-black uppercase">Solicitar Acceso</button>
+                        <input type="email" name="email" placeholder="Email" class="custom-input" required>
+                        <input type="password" name="password" placeholder="Contraseña" class="custom-input" required>
+                        <input type="tel" name="telefono" placeholder="WhatsApp (Ej: 2991234567)" class="custom-input" required>
+                        <button class="w-full border-2 border-slate-200 text-slate-400 py-5 rounded-3xl font-black uppercase">Pedir Acceso</button>
                     </form>
                 </div>
             </div>
@@ -97,8 +104,8 @@
         <section id="sec-profile" class="section-container hidden">
             <div class="bg-white p-8 rounded-[3rem] shadow-xl">
                 <div class="flex justify-between items-center mb-6">
-                    <h2 class="font-black text-2xl uppercase">Mis Publicaciones</h2>
-                    <button onclick="logout()" class="text-red-500 font-bold text-xs">CERRAR SESIÓN</button>
+                    <h2 class="font-black text-2xl uppercase tracking-tighter">Mis Reportes</h2>
+                    <button onclick="logout()" class="text-red-500 font-bold text-[10px] bg-red-50 px-4 py-2 rounded-full">SALIR</button>
                 </div>
                 <div id="user-pet-list" class="space-y-4"></div>
             </div>
@@ -106,11 +113,11 @@
 
         <section id="sec-admin" class="section-container hidden">
             <div class="bg-white p-8 rounded-[3rem] shadow-xl">
-                <h2 class="font-black text-2xl mb-6 uppercase">Administración</h2>
+                <h2 class="font-black text-2xl mb-6 uppercase tracking-tighter">Panel de Control</h2>
                 <div class="grid grid-cols-3 gap-2 mb-8 text-center" id="admin-stats">
-                    <div class="bg-orange-50 p-4 rounded-2xl text-orange-500"><p class="text-xl font-black" id="stat-perdidos">0</p><p class="text-[8px] font-bold uppercase">Perdidos</p></div>
-                    <div class="bg-emerald-50 p-4 rounded-2xl text-emerald-500"><p class="text-xl font-black" id="stat-adopcion">0</p><p class="text-[8px] font-bold uppercase">Adopción</p></div>
-                    <div class="bg-slate-50 p-4 rounded-2xl text-slate-400"><p class="text-xl font-black" id="stat-pendientes">0</p><p class="text-[8px] font-bold uppercase">Pendientes</p></div>
+                    <div class="bg-orange-50 p-4 rounded-2xl"><p class="text-xl font-black text-orange-500" id="stat-perdidos">0</p><p class="text-[8px] font-bold uppercase">Perdidos</p></div>
+                    <div class="bg-emerald-50 p-4 rounded-2xl"><p class="text-xl font-black text-emerald-500" id="stat-adopcion">0</p><p class="text-[8px] font-bold uppercase">Adopción</p></div>
+                    <div class="bg-slate-50 p-4 rounded-2xl"><p class="text-xl font-black text-slate-400" id="stat-pendientes">0</p><p class="text-[8px] font-bold uppercase">Espera</p></div>
                 </div>
                 <div id="admin-users" class="space-y-3 mb-8"></div>
                 <div id="admin-pets" class="space-y-3"></div>
@@ -119,12 +126,10 @@
     </main>
 
     <nav class="fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] glass shadow-2xl rounded-full p-3 flex justify-around items-center z-[2000] border-2 border-white">
-        <button onclick="showSection('home')" class="w-12 h-12 text-slate-300"><i class="fas fa-home text-2xl"></i></button>
-        <button onclick="checkAuth()" class="bg-orange-500 text-white w-14 h-14 rounded-full -mt-12 border-[6px] border-[#f8fafc] shadow-xl flex items-center justify-center"><i class="fas fa-plus text-xl"></i></button>
-        <button onclick="alert('Próximamente: Notificaciones')" class="w-12 h-12 text-slate-300"><i class="fas fa-bell text-2xl"></i></button>
+        <button onclick="showSection('home')" class="w-12 h-12 text-slate-300 hover:text-orange-500 transition-colors"><i class="fas fa-home text-2xl"></i></button>
+        <button onclick="checkAuth()" class="bg-orange-500 text-white w-14 h-14 rounded-full -mt-12 border-[6px] border-[#f8fafc] shadow-xl flex items-center justify-center active:scale-90 transition-all"><i class="fas fa-plus text-xl"></i></button>
+        <button onclick="location.reload()" class="w-12 h-12 text-slate-300"><i class="fas fa-rotate text-2xl"></i></button>
     </nav>
-
-
 
 
     <script>
@@ -132,18 +137,13 @@
     let currentSpecies = 'todos';
     let user = JSON.parse(localStorage.getItem('user'));
 
-    // --- NAVEGACIÓN Y SECCIONES ---
     function showSection(id) {
         document.querySelectorAll('.section-container').forEach(s => s.classList.add('hidden'));
-        const target = document.getElementById('sec-' + id);
-        if(target) target.classList.remove('hidden');
-
+        document.getElementById('sec-' + id).classList.remove('hidden');
         if(id === 'home') {
             if(!mainMap) initMainMap();
-            setTimeout(() => {
-                mainMap.invalidateSize();
-                loadPets();
-            }, 250);
+            setTimeout(() => mainMap.invalidateSize(), 250);
+            loadPets();
         }
         if(id === 'upload') {
             if(!uploadMap) initUploadMap();
@@ -151,55 +151,31 @@
         }
     }
 
-    // --- MAPAS ---
     function initMainMap() {
         mainMap = L.map('main-map', { zoomControl: false }).setView([-38.951, -68.061], 13);
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-            attribution: '© OpenStreetMap'
-        }).addTo(mainMap);
-
-        // EXTRA: Botón de "Mi ubicación"
-        const locateBtn = L.control({position: 'topright'});
-        locateBtn.onAdd = function() {
-            const btn = L.DomUtil.create('button', 'bg-white p-3 m-4 rounded-full shadow-lg text-orange-500');
-            btn.innerHTML = '<i class="fas fa-location-crosshairs text-lg"></i>';
-            btn.onclick = () => mainMap.locate({setView: true, maxZoom: 16});
-            return btn;
-        };
-        locateBtn.addTo(mainMap);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png').addTo(mainMap);
     }
 
     function initUploadMap() {
         uploadMap = L.map('map-upload', { zoomControl: false }).setView([-38.951, -68.061], 13);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(uploadMap);
-        
         uploadMap.on('click', e => {
             if(uploadMarker) uploadMarker.setLatLng(e.latlng);
-            else uploadMarker = L.marker(e.latlng, {draggable: true}).addTo(uploadMap);
-            
+            else uploadMarker = L.marker(e.latlng).addTo(uploadMap);
             document.getElementById('lat-in').value = e.latlng.lat;
             document.getElementById('lng-in').value = e.latlng.lng;
         });
     }
 
-    // --- EFECTO ZOOM (A PETICIÓN) ---
     function focusOnPet(lat, lng) {
         window.scrollTo({ top: 0, behavior: 'smooth' });
-        if (mainMap) {
-            mainMap.flyTo([lat, lng], 16, {
-                animate: true,
-                duration: 1.5
-            });
-        }
+        if (mainMap) mainMap.flyTo([lat, lng], 16, { animate: true, duration: 1.5 });
     }
 
-    // --- CARGA Y RENDERIZADO (SIN OMISIONES) ---
     async function loadPets() {
-        try {
-            const res = await fetch('/pets');
-            allPets = await res.json();
-            renderPets();
-        } catch (e) { console.error("Error cargando mascotas:", e); }
+        const res = await fetch('/pets');
+        allPets = await res.json();
+        renderPets();
     }
 
     function renderPets() {
@@ -208,9 +184,7 @@
         const status = document.getElementById('filter-status').value;
         list.innerHTML = "";
         
-        if(mainMap) {
-            mainMap.eachLayer(l => { if(l instanceof L.CircleMarker || (l instanceof L.Marker && !l._icon?.classList?.contains('leaflet-marker-draggable'))) mainMap.removeLayer(l); });
-        }
+        if(mainMap) mainMap.eachLayer(l => { if(l instanceof L.CircleMarker) mainMap.removeLayer(l); });
 
         allPets.filter(p => 
             (p.barrio.toLowerCase().includes(term) || p.name.toLowerCase().includes(term)) &&
@@ -219,43 +193,31 @@
         ).forEach(p => {
             const color = p.status === 'perdido' ? '#ef4444' : '#10b981';
             const tel = p.users ? p.users.telefono : '2996894360';
-            const msg = encodeURIComponent(`¡Hola! Vi a ${p.name} en la app Huellitas NQN. ¿Tenés novedades?`);
+            const msg = encodeURIComponent(`¡Hola! Vi a ${p.name} en la app Huellitas NQN.`);
 
-            // Añadir al mapa
-            if(mainMap) {
-                L.circleMarker([p.latitud, p.longitud], {
-                    color: color, radius: 8, fillOpacity: 0.8, weight: 2, fillColor: 'white'
-                }).addTo(mainMap).bindPopup(`<b>${p.name}</b><br>${p.barrio}`);
-            }
+            if(mainMap) L.circleMarker([p.latitud, p.longitud], {color: color, radius: 8, fillOpacity: 0.8}).addTo(mainMap);
 
-            // Añadir a la lista visual
             list.innerHTML += `
-                <div class="bg-white rounded-[2rem] overflow-hidden shadow-md border border-slate-50 relative group">
+                <div class="card-pet">
                     <span class="absolute top-3 left-3 px-3 py-1 rounded-full text-[8px] font-black text-white uppercase z-10" style="background:${color}">${p.status}</span>
-                    <img src="${p.image_url}" onclick="focusOnPet(${p.latitud}, ${p.longitud})" 
-                         class="w-full h-32 object-cover cursor-pointer hover:scale-105 transition-transform duration-500">
+                    <img src="${p.image_url}" onclick="focusOnPet(${p.latitud}, ${p.longitud})" class="w-full h-32 object-cover cursor-pointer">
                     <div class="p-4 text-center">
-                        <p class="font-black text-xs uppercase text-slate-800">${p.name}</p>
+                        <p class="font-black text-xs uppercase">${p.name}</p>
                         <p class="text-[8px] font-bold text-slate-400 mb-3">${p.barrio}</p>
                         <div class="flex gap-1">
-                            <a href="https://wa.me/${tel}?text=${msg}" target="_blank" class="flex-1 bg-emerald-500 text-white text-[9px] py-2 rounded-xl font-black shadow-md hover:bg-emerald-600 transition-colors">WHATSAPP</a>
-                            <button onclick="sharePet('${p.name}', '${p.barrio}')" class="bg-slate-100 text-slate-400 px-3 rounded-xl hover:bg-slate-200"><i class="fas fa-share-nodes text-xs"></i></button>
+                            <a href="https://wa.me/${tel}?text=${msg}" target="_blank" class="flex-1 bg-emerald-500 text-white text-[9px] py-2 rounded-xl font-black">WHATSAPP</a>
+                            <button onclick="sharePet('${p.name}', '${p.barrio}')" class="bg-slate-100 text-slate-400 px-3 rounded-xl"><i class="fas fa-share-nodes text-xs"></i></button>
                         </div>
                     </div>
                 </div>`;
         });
     }
 
-    function sharePet(name, barrio) {
-        const text = `🐾 Ayudanos con ${name} en el barrio ${barrio}. Miralo acá: https://petneuquen.onrender.com`;
-        if (navigator.share) {
-            navigator.share({ title: 'Huellitas NQN', text: text, url: 'https://petneuquen.onrender.com' });
-        } else {
-            window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
-        }
+    function sharePet(n, b) {
+        const txt = `🐾 Ayudanos con ${n} en barrio ${b}. Miralo acá: https://petneuquen.onrender.com`;
+        window.open(`https://wa.me/?text=${encodeURIComponent(txt)}`, '_blank');
     }
 
-    // --- PANELES Y AUTH ---
     function checkUserPanel() {
         if(!user) showSection('auth');
         else if(user.role === 'admin') { showSection('admin'); loadAdminData(); }
@@ -267,91 +229,63 @@
     async function handleLogin(e) {
         e.preventDefault();
         const res = await fetch('/login', { method: 'POST', body: new FormData(e.target) });
-        if(res.ok) { 
-            const data = await res.json(); 
-            localStorage.setItem('user', JSON.stringify(data)); 
-            location.reload(); 
-        } else alert("Usuario o clave incorrectos");
+        if(res.ok) { localStorage.setItem('user', JSON.stringify(await res.json())); location.reload(); }
+        else alert("Credenciales incorrectas");
     }
 
     async function handleRegister(e) {
         e.preventDefault();
         const res = await fetch('/register', { method: 'POST', body: new FormData(e.target) });
-        if(res.ok) { alert("Solicitud enviada. El administrador te habilitará pronto."); showSection('home'); }
+        if(res.ok) alert("Solicitud enviada. Te avisaremos por mail al activar.");
     }
 
     function logout() { localStorage.removeItem('user'); location.reload(); }
 
-    // --- ADMIN & USUARIO ---
     async function loadAdminData() {
         const res = await fetch('/admin/data');
         const data = await res.json();
         document.getElementById('stat-perdidos').innerText = data.stats.perdidos;
         document.getElementById('stat-adopcion').innerText = data.stats.adopcion;
         document.getElementById('stat-pendientes').innerText = data.stats.pendientes;
-
-        document.getElementById('admin-users').innerHTML = '<h3 class="text-[10px] font-black text-slate-400 mb-2 uppercase">Usuarios Pendientes</h3>' + 
-            (data.users.map(u => `
+        document.getElementById('admin-users').innerHTML = '<p class="text-[10px] font-black text-slate-400 mb-3 uppercase">Usuarios Pendientes</p>' + data.users.map(u => `
             <div class="bg-slate-50 p-4 rounded-2xl flex justify-between items-center mb-2">
-                <span class="text-[9px] font-black text-slate-600">${u.email}</span>
-                <button onclick="approve('user', ${u.id})" class="bg-emerald-500 text-white text-[9px] px-4 py-2 rounded-xl font-black shadow-sm">ADMITIR</button>
-            </div>`).join('') || "<p class='text-center text-[10px] py-4'>Todo al día</p>");
-
-        document.getElementById('admin-pets').innerHTML = '<h3 class="text-[10px] font-black text-slate-400 mb-2 uppercase">Mascotas por Aprobar</h3>' + 
-            (data.pets.filter(p => !p.is_approved).map(p => `
+                <span class="text-[10px] font-bold">${u.email}</span>
+                <button onclick="approve('user', ${u.id})" class="bg-emerald-500 text-white text-[9px] px-4 py-2 rounded-xl font-black">ADMITIR</button>
+            </div>`).join('') || "Sin pendientes";
+        document.getElementById('admin-pets').innerHTML = '<p class="text-[10px] font-black text-slate-400 mb-3 uppercase">Mascotas Pendientes</p>' + data.pets.filter(p => !p.is_approved).map(p => `
             <div class="bg-slate-50 p-3 rounded-2xl flex items-center gap-3 mb-2">
                 <img src="${p.image_url}" class="w-10 h-10 rounded-lg object-cover">
-                <span class="flex-1 text-[10px] font-black text-slate-600">${p.name}</span>
+                <span class="flex-1 text-[10px] font-black">${p.name}</span>
                 <button onclick="approve('pet', ${p.id})" class="bg-orange-500 text-white text-[9px] px-4 py-2 rounded-xl font-black">OK</button>
-            </div>`).join('') || "<p class='text-center text-[10px] py-4'>No hay pendientes</p>");
+            </div>`).join('') || "Todo aprobado";
     }
 
     async function loadUserPets() {
         const res = await fetch(`/my-pets/${user.id}`);
         const pets = await res.json();
         document.getElementById('user-pet-list').innerHTML = pets.map(p => `
-            <div class="bg-slate-50 p-4 rounded-2xl flex items-center gap-4 mb-3 border border-slate-100">
+            <div class="bg-slate-50 p-4 rounded-2xl flex items-center gap-4">
                 <img src="${p.image_url}" class="w-12 h-12 rounded-xl object-cover">
                 <div class="flex-1">
                     <p class="font-black text-xs">${p.name}</p>
-                    <p class="text-[9px] font-bold ${p.is_approved ? 'text-emerald-500':'text-orange-400'} uppercase">${p.is_approved ? '● Publicado':'● Revisando'}</p>
+                    <p class="text-[9px] font-bold ${p.is_approved ? 'text-emerald-500':'text-orange-400'} uppercase">${p.is_approved ? 'Público':'En Revisión'}</p>
                 </div>
                 <button onclick="deletePet(${p.id})" class="text-red-400 p-2"><i class="fas fa-trash"></i></button>
-            </div>`).join('') || "<p class='text-center text-xs p-10 text-slate-400'>No tienes publicaciones activas.</p>";
+            </div>`).join('') || "No tienes reportes.";
     }
 
-    async function approve(t, id) { 
-        await fetch(`/admin/approve/${t}/${id}`, {method:'POST'}); 
-        loadAdminData(); 
-    }
+    async function approve(t, id) { await fetch(`/admin/approve/${t}/${id}`, {method:'POST'}); loadAdminData(); }
+    async function deletePet(id) { if(confirm("¿Borrar?")) { await fetch(`/pets/user-delete/${id}`, {method:'DELETE'}); loadUserPets(); } }
 
-    async function deletePet(id) {
-        if(confirm("¿Eliminar publicación permanentemente?")) {
-            await fetch(`/pets/user-delete/${id}`, {method:'DELETE'});
-            loadUserPets();
-        }
-    }
-
-    // --- FORMULARIO DE SUBIDA ---
     async function handleUpload(e) {
         e.preventDefault();
         const lat = document.getElementById('lat-in').value;
-        if(!lat) return alert("Por favor, marcá la ubicación en el mapa");
-        
-        const btn = document.getElementById('btn-up');
-        btn.innerText = "PROCESANDO..."; btn.disabled = true;
-        
-        const fd = new FormData(e.target);
-        fd.append('user_id', user.id);
-        
+        if(!lat) return alert("Marca el mapa");
+        const btn = document.getElementById('btn-up'); btn.innerText = "SUBIENDO..."; btn.disabled = true;
+        const fd = new FormData(e.target); fd.append('user_id', user.id);
         const res = await fetch('/pets/upload', { method: 'POST', body: fd });
-        if(res.ok) {
-            alert("¡Recibido! En breve te llegará un mail de confirmación.");
-            location.reload();
-        } else {
-            alert("Algo falló al subir. Intentá de nuevo.");
-            btn.innerText = "Publicar"; btn.disabled = false;
-        }
+        if(res.ok) { alert("¡Éxito! Te enviamos un mail de confirmación."); location.reload(); }
+        else { alert("Error"); btn.innerText = "Publicar"; btn.disabled = false; }
     }
 
     function setSpecies(sp, btn) {
@@ -361,14 +295,11 @@
         renderPets();
     }
 
-    // Inicio automático
     window.onload = () => showSection('home');
-                </script>
-    
-
-
-
-
-
+</script>
 </body>
 </html>
+
+
+
+    
