@@ -171,6 +171,94 @@
     </nav>
 
     <script>
+        // Función para decidir qué mostrar cuando tocas el icono de usuario
+function checkUserPanel() {
+    if (!user) {
+        showSection('auth');
+    } else if (user.role === 'admin') {
+        showSection('admin');
+        loadAdminData();
+    } else {
+        showSection('profile');
+        loadUserPets();
+    }
+}
+
+// Carga las mascotas del vecino logueado
+async function loadUserPets() {
+    const res = await fetch(`/my-pets/${user.id}`);
+    const pets = await res.json();
+    const container = document.getElementById('user-pet-list');
+    container.innerHTML = pets.length ? "" : "<p class='text-slate-400 text-center text-xs'>No tenés publicaciones todavía.</p>";
+    
+    pets.forEach(p => {
+        container.innerHTML += `
+            <div class="flex items-center gap-4 bg-slate-50 p-3 rounded-2xl border border-slate-100">
+                <img src="${p.image_url}" class="w-12 h-12 rounded-xl object-cover">
+                <div class="flex-1">
+                    <p class="font-black text-sm">${p.name}</p>
+                    <p class="text-[10px] ${p.is_approved ? 'text-emerald-500' : 'text-orange-500'} font-bold">
+                        ${p.is_approved ? '● Publicado' : '● Pendiente'}
+                    </p>
+                </div>
+                <button onclick="deletePet(${p.id})" class="text-slate-300 hover:text-red-500 px-2"><i class="fas fa-trash"></i></button>
+            </div>`;
+    });
+}
+
+// Carga métricas y aprobaciones para el Admin
+async function loadAdminData() {
+    const res = await fetch('/admin/data');
+    const data = await res.json();
+    
+    // Actualizar métricas
+    document.getElementById('stat-perdidos').innerText = data.stats.perdidos;
+    document.getElementById('stat-adopcion').innerText = data.stats.adopcion;
+    document.getElementById('stat-pendientes').innerText = data.stats.pendientes;
+
+    // Listar usuarios a aprobar
+    const userDiv = document.getElementById('admin-users');
+    userDiv.innerHTML = data.users.map(u => `
+        <div class="flex justify-between items-center bg-slate-50 p-4 rounded-2xl">
+            <div class="text-left">
+                <p class="font-black text-xs">${u.email}</p>
+                <p class="text-[10px] text-slate-400">${u.telefono}</p>
+            </div>
+            <button onclick="approve('user', ${u.id})" class="bg-emerald-500 text-white text-[10px] px-4 py-2 rounded-xl font-black">APROBAR</button>
+        </div>
+    `).join('') || "<p class='text-slate-300 text-[10px]'>Sin usuarios pendientes.</p>";
+
+    // Listar mascotas a aprobar
+    const petDiv = document.getElementById('admin-pets');
+    petDiv.innerHTML = data.pets.filter(p => !p.is_approved).map(p => `
+        <div class="flex items-center gap-3 bg-slate-50 p-3 rounded-2xl">
+            <img src="${p.image_url}" class="w-10 h-10 rounded-lg object-cover">
+            <div class="flex-1 text-left">
+                <p class="font-black text-[10px]">${p.name} (${p.status})</p>
+                <p class="text-[9px] text-slate-400">${p.barrio}</p>
+            </div>
+            <button onclick="approve('pet', ${p.id})" class="bg-orange-500 text-white text-[10px] px-3 py-2 rounded-xl font-black">OK</button>
+        </div>
+    `).join('') || "<p class='text-slate-300 text-[10px]'>Todo al día.</p>";
+}
+
+async function approve(type, id) {
+    await fetch(`/admin/approve/${type}/${id}`, {method: 'POST'});
+    loadAdminData();
+}
+
+async function deletePet(id) {
+    if(confirm("¿Eliminar publicación?")) {
+        await fetch(`/pets/user-delete/${id}`, {method: 'DELETE'});
+        loadUserPets();
+    }
+}
+
+function logout() {
+    localStorage.removeItem('user');
+    location.reload();
+}
+        
         async function handleLogin(e) {
     e.preventDefault();
     const fd = new FormData(e.target);
