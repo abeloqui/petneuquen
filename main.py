@@ -48,6 +48,44 @@ def login():
         print(f"Error login: {err}")
     return jsonify({"msg": "Usuario no encontrado"}), 401
 
+
+
+
+@app.route('/register', methods=['POST'])
+def register():
+    try:
+        data = request.form
+        email = data.get('email')
+        password = data.get('password')
+        telefono = data.get('telefono')
+
+        # Verificamos si el usuario ya existe
+        check = supabase.table("users").select("*").eq("email", email).execute()
+        if check.data:
+            return jsonify({"msg": "Este email ya está registrado"}), 400
+
+        # Insertamos el nuevo vecino (por defecto is_approved es False)
+        supabase.table("users").insert({
+            "email": email,
+            "password": password,
+            "telefono": telefono,
+            "is_approved": False
+        }).execute()
+
+        return jsonify({"msg": "Solicitud enviada. El admin te aprobará pronto."}), 201
+    except Exception as e:
+        print(f"Error en registro: {e}")
+        return jsonify({"msg": "Error al procesar el registro"}), 500
+        
+
+
+
+
+
+
+
+
+
 @app.route('/pets', methods=['GET'])
 def get_all_pets():
     try:
