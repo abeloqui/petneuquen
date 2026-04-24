@@ -89,6 +89,31 @@
             </div>
         </section>
 
+
+        <section id="sec-auth" class="hidden">
+    <div class="bg-white p-8 rounded-[3rem] shadow-xl text-center">
+        <h2 class="font-black text-2xl mb-2">¡HOLA!</h2>
+        <p class="text-xs font-bold text-slate-400 mb-8 uppercase tracking-widest">Ingresá a tu cuenta</p>
+        
+        <form onsubmit="handleLogin(event)" class="space-y-4">
+            <input type="email" name="email" placeholder="Email" class="w-full custom-input outline-none" required>
+            <input type="password" name="password" placeholder="Contraseña" class="w-full custom-input outline-none" required>
+            <button class="w-full bg-slate-900 text-white py-5 rounded-2xl font-black uppercase shadow-lg">Entrar</button>
+        </form>
+
+        <div class="mt-10 pt-10 border-t border-dashed border-slate-100">
+            <p class="text-[10px] font-black text-slate-400 mb-6 uppercase tracking-widest">¿Sos nuevo? Pedí acceso</p>
+            <form onsubmit="handleRegister(event)" class="space-y-4">
+                <input type="email" name="email" placeholder="Tu email" class="w-full custom-input outline-none" required>
+                <input type="password" name="password" placeholder="Crear contraseña" class="w-full custom-input outline-none" required>
+                <input type="tel" name="telefono" placeholder="WhatsApp (ej: 299...)" class="w-full custom-input outline-none" required>
+                <button class="w-full border-2 border-slate-100 text-slate-400 py-5 rounded-2xl font-black uppercase">Registrarme</button>
+            </form>
+        </div>
+    </div>
+        </section>
+        
+
         <section id="sec-auth" class="hidden">...</section>
         <section id="sec-terms" class="hidden">...</section>
         <section id="sec-admin" class="hidden">...</section>
