@@ -1,0 +1,21 @@
+{
+  "name": "Huellitas NQN",
+  "short_name": "Huellitas",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#f97316",
+  "icons": [
+    {
+      "src": "https://res.cloudinary.com/demo/image/upload/v1625562238/sample.jpg", 
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://res.cloudinary.com/demo/image/upload/v1625562238/sample.jpg",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
+
