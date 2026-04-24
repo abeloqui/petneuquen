@@ -105,12 +105,14 @@
         <button onclick="location.reload()" class="w-14 h-14 text-slate-300"><i class="fas fa-sync-alt text-2xl"></i></button>
                         </nav>
                         <script>
-    // --- VARIABLES GLOBALES ---
+    // <script>
+    // ==========================================
+    // 1. VARIABLES DE ESTADO Y CONFIGURACIÓN
+    // ==========================================
     let mainMap, uploadMap, uploadMarker, allPets = [];
     let currentSpecies = 'todos';
     let user = JSON.parse(localStorage.getItem('user'));
 
-    // --- DICCIONARIO DE BARRIOS (Coordenadas Neuquén Capital) ---
     const coordsBarrios = {
         "Alta Barda": [-38.932, -68.077], "Altos del Limay": [-38.981, -68.083],
         "Área Centro": [-38.951, -68.059], "Belgrano": [-38.961, -68.046],
@@ -128,10 +130,13 @@
         "Villa Florencia": [-38.966, -68.076], "Villa María": [-38.966, -68.056]
     };
 
-    // --- NAVEGACIÓN Y UI ---
+    // ==========================================
+    // 2. NAVEGACIÓN Y CONTROL DE VISTAS
+    // ==========================================
     function showSection(id) {
         document.querySelectorAll('.section-container').forEach(s => s.classList.add('hidden'));
-        document.getElementById('sec-' + id).classList.remove('hidden');
+        const target = document.getElementById('sec-' + id);
+        if (target) target.classList.remove('hidden');
         
         if (id === 'home') {
             if (!mainMap) initMainMap();
@@ -142,26 +147,24 @@
             setTimeout(() => uploadMap.invalidateSize(), 300);
         }
         if (id === 'admin') loadAdminData();
+        window.scrollTo(0, 0);
+    }
+
+    function checkAuth() {
+        if (!user) { showSection('auth'); }
+        else { showSection('upload'); }
     }
 
     function toggleUserMenu() {
-        if (!user) { showSection('auth'); return; }
         const menu = document.getElementById('user-menu');
+        if (!user) { showSection('auth'); return; }
         menu.classList.toggle('hidden');
         document.getElementById('menu-email').innerText = user.email;
     }
 
-    function checkAuth() { user ? showSection('upload') : showSection('auth'); }
-
-    function updateAuthUI() {
-        if (user) {
-            document.getElementById('user-anchor').style.backgroundColor = 'var(--logo-coral)';
-            document.getElementById('user-anchor').style.color = 'white';
-            if (user.role === 'admin') document.getElementById('admin-badge').classList.remove('hidden');
-        }
-    }
-
-    // --- SISTEMA DE MAPAS ---
+    // ==========================================
+    // 3. LÓGICA DE MAPAS (LEAFLET)
+    // ==========================================
     function initMainMap() {
         mainMap = L.map('main-map', { zoomControl: false }).setView([-38.951, -68.061], 13);
         L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png').addTo(mainMap);
@@ -170,9 +173,10 @@
     function initUploadMap() {
         uploadMap = L.map('map-upload', { zoomControl: false }).setView([-38.951, -68.061], 13);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(uploadMap);
+        
         uploadMap.on('click', e => {
             if (uploadMarker) uploadMarker.setLatLng(e.latlng);
-            else uploadMarker = L.marker(e.latlng).addTo(uploadMap);
+            else uploadMarker = L.marker(e.latlng, { draggable: true }).addTo(uploadMap);
             document.getElementById('lat-in').value = e.latlng.lat;
             document.getElementById('lng-in').value = e.latlng.lng;
         });
@@ -180,24 +184,28 @@
 
     function autoZoomMap(barrio, mapaDestino) {
         if (coordsBarrios[barrio]) {
-            const targetMap = mapaDestino === 'main' ? mainMap : uploadMap;
-            targetMap.flyTo(coordsBarrios[barrio], 15, { duration: 1.5 });
+            const targetMap = (mapaDestino === 'main') ? mainMap : uploadMap;
+            const coords = coordsBarrios[barrio];
+            targetMap.flyTo(coords, 15, { duration: 1.5 });
             
             if (mapaDestino === 'upload') {
-                const latlng = coordsBarrios[barrio];
-                if (uploadMarker) uploadMarker.setLatLng(latlng);
-                else uploadMarker = L.marker(latlng).addTo(uploadMap);
-                document.getElementById('lat-in').value = latlng[0];
-                document.getElementById('lng-in').value = latlng[1];
+                if (uploadMarker) uploadMarker.setLatLng(coords);
+                else uploadMarker = L.marker(coords).addTo(uploadMap);
+                document.getElementById('lat-in').value = coords[0];
+                document.getElementById('lng-in').value = coords[1];
             }
         }
     }
 
-    // --- GESTIÓN DE MASCOTAS ---
+    // ==========================================
+    // 4. GESTIÓN DE DATOS Y RENDERIZADO
+    // ==========================================
     async function loadPets() {
-        const res = await fetch('/pets');
-        allPets = await res.json();
-        renderPets();
+        try {
+            const res = await fetch('/pets');
+            allPets = await res.json();
+            renderPets();
+        } catch (err) { console.error("Error cargando mascotas:", err); }
     }
 
     function renderPets() {
@@ -209,28 +217,41 @@
             mainMap.eachLayer(l => { if (l instanceof L.CircleMarker) mainMap.removeLayer(l); });
         }
 
-        allPets.filter(p => 
+        const filtered = allPets.filter(p => 
             (p.barrio.toLowerCase().includes(term) || p.name.toLowerCase().includes(term)) &&
             (currentSpecies === 'todos' || p.especie === currentSpecies)
-        ).forEach(p => {
-            const color = p.status === 'perdido' ? 'var(--logo-rojo)' : 'var(--logo-celeste)';
+        );
+
+        filtered.forEach(p => {
+            const color = (p.status === 'perdido') ? '#C94C4C' : '#81B29A';
             const tel = p.users ? p.users.telefono : '2996894360';
 
+            // Marcador en Mapa
             if (mainMap) {
-                const marker = L.circleMarker([p.latitud, p.longitud], {color: color, radius: 9, fillOpacity: 0.8, weight: 3}).addTo(mainMap);
-                marker.bindPopup(`<strong>${p.name.toUpperCase()}</strong><br>${p.barrio}`);
+                const marker = L.circleMarker([p.latitud, p.longitud], {
+                    color: color, radius: 9, fillOpacity: 0.8, weight: 3
+                }).addTo(mainMap);
+                marker.bindPopup(`
+                    <div class="text-center">
+                        <img src="${p.image_url}" class="w-16 h-16 rounded-lg object-cover mb-1">
+                        <br><b>${p.name.toUpperCase()}</b>
+                    </div>
+                `);
             }
 
+            // Card en Lista
             list.innerHTML += `
-                <div class="card-pet">
-                    <span class="status-badge" style="background:${color}">${p.status}</span>
-                    <img src="${p.image_url}" onclick="mainMap.flyTo([${p.latitud}, ${p.longitud}], 16)" class="w-full h-40 object-cover cursor-pointer">
-                    <div class="p-5 text-center">
-                        <p class="font-black text-sm uppercase">${p.name}</p>
-                        <p class="text-[9px] font-bold text-slate-400 mb-4 uppercase">${p.barrio}</p>
+                <div class="card-pet bg-white rounded-[2rem] overflow-hidden shadow-sm border border-slate-100">
+                    <div class="relative">
+                        <span class="absolute top-3 left-3 px-3 py-1 rounded-full text-[8px] font-black text-white uppercase z-10" style="background:${color}">${p.status}</span>
+                        <img src="${p.image_url}" onclick="mainMap.flyTo([${p.latitud}, ${p.longitud}], 16)" class="w-full h-40 object-cover cursor-pointer">
+                    </div>
+                    <div class="p-4 text-center">
+                        <p class="font-black text-xs uppercase text-slate-700">${p.name}</p>
+                        <p class="text-[9px] font-bold text-slate-400 mb-4 uppercase italic">${p.barrio}</p>
                         <div class="flex gap-2">
-                            <a href="https://wa.me/${tel}" target="_blank" class="flex-1 text-white text-[10px] py-3 rounded-2xl font-black shadow-md" style="background: var(--logo-celeste)">WA</a>
-                            <button onclick="sharePet('${p.name}', '${p.barrio}')" class="bg-slate-50 text-slate-400 px-4 rounded-2xl"><i class="fas fa-share-alt"></i></button>
+                            <a href="https://wa.me/${tel}" target="_blank" class="flex-1 bg-[#81B29A] text-white text-[9px] py-3 rounded-2xl font-black shadow-md uppercase">Contactar</a>
+                            <button onclick="sharePet('${p.name}', '${p.barrio}')" class="bg-slate-50 text-slate-400 px-4 rounded-2xl border border-slate-100"><i class="fas fa-share-alt"></i></button>
                         </div>
                     </div>
                 </div>`;
@@ -244,92 +265,165 @@
         renderPets();
     }
 
-    function sharePet(n, b) {
-        const txt = `🐾 Ayudanos con ${n} en barrio ${b}. Miralo acá: https://petneuquen.onrender.com`;
-        window.open(`https://wa.me/?text=${encodeURIComponent(txt)}`, '_blank');
+    function sharePet(name, barrio) {
+        const text = `🐾 ¡Ayudanos a encontrar a ${name} en el barrio ${barrio}! Mirá la foto acá: https://petneuquen.onrender.com`;
+        window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
     }
 
-    // --- ACCIONES DE FORMULARIO ---
+    // ==========================================
+    // 5. SISTEMA DE ADMINISTRACIÓN (SUPERUSUARIO)
+    // ==========================================
+    function updateMetrics(pets) {
+        const counts = {
+            perdido: pets.filter(p => p.status === 'perdido').length,
+            adopcion: pets.filter(p => p.status === 'adopcion').length,
+            encontrado: pets.filter(p => p.status === 'encontrado').length
+        };
+
+        const metricsContainer = document.getElementById('admin-metrics');
+        if (metricsContainer) {
+            metricsContainer.innerHTML = `
+                <div class="grid grid-cols-3 gap-3 mb-8">
+                    <div class="bg-white p-4 rounded-[2rem] shadow-sm border-b-4 border-red-400 text-center">
+                        <p class="text-[9px] font-black uppercase text-slate-400 tracking-tighter">Perdidos</p>
+                        <p class="text-xl font-black text-slate-700">${counts.perdido}</p>
+                    </div>
+                    <div class="bg-white p-4 rounded-[2rem] shadow-sm border-b-4 border-emerald-400 text-center">
+                        <p class="text-[9px] font-black uppercase text-slate-400 tracking-tighter">Adopción</p>
+                        <p class="text-xl font-black text-slate-700">${counts.adopcion}</p>
+                    </div>
+                    <div class="bg-white p-4 rounded-[2rem] shadow-sm border-b-4 border-blue-400 text-center">
+                        <p class="text-[9px] font-black uppercase text-slate-400 tracking-tighter">Hallados</p>
+                        <p class="text-xl font-black text-slate-700">${counts.encontrado}</p>
+                    </div>
+                </div>
+            `;
+        }
+    }
+
+    async function loadAdminData() {
+        if (!user || user.role !== 'admin') return;
+        try {
+            const res = await fetch('/admin/data');
+            const data = await res.json();
+            
+            updateMetrics(data.pets);
+
+            // Gestión de Usuarios
+            const userBox = document.getElementById('admin-users');
+            userBox.innerHTML = `<h3 class="text-[10px] font-black uppercase text-slate-400 mb-4 tracking-[0.2em]">Usuarios Nuevos / Actuales</h3>`;
+            data.users.forEach(u => {
+                userBox.innerHTML += `
+                    <div class="bg-white p-4 rounded-[1.8rem] flex justify-between items-center mb-3 shadow-sm border ${u.is_approved ? 'border-slate-50' : 'border-orange-100 bg-orange-50/30'}">
+                        <div class="flex flex-col">
+                            <span class="text-xs font-black text-slate-700">${u.email}</span>
+                            <span class="text-[8px] font-bold ${u.is_approved ? 'text-emerald-500' : 'text-orange-500'} uppercase">${u.is_approved ? 'Autorizado' : 'Pendiente'}</span>
+                        </div>
+                        <div class="flex gap-2">
+                            ${!u.is_approved ? `<button onclick="adminAction('user', 'approve', ${u.id})" class="w-10 h-10 bg-emerald-500 text-white rounded-full flex items-center justify-center shadow-md"><i class="fas fa-check"></i></button>` : ''}
+                            <button onclick="adminAction('user', 'delete', ${u.id})" class="w-10 h-10 bg-white text-red-300 rounded-full flex items-center justify-center border border-red-50"><i class="fas fa-trash"></i></button>
+                        </div>
+                    </div>`;
+            });
+
+            // Moderación de Mascotas
+            const petBox = document.getElementById('admin-pets');
+            petBox.innerHTML = `<h3 class="text-[10px] font-black uppercase text-slate-400 mt-8 mb-4 tracking-[0.2em]">Publicaciones</h3>`;
+            data.pets.forEach(p => {
+                petBox.innerHTML += `
+                    <div class="bg-white p-3 rounded-[1.8rem] flex items-center gap-4 mb-3 shadow-sm border border-slate-50">
+                        <img src="${p.image_url}" class="w-12 h-12 rounded-[1rem] object-cover">
+                        <div class="flex-1">
+                            <p class="text-[10px] font-black uppercase text-slate-700">${p.name}</p>
+                            <p class="text-[8px] font-bold text-slate-400">${p.barrio} - ${p.status}</p>
+                        </div>
+                        <div class="flex gap-2">
+                            ${!p.is_approved ? `<button onclick="adminAction('pet', 'approve', ${p.id})" class="text-orange-400 p-2"><i class="fas fa-check-circle text-xl"></i></button>` : ''}
+                            <button onclick="adminAction('pet', 'delete', ${p.id})" class="text-red-200 p-2"><i class="fas fa-times-circle text-xl"></i></button>
+                        </div>
+                    </div>`;
+            });
+        } catch (err) { console.error("Error en Admin:", err); }
+    }
+
+    async function adminAction(type, action, id) {
+        if (!confirm("¿Confirmar acción administrativa?")) return;
+        const method = (action === 'delete') ? 'DELETE' : 'POST';
+        const url = (action === 'delete') ? `/admin/delete/${type}/${id}` : `/admin/approve/${type}/${id}`;
+        
+        try {
+            const res = await fetch(url, { method: method });
+            if (res.ok) loadAdminData();
+        } catch (err) { alert("Error de conexión con el servidor"); }
+    }
+
+    // ==========================================
+    // 6. FORMULARIOS Y SESIÓN
+    // ==========================================
     async function handleLogin(e) {
         e.preventDefault();
         const res = await fetch('/login', { method: 'POST', body: new FormData(e.target) });
-        if (res.ok) { localStorage.setItem('user', JSON.stringify(await res.json())); location.reload(); }
-        else { const err = await res.json(); alert(err.msg || "Error"); }
+        if (res.ok) { 
+            const data = await res.json();
+            localStorage.setItem('user', JSON.stringify(data)); 
+            location.reload(); 
+        } else { alert("Credenciales incorrectas o usuario no aprobado."); }
     }
 
     async function handleRegister(e) {
         e.preventDefault();
         const res = await fetch('/register', { method: 'POST', body: new FormData(e.target) });
-        if (res.ok) alert("Solicitud enviada. ¡Pronto te avisaremos por mail!");
-        else alert("Error en el registro");
+        if (res.ok) {
+            alert("¡Registro enviado! André revisará tu cuenta y te llegará un aviso al mail.");
+            showSection('auth');
+        } else { alert("El email ya está registrado."); }
     }
 
     async function handleUpload(e) {
         e.preventDefault();
-        if (!document.getElementById('lat-in').value) return alert("Ubicá la mascota en el mapa haciendo clic.");
-        
+        const lat = document.getElementById('lat-in').value;
+        if (!lat) return alert("Por favor, marcá la ubicación en el mapa.");
+
         const btn = document.getElementById('btn-up');
-        btn.innerText = "Subiendo..."; btn.disabled = true;
-        
+        btn.innerText = "Subiendo reporte..."; btn.disabled = true;
+
         const fd = new FormData(e.target);
         fd.append('user_id', user.id);
-        
-        const res = await fetch('/pets/upload', { method: 'POST', body: fd });
-        if (res.ok) location.reload();
-        else { alert("Error al subir el reporte"); btn.disabled = false; btn.innerText = "Publicar Reporte"; }
+
+        try {
+            const res = await fetch('/pets/upload', { method: 'POST', body: fd });
+            if (res.ok) {
+                alert("Reporte enviado con éxito. Aparecerá cuando André lo apruebe.");
+                location.reload();
+            } else { throw new Error(); }
+        } catch (err) {
+            alert("Error al subir. Reintentá.");
+            btn.innerText = "Publicar Reporte"; btn.disabled = false;
+        }
     }
 
-    // --- PANEL DE SUPERUSUARIO (ADMIN) ---
-    async function loadAdminData() {
-        if (!user || user.role !== 'admin') return;
-        const res = await fetch('/admin/data');
-        const data = await res.json();
-        
-        // Usuarios pendientes
-        document.getElementById('admin-users').innerHTML = data.users.map(u => `
-            <div class="bg-white p-4 rounded-3xl flex justify-between items-center mb-2 shadow-sm border border-emerald-100">
-                <span class="text-xs font-black">${u.email}</span>
-                <div class="flex gap-2">
-                    <button onclick="adminAction('user', 'approve', ${u.id})" class="text-emerald-500"><i class="fas fa-check-circle text-xl"></i></button>
-                    <button onclick="adminAction('user', 'delete', ${u.id})" class="text-red-300"><i class="fas fa-trash text-xl"></i></button>
-                </div>
-            </div>`).join('');
-
-        // Mascotas (Moderar / Borrar)
-        document.getElementById('admin-pets').innerHTML = data.pets.map(p => `
-            <div class="bg-white p-3 rounded-3xl flex items-center gap-4 mb-2 shadow-sm">
-                <img src="${p.image_url}" class="w-12 h-12 rounded-2xl object-cover">
-                <span class="flex-1 text-xs font-black">${p.name} ${!p.is_approved ? '(⏳)':''}</span>
-                <div class="flex gap-3">
-                    ${!p.is_approved ? `<button onclick="adminAction('pet', 'approve', ${p.id})" class="text-orange-500"><i class="fas fa-plus-circle text-xl"></i></button>` : ''}
-                    <button onclick="adminAction('pet', 'delete', ${p.id})" class="text-red-300"><i class="fas fa-times-circle text-xl"></i></button>
-                </div>
-            </div>`).join('');
+    function logout() {
+        localStorage.removeItem('user');
+        location.reload();
     }
 
-    async function adminAction(type, action, id) {
-        if (!confirm(`¿Estás seguro de realizar esta acción?`)) return;
-        const method = action === 'delete' ? 'DELETE' : 'POST';
-        const url = action === 'delete' ? `/admin/delete/${type}/${id}` : `/admin/approve/${type}/${id}`;
-        
-        const res = await fetch(url, { method: method });
-        if (res.ok) loadAdminData();
-    }
-
-    function logout() { localStorage.removeItem('user'); location.reload(); }
-
-    function checkUserPanel() {
-        if (user && user.role === 'admin') showSection('admin');
-        else showSection('home');
-    }
-
-    // --- INICIO ---
+    // ==========================================
+    // 7. ARRANQUE DEL SISTEMA
+    // ==========================================
     window.onload = () => {
-        updateAuthUI();
+        if (user) {
+            // Estilizar el botón de usuario si está logueado
+            const uBtn = document.getElementById('user-anchor');
+            uBtn.classList.add('bg-[#E07A5F]', 'text-white');
+            uBtn.classList.remove('text-slate-400');
+            
+            if (user.role === 'admin') {
+                document.getElementById('admin-badge').classList.remove('hidden');
+            }
+        }
         showSection('home');
     };
-                        
-                            </script> 
+</script>
 
 </body>
 </html>
