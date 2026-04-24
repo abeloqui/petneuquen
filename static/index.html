@@ -10,54 +10,54 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Lexend:wght@400;900&display=swap');
-        body { font-family: 'Lexend', sans-serif; background: #F4F1DE; color: #3D405B; }
-        .glass { background: rgba(244, 241, 222, 0.9); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
-        #map { height: 40vh; border-radius: 0 0 3rem 3rem; border-bottom: 6px solid white; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
-        .card-pet { background: white; border-radius: 2rem; overflow: hidden; transition: 0.3s; border: 2px solid transparent; }
-        .card-pet:active { transform: scale(0.95); border-color: #E07A5F; }
-        .btn-filter.active { background: #E07A5F; color: white; box-shadow: 0 5px 15px rgba(224,122,95,0.4); }
+        body { font-family: 'Lexend', sans-serif; background: #F4F1DE; }
+        .glass { background: rgba(244, 241, 222, 0.9); backdrop-filter: blur(8px); }
+        #map { height: 38vh; width: 100%; border-bottom: 5px solid white; }
+        .active-filter { background: #E07A5F !important; color: white !important; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
     </style>
 </head>
-<body class="pb-32">
+<body class="pb-28">
 
     <div id="map" class="z-10"></div>
 
-    <nav class="absolute top-4 left-0 w-full px-4 z-[1000]">
-        <div class="glass p-3 rounded-2xl flex justify-between items-center shadow-lg border border-white/50">
+    <nav class="absolute top-4 w-full px-4 z-[1000]">
+        <div class="glass p-3 rounded-2xl flex justify-between items-center shadow-lg">
             <div class="flex items-center gap-2">
-                <img src="/static/logo.png" class="w-8 h-8">
-                <h1 class="font-black text-lg">Huellitas<span class="text-[#E07A5F]">NQN</span></h1>
+                <div class="w-8 h-8 bg-[#E07A5F] rounded-lg flex items-center justify-center text-white">
+                    <i class="fas fa-paw text-sm"></i>
+                </div>
+                <h1 class="font-black text-lg tracking-tight">Huellitas<span class="text-[#E07A5F]">NQN</span></h1>
             </div>
-            <button class="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm text-[#E07A5F]">
-                <i class="fas fa-bars"></i>
+            <button onclick="location.reload()" class="w-10 h-10 bg-white rounded-full flex items-center justify-center text-slate-300">
+                <i class="fas fa-redo-alt"></i>
             </button>
         </div>
     </nav>
 
-    <main class="p-4 space-y-6">
-        <div class="flex gap-2 overflow-x-auto no-scrollbar py-2">
-            <button onclick="setFilter('todos', this)" class="btn-filter active px-6 py-3 bg-white rounded-full font-black text-xs uppercase shadow-sm">🔍 Todos</button>
-            <button onclick="setFilter('perro', this)" class="btn-filter px-6 py-3 bg-white rounded-full font-black text-xs uppercase shadow-sm">🐶 Perros</button>
-            <button onclick="setFilter('gato', this)" class="btn-filter px-6 py-3 bg-white rounded-full font-black text-xs uppercase shadow-sm">🐱 Gatos</button>
+    <main class="p-4 space-y-5">
+        <div class="flex gap-2 overflow-x-auto no-scrollbar py-1">
+            <button onclick="setFilter('todos', this)" class="active-filter px-6 py-3 bg-white rounded-full font-black text-[10px] uppercase shadow-sm">Todos</button>
+            <button onclick="setFilter('perro', this)" class="px-6 py-3 bg-white rounded-full font-black text-[10px] uppercase shadow-sm">Perros</button>
+            <button onclick="setFilter('gato', this)" class="px-6 py-3 bg-white rounded-full font-black text-[10px] uppercase shadow-sm">Gatos</button>
         </div>
 
         <div class="relative">
-            <i class="fas fa-location-dot absolute left-5 top-1/2 -translate-y-1/2 text-[#E07A5F]"></i>
-            <input type="text" id="searchInput" oninput="render()" placeholder="¿En qué barrio buscamos?" 
-                   class="w-full p-5 pl-12 rounded-3xl bg-white shadow-inner outline-none focus:ring-2 ring-[#E07A5F] transition-all">
+            <i class="fas fa-search absolute left-5 top-1/2 -translate-y-1/2 text-slate-300"></i>
+            <input type="text" id="search" oninput="render()" placeholder="Buscar barrio..." 
+                   class="w-full p-4 pl-12 rounded-2xl bg-white shadow-sm outline-none focus:ring-2 ring-[#E07A5F]">
         </div>
 
-        <div id="petGrid" class="grid grid-cols-2 gap-4"></div>
+        <div id="grid" class="grid grid-cols-2 gap-4"></div>
     </main>
 
     <div class="fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-md z-[1000]">
-        <div class="glass p-4 rounded-[3rem] flex justify-around items-center border-2 border-white shadow-2xl">
-            <button onclick="window.scrollTo({top:0, behavior:'smooth'})" class="text-slate-400 text-xl"><i class="fas fa-home"></i></button>
-            <button class="w-16 h-16 bg-[#E07A5F] text-white rounded-full -mt-14 border-[6px] border-[#F4F1DE] shadow-xl flex items-center justify-center">
+        <div class="glass p-4 rounded-[2.5rem] flex justify-around items-center border-2 border-white shadow-2xl">
+            <button class="text-slate-400"><i class="fas fa-map-marked-alt text-xl"></i></button>
+            <button onclick="alert('Módulo de subida: Próximamente')" class="w-16 h-16 bg-[#E07A5F] text-white rounded-full -mt-14 border-[6px] border-[#F4F1DE] shadow-xl flex items-center justify-center">
                 <i class="fas fa-plus text-2xl"></i>
             </button>
-            <button onclick="location.reload()" class="text-slate-400 text-xl"><i class="fas fa-bell"></i></button>
+            <button class="text-slate-400"><i class="fas fa-info-circle text-xl"></i></button>
         </div>
     </div>
 
@@ -77,8 +77,8 @@
         }
 
         function render() {
-            const grid = document.getElementById('petGrid');
-            const search = document.getElementById('searchInput').value.toLowerCase();
+            const grid = document.getElementById('grid');
+            const search = document.getElementById('search').value.toLowerCase();
             grid.innerHTML = "";
             
             const filtered = allPets.filter(p => {
@@ -88,40 +88,35 @@
             });
 
             filtered.forEach(p => {
-                const isLost = p.status.toLowerCase() === 'perdido';
+                const color = p.status === 'perdido' ? '#ef4444' : '#10b981';
                 grid.innerHTML += `
-                    <div class="card-pet shadow-md">
-                        <div class="h-32 w-full relative">
+                    <div class="bg-white rounded-3xl overflow-hidden shadow-sm relative">
+                        <div class="h-32 relative">
                             <img src="${p.image_url}" class="w-full h-full object-cover" onclick="map.flyTo([${p.lat}, ${p.lng}], 16)">
-                            <div class="absolute top-2 left-2 px-2 py-1 rounded-lg text-[8px] font-black text-white uppercase ${isLost ? 'bg-red-500' : 'bg-emerald-500'}">
+                            <div class="absolute top-2 left-2 px-2 py-1 rounded-lg text-[7px] font-black text-white uppercase" style="background:${color}">
                                 ${p.status}
                             </div>
                         </div>
                         <div class="p-3">
-                            <h3 class="font-black text-xs uppercase truncate">${p.name}</h3>
-                            <p class="text-[9px] text-slate-400 mb-3"><i class="fas fa-map-marker-alt"></i> ${p.barrio}</p>
-                            <div class="flex gap-2">
-                                <a href="/generate_plate/${p.id}" class="flex-1 bg-slate-100 text-[#3D405B] py-2 rounded-xl text-[9px] font-black text-center uppercase">
-                                    <i class="fas fa-download"></i> Placa
-                                </a>
-                                <a href="https://wa.me/2996894360" class="w-10 bg-emerald-100 text-emerald-600 py-2 rounded-xl flex items-center justify-center">
-                                    <i class="fab fa-whatsapp text-lg"></i>
+                            <h3 class="font-black text-[10px] uppercase truncate">${p.name}</h3>
+                            <p class="text-[8px] text-slate-400 mb-2">${p.barrio}</p>
+                            <div class="flex gap-1">
+                                <a href="/generate_plate/${p.id}" class="flex-1 bg-slate-50 text-slate-400 py-2 rounded-xl text-[8px] font-black text-center">PLACA</a>
+                                <a href="https://wa.me/2996894360" class="w-8 bg-emerald-50 text-emerald-500 rounded-xl flex items-center justify-center">
+                                    <i class="fab fa-whatsapp"></i>
                                 </a>
                             </div>
                         </div>
                     </div>`;
                 
-                // Agregar marcador al mapa
-                L.circleMarker([p.lat, p.lng], {
-                    radius: 8, color: '#white', weight: 2, fill: true, fillColor: isLost ? '#ef4444' : '#10b981', fillOpacity: 1
-                }).addTo(map).bindPopup(`<b>${p.name}</b><br>${p.barrio}`);
+                L.circleMarker([p.lat, p.lng], {radius: 6, color: color, fillOpacity: 1}).addTo(map);
             });
         }
 
         function setFilter(type, btn) {
             currentFilter = type;
-            document.querySelectorAll('.btn-filter').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
+            document.querySelectorAll('button').forEach(b => b.classList.remove('active-filter'));
+            btn.classList.add('active-filter');
             render();
         }
 
