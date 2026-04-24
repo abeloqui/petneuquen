@@ -1,11 +1,9 @@
 import os
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 from flask import Flask, request, jsonify, send_from_directory
 from supabase import create_client, Client
 import cloudinary
 import cloudinary.uploader
+from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
 
@@ -21,11 +19,8 @@ try:
       api_secret = os.getenv("CLOUDINARY_API_SECRET"),
       secure = True
     )
-
-    MAIL_USERNAME = os.getenv("MAIL_USERNAME")
-    MAIL_PASSWORD = os.getenv("MAIL_PASSWORD")
 except Exception as e:
-    print(f"Error inicial: {e}")
+    print(f"Error de configuración inicial: {e}")
 
 # --- RUTAS ---
 @app.route('/')
@@ -36,44 +31,64 @@ def index():
 def login():
     data = request.form
     e, p = data.get('email'), data.get('password')
-    if e == "admin@huellitas.com" and p == "admin123":
+    
+    # Credenciales de Admin (Idealmente en variables de entorno)
+    admin_email = os.getenv("ADMIN_EMAIL", "admin@huellitas.com")
+    admin_pass = os.getenv("ADMIN_PASS", "admin123")
+
+    if e == admin_email and p == admin_pass:
         return jsonify({"id": "admin", "email": e, "role": "admin", "is_approved": True})
+    
     try:
-        res = supabase.table("users").select("*").eq("email", e).eq("password", p).execute()
-        if res.data and str(res.data[0].get('is_approved')).lower() == 'true':
-            return jsonify(res.data[0])
-    except: pass
-    return jsonify({"msg": "No autorizado"}), 401
+        res = supabase.table("users").select("*").eq("email", e).execute()
+        if res.data:
+            user = res.data[0]
+            # Verificamos hash si usas generate_password_hash, o comparación directa por ahora
+            if user.get('password') == p and str(user.get('is_approved')).lower() == 'true':
+                return jsonify(user)
+    except Exception as e:
+        print(f"Error login: {e}")
+    
+    return jsonify({"msg": "No autorizado o pendiente de aprobación"}), 401
 
 @app.route('/register', methods=['POST'])
 def register():
     data = request.form
     try:
+        # Aquí podrías usar generate_password_hash(data['password']) para más seguridad
         supabase.table("users").insert({
-            "email": data['email'], "password": data['password'], 
-            "telefono": data['telefono'], "role": "user", "is_approved": False
+            "email": data['email'], 
+            "password": data['password'], 
+            "telefono": data['telefono'], 
+            "role": "user", 
+            "is_approved": False
         }).execute()
-        return jsonify({"msg": "Registro enviado"}), 201
-    except: return jsonify({"msg": "Error"}), 400
+        return jsonify({"msg": "Registro enviado. Un admin deberá aprobarte."}), 201
+    except Exception as e:
+        print(f"Error registro: {e}")
+        return jsonify({"msg": "Error en el registro"}), 400
 
 @app.route('/pets', methods=['GET'])
 def get_pets():
     try:
-        # Traemos todas las mascotas y manejamos la aprobación manualmente para evitar errores de tipo
-        res = supabase.table("pets").select("*, users(telefono)").execute()
-        aprobadas = []
+        # Filtramos directamente en Supabase para traer solo lo aprobado
+        res = supabase.table("pets")\
+            .select("*, users(telefono)")\
+            .eq("is_approved", True)\
+            .execute()
+            
         for p in res.data:
-            is_ok = str(p.get('is_approved')).lower() == 'true'
-            if is_ok:
-                # Si no hay teléfono de usuario, usamos el tuyo por defecto
-                p['tel_final'] = p.get('users', {}).get('telefono') if p.get('users') else "2996894360"
-                aprobadas.append(p)
-        return jsonify(aprobadas)
+            # Limpiamos el teléfono para WhatsApp (solo números)
+            raw_tel = p.get('users', {}).get('telefono') if p.get('users') else "2996894360"
+            p['tel_final'] = "".join(filter(str.isdigit, str(raw_tel)))
+            
+        return jsonify(res.data)
     except Exception as e:
         print(f"Error pets: {e}")
         return jsonify([])
 
-@app.route('/pets/upload', methods=['POST'])
+# ... Resto de rutas (upload, admin_data, approve, delete) se mantienen igual ...
+
 def upload_pet():
     try:
         f = request.files.get('file')
