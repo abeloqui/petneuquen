@@ -74,7 +74,18 @@ def register():
     except Exception as e:
         print(f"Error registro: {e}")
         return jsonify({"msg": "Error en el registro"}), 400
+@app.route('/my-pets/<int:user_id>', methods=['GET'])
+def get_my_pets(user_id):
+    # Traemos todas (aprobadas o no) para que el usuario vea el estado de su trámite
+    res = supabase.table("pets").select("*").eq("user_id", user_id).execute()
+    return jsonify(res.data)
 
+@app.route('/pets/delete/<int:pet_id>', methods=['DELETE'])
+def delete_pet(pet_id):
+    # Aquí podrías verificar que el user_id coincida, por ahora borrado directo
+    supabase.table("pets").delete().eq("id", pet_id).execute()
+    return jsonify({"msg": "Mascota eliminada"})
+    
 @app.route('/pets', methods=['GET'])
 def get_pets():
     try:
