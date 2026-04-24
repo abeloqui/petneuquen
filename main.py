@@ -74,9 +74,6 @@ def get_user_pets_list(user_id):
     res = supabase.table("pets").select("*").eq("user_id", user_id).execute()
     return jsonify(res.data)
 
-
-# ... (mismo inicio de importaciones)
-
 @app.route('/pets/upload', methods=['POST'])
 def upload_pet():
     try:
@@ -85,12 +82,12 @@ def upload_pet():
         if not user_id or user_id == "admin":
             return jsonify({"msg": "Inicia sesión como vecino"}), 400
 
-        up = cloudinary.uploader.upload(f, folder="huellitas")
+        up = cloudinary.uploader.upload(f, folder="huellitas", transformation=[{'width': 800, 'crop': "limit"}, {'quality': "auto"}])
         supabase.table("pets").insert({
             "user_id": int(user_id), 
             "name": d['name'], 
             "status": d['status'],
-            "especie": d.get('especie', 'perro'), # NUEVO CAMPO
+            "especie": d.get('especie', 'perro'),
             "barrio": d['barrio'], 
             "latitud": float(d['latitud']),
             "longitud": float(d['longitud']), 
@@ -103,21 +100,14 @@ def upload_pet():
 
 @app.route('/pets/report/<int:pet_id>', methods=['POST'])
 def report_pet(pet_id):
-    # Simplemente registramos la denuncia (en una app real iría a una tabla 'reports')
-    print(f"ALERTA: Mascota {pet_id} denunciada por contenido inapropiado.")
+    print(f"ALERTA: Mascota {pet_id} denunciada.")
     return jsonify({"msg": "Denuncia recibida"}), 200
-
-# ... (resto del código igual)
-
-
-
 
 @app.route('/admin/data', methods=['GET'])
 def admin_data():
     try:
         u = supabase.table("users").select("*").eq("is_approved", False).execute()
         p = supabase.table("pets").select("*").execute()
-        
         pets_all = p.data if p.data else []
         stats = {
             "perdidos": len([x for x in pets_all if x.get('status') == 'perdido' and x.get('is_approved')]),
@@ -147,3 +137,4 @@ def user_delete(pet_id):
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
+    
