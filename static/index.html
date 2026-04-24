@@ -83,10 +83,19 @@
                     </form>
                 </div>
             </div>
-            <div id="user-info" class="hidden text-center p-12 bg-white rounded-[3rem] border-2">
-                <p id="u-mail" class="font-black text-xl text-slate-800 mb-8"></p>
-                <button onclick="logout()" class="text-red-500 font-bold uppercase tracking-widest text-xs">Cerrar Sesión</button>
+            <div id="user-info" class="hidden space-y-6">
+    <div class="bg-white p-8 rounded-[3rem] border-2 text-center">
+        <p id="u-mail" class="font-black text-slate-800 mb-2"></p>
+        <button onclick="logout()" class="text-red-500 font-bold text-[10px] uppercase tracking-widest">Cerrar Sesión</button>
+    </div>
+    
+    <div class="px-2">
+        <h3 class="font-black text-slate-800 mb-4">Mis Publicaciones</h3>
+        <div id="my-pets-list" class="grid grid-cols-1 gap-3">
             </div>
+    </div>
+        
+    
         </section>
     </main>
 
