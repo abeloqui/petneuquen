@@ -72,31 +72,52 @@ def register():
         }).execute()
         return jsonify({"msg": "Registro enviado. Un admin deberá aprobarte."}), 201
     except Exception as e:
-        print(f"Error registro: {e}")
-', methods=['GET'])
+        print(f"Error registro: {e}")', methods=['GET'])
         return jsonify({"msg": "Error en el registro"}), 400
 
 
 
+# --- GESTIÓN PARA EL USUARIO LOGUEADO ---
 
-# RUTA PARA TRAER MASCOTAS DE UN USUARIO ESPECÍFICO
 @app.route('/my-pets/<int:user_id>', methods=['GET'])
-def get_user_pets(user_id): # Nombre cambiado para evitar conflictos
+def get_user_pets_list(user_id):
     try:
+        # Traemos todas sus mascotas para que vea el estado (aprobada o no)
         res = supabase.table("pets").select("*").eq("user_id", user_id).execute()
         return jsonify(res.data)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# RUTA PARA QUE EL USUARIO ELIMINE SU PROPIA MASCOTA
 @app.route('/pets/user-delete/<int:pet_id>', methods=['DELETE'])
-def user_delete_pet(pet_id): # Nombre cambiado para evitar conflictos
+def user_self_delete(pet_id):
     try:
         supabase.table("pets").delete().eq("id", pet_id).execute()
-        return jsonify({"msg": "Mascota eliminada correctamente"})
+        return jsonify({"msg": "Publicación eliminada"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# --- GESTIÓN DE ADMINISTRADOR (Nombres únicos) ---
+
+@app.route('/admin/delete-any/<int:pet_id>', methods=['DELETE'])
+def admin_delete_pet(pet_id):
+    try:
+        supabase.table("pets").delete().eq("id", pet_id).execute()
+        return jsonify({"msg": "Eliminado por admin"})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
         
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
