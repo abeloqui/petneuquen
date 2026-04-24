@@ -1,99 +1,123 @@
-from flask import Flask, render_template, request, jsonify, send_file
+import os
+import sqlite3
+from flask import Flask, render_template, request, jsonify, send_file, redirect, url_for
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 import requests
 from io import BytesIO
-import os
+from datetime import datetime
 
 app = Flask(__name__)
+DB_PATH = 'database.db'
 
-# Configuración de colores (Huellitas NQN)
-COLOR_CORAL = (224, 122, 95)
-COLOR_CELESTE = (129, 178, 154)
-COLOR_CREMA = (244, 241, 222)
-COLOR_DARK = (61, 64, 91)
-COLOR_ROJO = (201, 76, 76)
+# --- CONFIGURACIÓN DE COLORES ---
+COLORS = {
+    'coral': (224, 122, 95),
+    'celeste': (129, 178, 154),
+    'crema': (244, 241, 222),
+    'dark': (61, 64, 91),
+    'rojo': (201, 76, 76),
+    'blanco': (255, 255, 255)
+}
 
+# --- BASE DE DATOS ---
+def init_db():
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.execute('''CREATE TABLE IF NOT EXISTS users 
+            (id INTEGER PRIMARY KEY, email TEXT, password TEXT, telefono TEXT, role TEXT, is_approved INTEGER)''')
+        conn.execute('''CREATE TABLE IF NOT EXISTS pets 
+            (id INTEGER PRIMARY KEY, name TEXT, especie TEXT, status TEXT, barrio TEXT, 
+             latitud REAL, longitud REAL, image_url TEXT, user_id INTEGER, is_approved INTEGER)''')
+        # Admin por defecto si no existe
+        conn.execute("INSERT OR IGNORE INTO users (id, email, password, role, is_approved) VALUES (1, 'admin@huellitas.com', 'admin123', 'admin', 1)")
+
+# --- LÓGICA DE GENERACIÓN DE PLACA (PILLOW) ---
 def get_font(size):
-    # Intentamos cargar una fuente del sistema, si no, usamos la básica
     try:
-        return ImageFont.truetype("arialbd.ttf", size) # O la ruta a tu fuente Lexend
+        # En Render/Linux suele estar en esta ruta
+        return ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", size)
     except:
         return ImageFont.load_default()
 
-@app.route('/')
-def index():
-    return render_template('index.html')
-
-@app.route('/generate_plate')
-def generate_plate():
-    name = request.args.get('name', 'Mascota').upper()
-    barrio = request.args.get('barrio', 'Neuquén').upper()
-    status = request.args.get('status', 'perdido')
-    img_url = request.args.get('img_url')
-
-    # 1. Crear lienzo base (1080x1080)
-    canvas = Image.new('RGB', (1080, 1080), COLOR_CREMA)
-    draw = ImageDraw.Draw(canvas)
-
-    # 2. Dibujar borde Coral
-    border_width = 45
-    draw.rectangle([border_width/2, border_width/2, 1080-border_width/2, 1080-border_width/2], 
-                   outline=COLOR_CORAL, width=border_width)
+@app.route('/generate_plate/<int:pet_id>')
+def generate_plate(pet_id):
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.row_factory = sqlite3.Row
+        pet = conn.execute("SELECT * FROM pets WHERE id = ?", (pet_id,)).fetchone()
     
-    # Relleno blanco central
-    draw.rectangle([border_width, border_width, 1080-border_width, 1080-border_width], fill="white")
+    if not pet: return "Mascota no encontrada", 404
 
-    # 3. Insertar Logo (Si existe localmente)
+    # Crear lienzo 1080x1080
+    canvas = Image.new('RGB', (1080, 1080), COLORS['crema'])
+    draw = ImageDraw.Draw(canvas)
+    
+    # Borde y Fondo Blanco
+    draw.rectangle([20, 20, 1060, 1060], fill=COLORS['coral'])
+    draw.rectangle([45, 45, 1035, 1035], fill=COLORS['blanco'])
+
+    # Logo
     try:
         logo = Image.open("static/logo.png").convert("RGBA")
-        logo.thumbnail((300, 300))
-        canvas.paste(logo, (390, 70), logo)
-    except:
-        pass
+        logo.thumbnail((250, 250))
+        canvas.paste(logo, (415, 70), logo)
+    except: pass
 
-    # 4. Procesar Imagen de la Mascota
+    # Imagen Mascota (Procesado de URL)
     try:
-        response = requests.get(img_url)
-        pet_img = Image.open(BytesIO(response.content)).convert("RGB")
-        # Hacerla cuadrada y centrarla (Object-fit: cover manual)
-        pet_img = ImageOps.fit(pet_img, (850, 500), centering=(0.5, 0.5))
+        resp = requests.get(pet['image_url'], timeout=5)
+        pet_img = Image.open(BytesIO(resp.content)).convert("RGB")
+        pet_img = ImageOps.fit(pet_img, (800, 500), centering=(0.5, 0.5))
         
-        # Redondear esquinas
-        mask = Image.new('L', (850, 500), 0)
-        draw_mask = ImageDraw.Draw(mask)
-        draw_mask.rounded_rectangle([0, 0, 850, 500], radius=40, fill=255)
-        
-        canvas.paste(pet_img, (115, 230), mask)
-    except Exception as e:
-        print(f"Error imagen: {e}")
+        # Máscara redondeada
+        mask = Image.new('L', (800, 500), 0)
+        ImageDraw.Draw(mask).rounded_rectangle([0,0,800,500], radius=50, fill=255)
+        canvas.paste(pet_img, (140, 240), mask)
+    except: pass
 
-    # 5. Escribir Textos
-    font_name = get_font(110)
-    font_status = get_font(50)
-    font_barrio = get_font(40)
+    # Textos
+    f_name = get_font(120)
+    f_status = get_font(50)
+    f_barrio = get_font(45)
 
-    # Nombre
-    draw.text((540, 780), name, fill=COLOR_DARK, font=font_name, anchor="mm")
+    draw.text((540, 800), pet['name'].upper(), fill=COLORS['dark'], font=f_name, anchor="mm")
     
-    # Estado
-    txt_status = "¡SE BUSCA!" if status == "perdido" else "EN ADOPCIÓN"
-    draw.text((540, 880), txt_status, fill=COLOR_ROJO, font=font_status, anchor="mm")
+    status_txt = "¡SE BUSCA!" if pet['status'] == 'perdido' else "EN ADOPCIÓN"
+    draw.text((540, 900), status_txt, fill=COLORS['rojo'], font=f_status, anchor="mm")
 
-    # Barrio (Caja Verde)
-    barrio_txt = f"BARRIO {barrio}"
-    bbox = draw.textbbox((540, 960), barrio_txt, font=font_barrio, anchor="mm")
-    draw.rounded_rectangle([bbox[0]-40, bbox[1]-20, bbox[2]+40, bbox[3]+20], radius=30, fill=COLOR_CELESTE)
-    draw.text((540, 960), barrio_txt, fill="white", font=font_barrio, anchor="mm")
+    # Botón Barrio
+    btxt = f"BARRIO {pet['barrio'].upper()}"
+    bbox = draw.textbbox((540, 980), btxt, font=f_barrio, anchor="mm")
+    draw.rounded_rectangle([bbox[0]-30, bbox[1]-15, bbox[2]+30, bbox[3]+15], radius=30, fill=COLORS['celeste'])
+    draw.text((540, 980), btxt, fill="white", font=f_barrio, anchor="mm")
 
-    # URL pie
-    draw.text((540, 1030), "petneuquen.onrender.com", fill=(150, 150, 150), font=get_font(20), anchor="mm")
+    draw.text((540, 1045), "petneuquen.onrender.com", fill=(180, 180, 180), font=get_font(22), anchor="mm")
 
-    # 6. Guardar en memoria y enviar
-    img_io = BytesIO()
-    canvas.save(img_io, 'PNG')
-    img_io.seek(0)
-    return send_file(img_io, mimetype='image/png', as_attachment=True, download_name=f"placa_{name}.png")
+    output = BytesIO()
+    canvas.save(output, format='PNG')
+    output.seek(0)
+    return send_file(output, mimetype='image/png', as_attachment=True, download_name=f"{pet['name']}.png")
+
+# --- RUTAS DE API ---
+@app.route('/pets')
+def get_pets():
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.row_factory = sqlite3.Row
+        pets = conn.execute("SELECT * FROM pets WHERE is_approved = 1").fetchall()
+        return jsonify([dict(p) for p in pets])
+
+@app.route('/login', methods=['POST'])
+def login():
+    data = request.form
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.row_factory = sqlite3.Row
+        user = conn.execute("SELECT * FROM users WHERE email = ? AND password = ?", 
+                           (data['email'], data['password'])).fetchone()
+        if user: return jsonify(dict(user))
+        return "Error", 401
+
+@app.route('/')
+def index(): return render_template('index.html')
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    init_db()
+    app.run(debug=True, port=5000)
     
