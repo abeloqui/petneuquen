@@ -112,6 +112,51 @@
         </div>
     </div>
         </section>
+
+        <section id="sec-profile" class="hidden">
+    <div class="bg-white p-8 rounded-[3rem] shadow-xl">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="font-black text-2xl uppercase">Mis Huellitas</h2>
+            <button onclick="logout()" class="text-red-500 font-bold text-xs">SALIR</button>
+        </div>
+        <div id="user-pet-list" class="space-y-4">
+            </div>
+    </div>
+</section>
+
+<section id="sec-admin" class="hidden">
+    <div class="bg-white p-8 rounded-[3rem] shadow-xl">
+        <h2 class="font-black text-2xl mb-6">Panel Control</h2>
+        
+        <div class="grid grid-cols-3 gap-2 mb-8 text-center">
+            <div class="bg-orange-50 p-4 rounded-2xl">
+                <p class="text-xl font-black text-orange-500" id="stat-perdidos">0</p>
+                <p class="text-[8px] font-bold text-slate-400 uppercase">Perdidos</p>
+            </div>
+            <div class="bg-emerald-50 p-4 rounded-2xl">
+                <p class="text-xl font-black text-emerald-500" id="stat-adopcion">0</p>
+                <p class="text-[8px] font-bold text-slate-400 uppercase">Adopción</p>
+            </div>
+            <div class="bg-slate-50 p-4 rounded-2xl">
+                <p class="text-xl font-black text-slate-500" id="stat-pendientes">0</p>
+                <p class="text-[8px] font-bold text-slate-400 uppercase">Espera</p>
+            </div>
+        </div>
+
+        <div class="space-y-8">
+            <div>
+                <h3 class="font-black text-xs uppercase tracking-widest text-slate-300 mb-4">Usuarios Pendientes</h3>
+                <div id="admin-users" class="space-y-3"></div>
+            </div>
+            <div>
+                <h3 class="font-black text-xs uppercase tracking-widest text-slate-300 mb-4">Publicaciones Nuevas</h3>
+                <div id="admin-pets" class="space-y-3"></div>
+            </div>
+        </div>
+        <button onclick="logout()" class="w-full mt-10 text-slate-300 font-bold text-xs uppercase">Cerrar Sesión Admin</button>
+    </div>
+</section>
+        
         
 
         <section id="sec-auth" class="hidden">...</section>
