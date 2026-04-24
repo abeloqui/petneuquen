@@ -48,109 +48,65 @@ def login():
         print(f"Error login: {err}")
     return jsonify({"msg": "Usuario no encontrado"}), 401
 
-
-
-
 @app.route('/register', methods=['POST'])
 def register():
     try:
         data = request.form
-        email = data.get('email')
-        password = data.get('password')
-        telefono = data.get('telefono')
-
-        # Verificamos si el usuario ya existe
+        email, password, telefono = data.get('email'), data.get('password'), data.get('telefono')
         check = supabase.table("users").select("*").eq("email", email).execute()
         if check.data:
-            return jsonify({"msg": "Este email ya está registrado"}), 400
-
-        # Insertamos el nuevo vecino (por defecto is_approved es False)
-        supabase.table("users").insert({
-            "email": email,
-            "password": password,
-            "telefono": telefono,
-            "is_approved": False
-        }).execute()
-
-        return jsonify({"msg": "Solicitud enviada. El admin te aprobará pronto."}), 201
+            return jsonify({"msg": "Este email ya existe"}), 400
+        supabase.table("users").insert({"email": email, "password": password, "telefono": telefono, "is_approved": False}).execute()
+        return jsonify({"msg": "Solicitud enviada"}), 201
     except Exception as e:
-        print(f"Error en registro: {e}")
-        return jsonify({"msg": "Error al procesar el registro"}), 500
-        
-
-
-
-
-
-
-
-
+        return jsonify({"msg": str(e)}), 500
 
 @app.route('/pets', methods=['GET'])
 def get_all_pets():
     try:
-        # Importante: usamos la relación que acabas de guardar en Supabase
         res = supabase.table("pets").select("*, users(telefono)").eq("is_approved", True).execute()
         return jsonify(res.data)
     except Exception as e:
-        print(f"Error cargando mascotas: {e}")
         return jsonify([])
+
+@app.route('/my-pets/<int:user_id>', methods=['GET'])
+def get_user_pets_list(user_id):
+    res = supabase.table("pets").select("*").eq("user_id", user_id).execute()
+    return jsonify(res.data)
 
 @app.route('/pets/upload', methods=['POST'])
 def upload_pet():
     try:
-        f = request.files.get('file')
-        d = request.form
+        f, d = request.files.get('file'), request.form
         user_id = d.get('user_id')
-
         if not user_id or user_id == "admin":
-            return jsonify({"msg": "Inicia sesión como vecino para publicar"}), 400
+            return jsonify({"msg": "Inicia sesión como vecino"}), 400
 
-        up = cloudinary.uploader.upload(f, 
-            folder="huellitas",
-            transformation=[{'width': 800, 'crop': "limit"}, {'quality': "auto"}]
-        )
-        
+        up = cloudinary.uploader.upload(f, folder="huellitas", transformation=[{'width': 800, 'crop': "limit"}, {'quality': "auto"}])
         supabase.table("pets").insert({
-            "user_id": int(user_id), 
-            "name": d['name'], 
-            "status": d['status'],
-            "barrio": d['barrio'], 
-            "latitud": float(d['latitud']),
-            "longitud": float(d['longitud']), 
-            "image_url": up['secure_url'], 
-            "is_approved": False
+            "user_id": int(user_id), "name": d['name'], "status": d['status'],
+            "barrio": d['barrio'], "latitud": float(d['latitud']),
+            "longitud": float(d['longitud']), "image_url": up['secure_url'], "is_approved": False
         }).execute()
         return jsonify({"msg": "OK"}), 201
     except Exception as e:
-        print(f"Error subida: {e}")
-        return jsonify({"msg": "Error al subir datos"}), 500
+        return jsonify({"msg": str(e)}), 500
 
 @app.route('/admin/data', methods=['GET'])
 def admin_data():
     try:
-        # Traemos todo para que las métricas de los círculos naranja y azul no den 0
-        u_res = supabase.table("users").select("*").execute()
-        p_res = supabase.table("pets").select("*").execute()
+        u = supabase.table("users").select("*").eq("is_approved", False).execute()
+        p = supabase.table("pets").select("*").execute()
         
-        users_all = u_res.data if u_res.data else []
-        pets_all = p_res.data if p_res.data else []
-
+        pets_all = p.data if p.data else []
         stats = {
-            "perdidos": len([x for x in pets_all if x.get('status') == 'perdido']),
+            "perdidos": len([x for x in pets_all if x.get('status') == 'perdido' and x.get('is_approved')]),
+            "adopcion": len([x for x in pets_all if x.get('status') == 'adopcion' and x.get('is_approved')]),
             "pendientes": len([x for x in pets_all if not x.get('is_approved')])
         }
-        
-        pending_users = [u for u in users_all if not u.get('is_approved')]
-        
-        return jsonify({
-            "users": pending_users, 
-            "pets": pets_all, 
-            "stats": stats
-        })
+        return jsonify({"users": u.data, "pets": pets_all, "stats": stats})
     except Exception as e:
-        print(f"Error admin: {e}")
-        return jsonify({"users": [], "pets": [], "stats": {"perdidos":0, "pendientes":0}})
+        return jsonify({"users": [], "pets": [], "stats": {"perdidos":0, "adopcion":0, "pendientes":0}})
 
 @app.route('/admin/approve/<t>/<id>', methods=['POST'])
 def approve_item(t, id):
@@ -163,7 +119,12 @@ def admin_delete(pet_id):
     supabase.table("pets").delete().eq("id", pet_id).execute()
     return jsonify({"msg": "OK"})
 
+@app.route('/pets/user-delete/<int:pet_id>', methods=['DELETE'])
+def user_delete(pet_id):
+    supabase.table("pets").delete().eq("id", pet_id).execute()
+    return jsonify({"msg": "OK"})
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
-    
+                                                           
