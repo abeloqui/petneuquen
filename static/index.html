@@ -132,41 +132,74 @@
     let currentSpecies = 'todos';
     let user = JSON.parse(localStorage.getItem('user'));
 
+    // --- NAVEGACIÓN Y SECCIONES ---
     function showSection(id) {
         document.querySelectorAll('.section-container').forEach(s => s.classList.add('hidden'));
-        document.getElementById('sec-' + id).classList.remove('hidden');
+        const target = document.getElementById('sec-' + id);
+        if(target) target.classList.remove('hidden');
+
         if(id === 'home') {
             if(!mainMap) initMainMap();
-            setTimeout(() => mainMap.invalidateSize(), 200);
-            loadPets();
+            setTimeout(() => {
+                mainMap.invalidateSize();
+                loadPets();
+            }, 250);
         }
         if(id === 'upload') {
             if(!uploadMap) initUploadMap();
-            setTimeout(() => uploadMap.invalidateSize(), 200);
+            setTimeout(() => uploadMap.invalidateSize(), 250);
         }
     }
 
+    // --- MAPAS ---
     function initMainMap() {
-        mainMap = L.map('main-map', {zoomControl: false}).setView([-38.951, -68.061], 13);
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png').addTo(mainMap);
+        mainMap = L.map('main-map', { zoomControl: false }).setView([-38.951, -68.061], 13);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+            attribution: '© OpenStreetMap'
+        }).addTo(mainMap);
+
+        // EXTRA: Botón de "Mi ubicación"
+        const locateBtn = L.control({position: 'topright'});
+        locateBtn.onAdd = function() {
+            const btn = L.DomUtil.create('button', 'bg-white p-3 m-4 rounded-full shadow-lg text-orange-500');
+            btn.innerHTML = '<i class="fas fa-location-crosshairs text-lg"></i>';
+            btn.onclick = () => mainMap.locate({setView: true, maxZoom: 16});
+            return btn;
+        };
+        locateBtn.addTo(mainMap);
     }
 
     function initUploadMap() {
-        uploadMap = L.map('map-upload', {zoomControl: false}).setView([-38.951, -68.061], 13);
+        uploadMap = L.map('map-upload', { zoomControl: false }).setView([-38.951, -68.061], 13);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(uploadMap);
+        
         uploadMap.on('click', e => {
             if(uploadMarker) uploadMarker.setLatLng(e.latlng);
-            else uploadMarker = L.marker(e.latlng).addTo(uploadMap);
+            else uploadMarker = L.marker(e.latlng, {draggable: true}).addTo(uploadMap);
+            
             document.getElementById('lat-in').value = e.latlng.lat;
             document.getElementById('lng-in').value = e.latlng.lng;
         });
     }
 
-    // --- CARGA Y RENDERIZADO (CON WHATSAPP) ---
+    // --- EFECTO ZOOM (A PETICIÓN) ---
+    function focusOnPet(lat, lng) {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        if (mainMap) {
+            mainMap.flyTo([lat, lng], 16, {
+                animate: true,
+                duration: 1.5
+            });
+        }
+    }
+
+    // --- CARGA Y RENDERIZADO (SIN OMISIONES) ---
     async function loadPets() {
-        const res = await fetch('/pets');
-        allPets = await res.json();
-        renderPets();
+        try {
+            const res = await fetch('/pets');
+            allPets = await res.json();
+            renderPets();
+        } catch (e) { console.error("Error cargando mascotas:", e); }
     }
 
     function renderPets() {
@@ -175,6 +208,10 @@
         const status = document.getElementById('filter-status').value;
         list.innerHTML = "";
         
+        if(mainMap) {
+            mainMap.eachLayer(l => { if(l instanceof L.CircleMarker || (l instanceof L.Marker && !l._icon?.classList?.contains('leaflet-marker-draggable'))) mainMap.removeLayer(l); });
+        }
+
         allPets.filter(p => 
             (p.barrio.toLowerCase().includes(term) || p.name.toLowerCase().includes(term)) &&
             (status === 'todos' || p.status === status) &&
@@ -182,18 +219,27 @@
         ).forEach(p => {
             const color = p.status === 'perdido' ? '#ef4444' : '#10b981';
             const tel = p.users ? p.users.telefono : '2996894360';
-            const msg = encodeURIComponent(`Hola! Vi a ${p.name} en la app Huellitas NQN. Sigue ahí?`);
+            const msg = encodeURIComponent(`¡Hola! Vi a ${p.name} en la app Huellitas NQN. ¿Tenés novedades?`);
 
+            // Añadir al mapa
+            if(mainMap) {
+                L.circleMarker([p.latitud, p.longitud], {
+                    color: color, radius: 8, fillOpacity: 0.8, weight: 2, fillColor: 'white'
+                }).addTo(mainMap).bindPopup(`<b>${p.name}</b><br>${p.barrio}`);
+            }
+
+            // Añadir a la lista visual
             list.innerHTML += `
-                <div class="bg-white rounded-[2rem] overflow-hidden shadow-md border border-slate-50 relative">
+                <div class="bg-white rounded-[2rem] overflow-hidden shadow-md border border-slate-50 relative group">
                     <span class="absolute top-3 left-3 px-3 py-1 rounded-full text-[8px] font-black text-white uppercase z-10" style="background:${color}">${p.status}</span>
-                    <img src="${p.image_url}" class="w-full h-32 object-cover">
+                    <img src="${p.image_url}" onclick="focusOnPet(${p.latitud}, ${p.longitud})" 
+                         class="w-full h-32 object-cover cursor-pointer hover:scale-105 transition-transform duration-500">
                     <div class="p-4 text-center">
-                        <p class="font-black text-xs uppercase">${p.name}</p>
+                        <p class="font-black text-xs uppercase text-slate-800">${p.name}</p>
                         <p class="text-[8px] font-bold text-slate-400 mb-3">${p.barrio}</p>
                         <div class="flex gap-1">
-                            <a href="https://wa.me/${tel}?text=${msg}" target="_blank" class="flex-1 bg-emerald-500 text-white text-[9px] py-2 rounded-xl font-black">WHATSAPP</a>
-                            <button onclick="sharePet('${p.name}', '${p.barrio}')" class="bg-slate-100 text-slate-400 px-3 rounded-xl"><i class="fas fa-share-nodes"></i></button>
+                            <a href="https://wa.me/${tel}?text=${msg}" target="_blank" class="flex-1 bg-emerald-500 text-white text-[9px] py-2 rounded-xl font-black shadow-md hover:bg-emerald-600 transition-colors">WHATSAPP</a>
+                            <button onclick="sharePet('${p.name}', '${p.barrio}')" class="bg-slate-100 text-slate-400 px-3 rounded-xl hover:bg-slate-200"><i class="fas fa-share-nodes text-xs"></i></button>
                         </div>
                     </div>
                 </div>`;
@@ -201,11 +247,15 @@
     }
 
     function sharePet(name, barrio) {
-        const text = `🐾 Ayudanos a encontrar a ${name} en el barrio ${barrio}. Mirá el mapa acá: https://petneuquen.onrender.com`;
-        window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+        const text = `🐾 Ayudanos con ${name} en el barrio ${barrio}. Miralo acá: https://petneuquen.onrender.com`;
+        if (navigator.share) {
+            navigator.share({ title: 'Huellitas NQN', text: text, url: 'https://petneuquen.onrender.com' });
+        } else {
+            window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+        }
     }
 
-    // --- SESIONES Y PANELES ---
+    // --- PANELES Y AUTH ---
     function checkUserPanel() {
         if(!user) showSection('auth');
         else if(user.role === 'admin') { showSection('admin'); loadAdminData(); }
@@ -221,18 +271,18 @@
             const data = await res.json(); 
             localStorage.setItem('user', JSON.stringify(data)); 
             location.reload(); 
-        } else alert("Datos incorrectos");
+        } else alert("Usuario o clave incorrectos");
     }
 
     async function handleRegister(e) {
         e.preventDefault();
         const res = await fetch('/register', { method: 'POST', body: new FormData(e.target) });
-        if(res.ok) alert("Solicitud enviada al administrador.");
+        if(res.ok) { alert("Solicitud enviada. El administrador te habilitará pronto."); showSection('home'); }
     }
 
     function logout() { localStorage.removeItem('user'); location.reload(); }
 
-    // --- LÓGICA DE ADMIN (APROBAR/BORRAR) ---
+    // --- ADMIN & USUARIO ---
     async function loadAdminData() {
         const res = await fetch('/admin/data');
         const data = await res.json();
@@ -240,18 +290,34 @@
         document.getElementById('stat-adopcion').innerText = data.stats.adopcion;
         document.getElementById('stat-pendientes').innerText = data.stats.pendientes;
 
-        document.getElementById('admin-users').innerHTML = data.users.map(u => `
-            <div class="bg-slate-50 p-4 rounded-2xl flex justify-between items-center">
-                <span class="text-[10px] font-black">${u.email}</span>
-                <button onclick="approve('user', ${u.id})" class="bg-emerald-500 text-white text-[9px] px-4 py-2 rounded-xl font-black">ADMITIR</button>
-            </div>`).join('') || "<p class='text-center text-[10px] text-slate-300'>No hay usuarios pendientes</p>";
+        document.getElementById('admin-users').innerHTML = '<h3 class="text-[10px] font-black text-slate-400 mb-2 uppercase">Usuarios Pendientes</h3>' + 
+            (data.users.map(u => `
+            <div class="bg-slate-50 p-4 rounded-2xl flex justify-between items-center mb-2">
+                <span class="text-[9px] font-black text-slate-600">${u.email}</span>
+                <button onclick="approve('user', ${u.id})" class="bg-emerald-500 text-white text-[9px] px-4 py-2 rounded-xl font-black shadow-sm">ADMITIR</button>
+            </div>`).join('') || "<p class='text-center text-[10px] py-4'>Todo al día</p>");
 
-        document.getElementById('admin-pets').innerHTML = data.pets.filter(p => !p.is_approved).map(p => `
-            <div class="bg-slate-50 p-3 rounded-2xl flex items-center gap-3">
+        document.getElementById('admin-pets').innerHTML = '<h3 class="text-[10px] font-black text-slate-400 mb-2 uppercase">Mascotas por Aprobar</h3>' + 
+            (data.pets.filter(p => !p.is_approved).map(p => `
+            <div class="bg-slate-50 p-3 rounded-2xl flex items-center gap-3 mb-2">
                 <img src="${p.image_url}" class="w-10 h-10 rounded-lg object-cover">
-                <span class="flex-1 text-[10px] font-black">${p.name}</span>
+                <span class="flex-1 text-[10px] font-black text-slate-600">${p.name}</span>
                 <button onclick="approve('pet', ${p.id})" class="bg-orange-500 text-white text-[9px] px-4 py-2 rounded-xl font-black">OK</button>
-            </div>`).join('') || "<p class='text-center text-[10px] text-slate-300'>No hay mascotas pendientes</p>";
+            </div>`).join('') || "<p class='text-center text-[10px] py-4'>No hay pendientes</p>");
+    }
+
+    async function loadUserPets() {
+        const res = await fetch(`/my-pets/${user.id}`);
+        const pets = await res.json();
+        document.getElementById('user-pet-list').innerHTML = pets.map(p => `
+            <div class="bg-slate-50 p-4 rounded-2xl flex items-center gap-4 mb-3 border border-slate-100">
+                <img src="${p.image_url}" class="w-12 h-12 rounded-xl object-cover">
+                <div class="flex-1">
+                    <p class="font-black text-xs">${p.name}</p>
+                    <p class="text-[9px] font-bold ${p.is_approved ? 'text-emerald-500':'text-orange-400'} uppercase">${p.is_approved ? '● Publicado':'● Revisando'}</p>
+                </div>
+                <button onclick="deletePet(${p.id})" class="text-red-400 p-2"><i class="fas fa-trash"></i></button>
+            </div>`).join('') || "<p class='text-center text-xs p-10 text-slate-400'>No tienes publicaciones activas.</p>";
     }
 
     async function approve(t, id) { 
@@ -259,38 +325,33 @@
         loadAdminData(); 
     }
 
-    async function loadUserPets() {
-        const res = await fetch(`/my-pets/${user.id}`);
-        const pets = await res.json();
-        document.getElementById('user-pet-list').innerHTML = pets.map(p => `
-            <div class="bg-slate-50 p-4 rounded-2xl flex items-center gap-4">
-                <img src="${p.image_url}" class="w-12 h-12 rounded-xl object-cover">
-                <div class="flex-1">
-                    <p class="font-black text-xs">${p.name}</p>
-                    <p class="text-[9px] font-bold ${p.is_approved ? 'text-emerald-500':'text-orange-400'} uppercase">${p.is_approved ? 'Publicado':'Pendiente'}</p>
-                </div>
-                <button onclick="deletePet(${p.id})" class="text-red-400"><i class="fas fa-trash"></i></button>
-            </div>`).join('') || "<p class='text-center text-xs text-slate-400'>No publicaste nada todavía.</p>";
-    }
-
     async function deletePet(id) {
-        if(confirm("¿Borrar publicación?")) {
+        if(confirm("¿Eliminar publicación permanentemente?")) {
             await fetch(`/pets/user-delete/${id}`, {method:'DELETE'});
             loadUserPets();
         }
     }
 
-    // --- SUBIDA DE MASCOTA ---
+    // --- FORMULARIO DE SUBIDA ---
     async function handleUpload(e) {
         e.preventDefault();
-        if(!document.getElementById('lat-in').value) return alert("Marcá la ubicación en el mapa");
+        const lat = document.getElementById('lat-in').value;
+        if(!lat) return alert("Por favor, marcá la ubicación en el mapa");
+        
         const btn = document.getElementById('btn-up');
-        btn.innerText = "SUBIENDO..."; btn.disabled = true;
+        btn.innerText = "PROCESANDO..."; btn.disabled = true;
+        
         const fd = new FormData(e.target);
         fd.append('user_id', user.id);
+        
         const res = await fetch('/pets/upload', { method: 'POST', body: fd });
-        if(res.ok) { alert("¡Éxito! Esperá aprobación."); location.reload(); }
-        else { alert("Error al subir"); btn.innerText = "Publicar"; btn.disabled = false; }
+        if(res.ok) {
+            alert("¡Recibido! En breve te llegará un mail de confirmación.");
+            location.reload();
+        } else {
+            alert("Algo falló al subir. Intentá de nuevo.");
+            btn.innerText = "Publicar"; btn.disabled = false;
+        }
     }
 
     function setSpecies(sp, btn) {
@@ -300,7 +361,14 @@
         renderPets();
     }
 
+    // Inicio automático
     window.onload = () => showSection('home');
-</script>
+                </script>
+    
+
+
+
+
+
 </body>
 </html>
