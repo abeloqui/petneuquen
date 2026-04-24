@@ -21,8 +21,6 @@ try:
 except Exception as e:
     print(f"Error de configuración: {e}")
 
-# --- RUTAS ---
-
 @app.route('/')
 def index():
     return send_from_directory('static', 'index.html')
@@ -53,16 +51,12 @@ def login():
 @app.route('/pets', methods=['GET'])
 def get_all_pets():
     try:
-        # Traemos el teléfono del usuario dueño para el botón de contacto
+        # Importante: usamos la relación que acabas de guardar en Supabase
         res = supabase.table("pets").select("*, users(telefono)").eq("is_approved", True).execute()
         return jsonify(res.data)
-    except:
+    except Exception as e:
+        print(f"Error cargando mascotas: {e}")
         return jsonify([])
-
-@app.route('/my-pets/<int:user_id>', methods=['GET'])
-def get_user_pets_list(user_id):
-    res = supabase.table("pets").select("*").eq("user_id", user_id).execute()
-    return jsonify(res.data)
 
 @app.route('/pets/upload', methods=['POST'])
 def upload_pet():
@@ -72,15 +66,11 @@ def upload_pet():
         user_id = d.get('user_id')
 
         if not user_id or user_id == "admin":
-            return jsonify({"msg": "Inicia sesión con tu cuenta de vecino"}), 400
+            return jsonify({"msg": "Inicia sesión como vecino para publicar"}), 400
 
-        # OPTIMIZACIÓN: Redimensionar a 800px de ancho y calidad automática
         up = cloudinary.uploader.upload(f, 
             folder="huellitas",
-            transformation=[
-                {'width': 800, 'crop': "limit"},
-                {'quality': "auto"}
-            ]
+            transformation=[{'width': 800, 'crop': "limit"}, {'quality': "auto"}]
         )
         
         supabase.table("pets").insert({
@@ -95,13 +85,13 @@ def upload_pet():
         }).execute()
         return jsonify({"msg": "OK"}), 201
     except Exception as e:
-        return jsonify({"msg": str(e)}), 500
-
+        print(f"Error subida: {e}")
+        return jsonify({"msg": "Error al subir datos"}), 500
 
 @app.route('/admin/data', methods=['GET'])
 def admin_data():
     try:
-        # Traemos todos los usuarios y mascotas sin filtros iniciales para contar bien
+        # Traemos todo para que las métricas de los círculos naranja y azul no den 0
         u_res = supabase.table("users").select("*").execute()
         p_res = supabase.table("pets").select("*").execute()
         
@@ -109,13 +99,10 @@ def admin_data():
         pets_all = p_res.data if p_res.data else []
 
         stats = {
-            # Contamos todos los que tengan status 'perdido', estén aprobados o no
             "perdidos": len([x for x in pets_all if x.get('status') == 'perdido']),
-            # Contamos los que esperan aprobación
             "pendientes": len([x for x in pets_all if not x.get('is_approved')])
         }
         
-        # Usuarios que todavía no fueron aprobados para mostrar en la lista
         pending_users = [u for u in users_all if not u.get('is_approved')]
         
         return jsonify({
@@ -124,16 +111,8 @@ def admin_data():
             "stats": stats
         })
     except Exception as e:
-        print(f"Error en admin_data: {e}")
+        print(f"Error admin: {e}")
         return jsonify({"users": [], "pets": [], "stats": {"perdidos":0, "pendientes":0}})
-        
-
-
-
-
-
-
-
 
 @app.route('/admin/approve/<t>/<id>', methods=['POST'])
 def approve_item(t, id):
@@ -143,11 +122,6 @@ def approve_item(t, id):
 
 @app.route('/admin/delete/<int:pet_id>', methods=['DELETE'])
 def admin_delete(pet_id):
-    supabase.table("pets").delete().eq("id", pet_id).execute()
-    return jsonify({"msg": "OK"})
-
-@app.route('/pets/user-delete/<int:pet_id>', methods=['DELETE'])
-def user_delete(pet_id):
     supabase.table("pets").delete().eq("id", pet_id).execute()
     return jsonify({"msg": "OK"})
 
