@@ -18,7 +18,7 @@
 <body>
 
     <nav class="p-6 bg-white/90 backdrop-blur-md sticky top-0 z-[1000] flex justify-between items-center border-b border-slate-200">
-        <h1 class="font-black text-2xl tracking-tighter" onclick="location.reload()">Huellitas<span class="text-orange-500">NQN</span></h1>
+        <h1 class="font-black text-2xl tracking-tighter cursor-pointer" onclick="location.reload()">Huellitas<span class="text-orange-500">NQN</span></h1>
         <button onclick="showSection('auth')" class="text-slate-300 text-4xl"><i class="fas fa-user-circle"></i></button>
     </nav>
 
@@ -85,7 +85,7 @@
             </div>
             <div id="user-info" class="hidden text-center p-12 bg-white rounded-[3rem] border-2">
                 <p id="u-mail" class="font-black text-xl text-slate-800 mb-8"></p>
-                <button onclick="logout()" class="text-red-500 font-bold uppercase tracking-widest text-xs">Cerrar Sesión Permanente</button>
+                <button onclick="logout()" class="text-red-500 font-bold uppercase tracking-widest text-xs">Cerrar Sesión</button>
             </div>
         </section>
     </main>
@@ -103,15 +103,13 @@
         function showSection(id) {
             document.querySelectorAll('section').forEach(s => s.classList.add('hidden'));
             document.getElementById('sec-' + id).classList.remove('hidden');
-            document.querySelectorAll('nav button').forEach(b => b.classList.remove('text-orange-500'));
             
             if(id === 'home') {
-                document.getElementById('nav-home').classList.add('text-orange-500');
                 if(!mainMap) {
                     mainMap = L.map('main-map', {zoomControl: false}).setView([-38.951, -68.061], 13);
                     L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png').addTo(mainMap);
                 }
-                setTimeout(() => { mainMap.invalidateSize(); loadPets(); }, 500);
+                setTimeout(() => { mainMap.invalidateSize(); loadPets(); }, 400);
             }
             if(id === 'upload') {
                 setTimeout(() => {
@@ -126,18 +124,16 @@
                         });
                     }
                     uploadMap.invalidateSize();
-                }, 500);
+                }, 400);
             }
         }
 
         async function loadPets() {
             try {
-                console.log("Iniciando carga de mascotas...");
                 const res = await fetch('/pets');
                 allPets = await res.json();
-                console.log("Mascotas recibidas del servidor:", allPets);
                 applyFilters();
-            } catch (e) { console.error("Fallo crítico en carga:", e); }
+            } catch (e) { console.error("Error cargando mascotas:", e); }
         }
 
         function applyFilters() {
@@ -147,7 +143,7 @@
             list.innerHTML = '';
             
             if(mainMap) {
-                mainMap.eachLayer(l => { if(l instanceof L.Marker || l instanceof L.CircleMarker) mainMap.removeLayer(l); });
+                mainMap.eachLayer(l => { if(l instanceof L.CircleMarker) mainMap.removeLayer(l); });
             }
 
             const filtered = allPets.filter(p => 
@@ -156,121 +152,53 @@
             );
 
             if (filtered.length === 0) {
-                list.innerHTML = '<p class="col-span-2 text-center text-slate-400 py-10 font-bold uppercase text-[10px] tracking-widest">No hay mascotas publicadas</p>';
+                list.innerHTML = '<p class="col-span-2 text-center text-slate-400 py-10 font-bold uppercase text-[10px]">No hay mascotas</p>';
                 return;
             }
 
             filtered.forEach(p => {
                 const color = p.status === 'perdido' ? '#ef4444' : '#10b981';
                 if(mainMap) {
-                    L.circleMarker([p.latitud, p.longitud], {color: color, radius: 9, fillOpacity: 0.9, weight: 4, fillColor: 'white'}).addTo(mainMap).bindPopup(`<b>${p.name}</b>`);
+                    L.circleMarker([p.latitud, p.longitud], {color: color, radius: 8, fillOpacity: 1, fillColor: 'white'}).addTo(mainMap).bindPopup(`<b>${p.name}</b>`);
                 }
                 
                 list.innerHTML += `
-                    <div class="bg-white rounded-[2.5rem] overflow-hidden shadow-sm border border-white transition-transform active:scale-95">
-                        <img src="${p.image_url}" class="w-full h-40 object-cover" onerror="this.src='https://placehold.co/400x400?text=Cargando...'">
+                    <div class="bg-white rounded-[2.5rem] overflow-hidden shadow-sm border border-white">
+                        <img src="${p.image_url}" class="w-full h-40 object-cover" onerror="this.src='https://placehold.co/400x400?text=Mascota'">
                         <div class="p-4 text-center">
                             <p class="font-black text-slate-800 text-sm mb-1">${p.name}</p>
-                            <p class="text-[9px] text-slate-400 uppercase font-black tracking-tighter mb-4">${p.barrio || 'Neuquén'}</p>
-                            <a href="https://wa.me/${p.tel_final}" target="_blank" class="block bg-orange-500 text-white py-3 rounded-2xl text-[10px] font-black uppercase shadow-md shadow-orange-100">Contactar</a>
+                            <p class="text-[9px] text-slate-400 uppercase font-black mb-4">${p.barrio || 'Neuquén'}</p>
+                            <a href="https://wa.me/${p.tel_final}" target="_blank" class="block bg-orange-500 text-white py-3 rounded-2xl text-[10px] font-black uppercase">Contactar</a>
                         </div>
                     </div>`;
             });
         }
 
-        // ... (Dentro del script de index.html)
-
-async function handleLogin(e) {
-    e.preventDefault();
-    const res = await fetch('/login', {method:'POST', body:new FormData(e.target)});
-    const data = await res.json();
-    
-    if(res.ok) { 
-        user = data; 
-        localStorage.setItem('user', JSON.stringify(user)); 
-        location.reload(); 
-    } else { 
-        // Mostramos el mensaje exacto que viene del servidor
-        alert(data.msg || "Credenciales incorrectas o cuenta no activada."); 
-    }
-}
-
-async function handleRegister(e) {
-    e.preventDefault();
-    const res = await fetch('/register', {method:'POST', body:new FormData(e.target)});
-    const data = await res.json();
-    
-    if(res.ok) {
-        alert(data.msg); // "Registro enviado. Un admin deberá aprobarte."
-        location.reload();
-    } else {
-        alert("Hubo un error. ¿Ese email ya está registrado?");
-    }
-}
-
-// En applyFilters, los marcadores ahora son más limpios
-function applyFilters() {
-    const term = document.getElementById('search').value.toLowerCase();
-    const status = document.getElementById('filter-status').value;
-    const list = document.getElementById('pet-list');
-    list.innerHTML = '';
-    
-    if(mainMap) {
-        mainMap.eachLayer(l => { if(l instanceof L.CircleMarker) mainMap.removeLayer(l); });
-    }
-
-    const filtered = allPets.filter(p => 
-        (status === 'todos' || p.status === status) && 
-        (p.barrio || "").toLowerCase().includes(term)
-    );
-
-    if (filtered.length === 0) {
-        list.innerHTML = '<p class="col-span-2 text-center text-slate-400 py-10 font-bold uppercase text-[10px] tracking-widest">No se encontraron resultados</p>';
-        return;
-    }
-
-    filtered.forEach(p => {
-        const color = p.status === 'perdido' ? '#ef4444' : '#10b981';
-        if(mainMap) {
-            L.circleMarker([p.latitud, p.longitud], {
-                color: color, 
-                radius: 9, 
-                fillOpacity: 0.9, 
-                weight: 4, 
-                fillColor: 'white'
-            }).addTo(mainMap).bindPopup(`<b>${p.name}</b><br>${p.status}`);
+        async function handleLogin(e) {
+            e.preventDefault();
+            const res = await fetch('/login', {method:'POST', body:new FormData(e.target)});
+            const data = await res.json();
+            if(res.ok) { user = data; localStorage.setItem('user', JSON.stringify(user)); location.reload(); }
+            else alert(data.msg || "Error al ingresar");
         }
-        
-        list.innerHTML += `
-            <div class="bg-white rounded-[2.5rem] overflow-hidden shadow-sm border border-white transition-transform active:scale-95">
-                <img src="${p.image_url}" class="w-full h-40 object-cover" onerror="this.src='https://placehold.co/400x400?text=Huellitas'">
-                <div class="p-4 text-center">
-                    <p class="font-black text-slate-800 text-sm mb-1">${p.name}</p>
-                    <p class="text-[9px] text-slate-400 uppercase font-black tracking-tighter mb-4">${p.barrio || 'Neuquén'}</p>
-                    <a href="https://wa.me/${p.tel_final}" target="_blank" class="block bg-orange-500 text-white py-3 rounded-2xl text-[10px] font-black uppercase shadow-md shadow-orange-100">Contactar</a>
-                </div>
-            </div>`;
-    });
-}
-
 
         async function handleRegister(e) {
             e.preventDefault();
             const res = await fetch('/register', {method:'POST', body:new FormData(e.target)});
             const data = await res.json();
-            alert(data.msg || "Registro enviado");
+            alert(data.msg);
             if(res.ok) location.reload();
         }
 
         async function handleUpload(e) {
             e.preventDefault();
-            if(!document.getElementById('lat-in').value) return alert("Por favor, marca la ubicación en el mapa");
+            if(!document.getElementById('lat-in').value) return alert("Marca la ubicación en el mapa");
             const btn = document.getElementById('btn-up');
             btn.innerText = "SUBIENDO..."; btn.disabled = true;
             const fd = new FormData(e.target);
             fd.append('user_id', user.id);
             const res = await fetch('/pets/upload', {method:'POST', body:fd});
-            if(res.ok) { alert("¡Publicado! Se verá en el inicio cuando el administrador lo apruebe."); location.reload(); }
+            if(res.ok) { alert("¡Publicado! Espera la aprobación."); location.reload(); }
             else { alert("Error al subir."); btn.innerText = "Publicar Ahora"; btn.disabled = false; }
         }
 
@@ -279,18 +207,18 @@ function applyFilters() {
             const res = await fetch('/admin/data');
             const data = await res.json();
             const container = document.getElementById('admin-content');
-            container.innerHTML = '<p class="text-[10px] font-black text-slate-300 uppercase px-2">Usuarios</p>';
+            container.innerHTML = '<p class="text-[10px] font-black text-slate-300 uppercase px-2">Usuarios Pendientes</p>';
             data.users.forEach(u => {
-                container.innerHTML += `<div class="bg-white p-5 rounded-3xl flex justify-between items-center border shadow-sm"><p class="text-xs font-bold">${u.email}</p><button onclick="approve('user', ${u.id})" class="bg-indigo-600 text-white px-5 py-2 rounded-xl text-[10px] font-black">HABILITAR</button></div>`;
+                container.innerHTML += `<div class="bg-white p-5 rounded-3xl flex justify-between items-center border shadow-sm"><p class="text-xs font-bold">${u.email}</p><button onclick="approve('user', ${u.id})" class="bg-indigo-600 text-white px-5 py-2 rounded-xl text-[10px] font-black">APROBAR</button></div>`;
             });
-            container.innerHTML += '<p class="text-[10px] font-black text-slate-300 uppercase px-2 mt-6">Mascotas</p>';
+            container.innerHTML += '<p class="text-[10px] font-black text-slate-300 uppercase px-2 mt-6">Gestión de Mascotas</p>';
             data.pets.forEach(p => {
-                container.innerHTML += `<div class="bg-white p-4 rounded-3xl flex items-center gap-4 border shadow-sm"><img src="${p.image_url}" class="w-14 h-14 rounded-2xl object-cover"><div class="flex-1"><p class="text-xs font-black">${p.name}</p><p class="text-[9px] font-bold ${p.is_approved ? 'text-green-500' : 'text-orange-500'} uppercase">${p.is_approved ? 'Aprobada' : 'Pendiente'}</p></div><div class="flex gap-2">${!p.is_approved ? `<button onclick="approve('pet', ${p.id})" class="bg-green-500 text-white p-3 rounded-xl"><i class="fas fa-check"></i></button>` : ''}<button onclick="delPet(${p.id})" class="bg-red-50 text-red-500 p-3 rounded-xl border border-red-100"><i class="fas fa-trash"></i></button></div></div>`;
+                container.innerHTML += `<div class="bg-white p-4 rounded-3xl flex items-center gap-4 border shadow-sm"><img src="${p.image_url}" class="w-14 h-14 rounded-2xl object-cover"><div class="flex-1"><p class="text-xs font-black">${p.name}</p><p class="text-[9px] font-bold ${p.is_approved ? 'text-green-500' : 'text-orange-500'} uppercase">${p.is_approved ? 'Aprobada' : 'Pendiente'}</p></div><div class="flex gap-2">${!p.is_approved ? `<button onclick="approve('pet', ${p.id})" class="bg-green-500 text-white p-3 rounded-xl"><i class="fas fa-check"></i></button>` : ''}<button onclick="delPet(${p.id})" class="bg-red-50 text-red-500 p-3 rounded-xl"><i class="fas fa-trash"></i></button></div></div>`;
             });
         }
 
         async function approve(type, id) { await fetch(`/admin/approve/${type}/${id}`, {method:'POST'}); showAdmin(); }
-        async function delPet(id) { if(confirm("¿Eliminar publicación?")) { await fetch(`/admin/delete/pet/${id}`, {method:'DELETE'}); showAdmin(); } }
+        async function delPet(id) { if(confirm("¿Eliminar?")) { await fetch(`/admin/delete/pet/${id}`, {method:'DELETE'}); showAdmin(); } }
         function checkAuth() { user ? showSection('upload') : showSection('auth'); }
         function logout() { localStorage.clear(); location.reload(); }
 
@@ -306,3 +234,4 @@ function applyFilters() {
     </script>
 </body>
 </html>
+
