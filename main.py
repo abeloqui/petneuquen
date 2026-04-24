@@ -65,7 +65,7 @@ def enviar_mail(email_destino, tipo_evento, datos=None):
 # --- RUTAS DE NAVEGACIÓN Y AUTH ---
 @app.route('/')
 def index():
-    return send_from_directory('static', 'index.html')
+    return send_from_directory('templates', 'index.html')
 
 @app.route('/login', methods=['POST'])
 def login():
