@@ -9,12 +9,10 @@ app = Flask(__name__)
 
 # --- CONFIGURACIONES ---
 try:
-    # Supabase
     url = os.getenv("SUPABASE_URL", "").strip()
     key = os.getenv("SUPABASE_KEY", "").strip()
     supabase: Client = create_client(url, key)
 
-    # Cloudinary
     cloudinary.config( 
       cloud_name = os.getenv("CLOUDINARY_CLOUD_NAME"), 
       api_key = os.getenv("CLOUDINARY_API_KEY"), 
@@ -24,7 +22,7 @@ try:
 except Exception as e:
     print(f"Error de configuración inicial: {e}")
 
-# --- RUTAS ---
+# --- RUTAS PRINCIPALES ---
 
 @app.route('/')
 def index():
@@ -34,8 +32,6 @@ def index():
 def login():
     data = request.form
     e, p = data.get('email'), data.get('password')
-    
-    # Credenciales de Admin (Hardcoded para emergencia, ideal usar env)
     admin_email = os.getenv("ADMIN_EMAIL", "admin@huellitas.com")
     admin_pass = os.getenv("ADMIN_PASS", "admin123")
 
@@ -46,28 +42,38 @@ def login():
         res = supabase.table("users").select("*").eq("email", e).execute()
         if res.data:
             user = res.data[0]
-            # Verificamos si la cuenta está aprobada y si la clave coincide
             if str(user.get('is_approved')).lower() == 'true':
-                if user.get('password') == p: # Aquí podrías usar check_password_hash
+                if user.get('password') == p:
                     return jsonify(user)
-                else:
-                    return jsonify({"msg": "Clave incorrecta"}), 401
-            else:
-                return jsonify({"msg": "Tu cuenta aún no ha sido aprobada por un admin."}), 401
+                return jsonify({"msg": "Clave incorrecta"}), 401
+            return jsonify({"msg": "Cuenta pendiente de aprobación"}), 401
     except Exception as err:
         print(f"Error login: {err}")
-    
     return jsonify({"msg": "Usuario no encontrado"}), 401
 
-# --- GESTIÓN PARA EL USUARIO LOGUEADO ---
+@app.route('/pets', methods=['GET'])
+def get_all_pets():
+    try:
+        res = supabase.table("pets").select("*, users(telefono)").eq("is_approved", True).execute()
+        data = res.data
+        for p in data:
+            user_data = p.get('users')
+            raw_tel = user_data.get('telefono') if user_data else "2996894360"
+            p['tel_final'] = "".join(filter(str.isdigit, str(raw_tel)))
+        return jsonify(data)
+    except:
+        res = supabase.table("pets").select("*").eq("is_approved", True).execute()
+        return jsonify(res.data)
+
+# --- GESTIÓN DE USUARIO (MIS PUBLICACIONES) ---
 
 @app.route('/my-pets/<int:user_id>', methods=['GET'])
 def get_user_pets_list(user_id):
     try:
-        # Traemos todas sus mascotas para que vea el estado (aprobada o no)
         res = supabase.table("pets").select("*").eq("user_id", user_id).execute()
         return jsonify(res.data)
     except Exception as e:
+        print(f"Error en mis mascotas: {e}")
         return jsonify({"error": str(e)}), 500
 
 @app.route('/pets/user-delete/<int:pet_id>', methods=['DELETE'])
@@ -76,105 +82,56 @@ def user_self_delete(pet_id):
         supabase.table("pets").delete().eq("id", pet_id).execute()
         return jsonify({"msg": "Publicación eliminada"})
     except Exception as e:
+        print(f"Error al eliminar: {e}")
         return jsonify({"error": str(e)}), 500
 
-# --- GESTIÓN DE ADMINISTRADOR (Nombres únicos) ---
-
-@app.route('/admin/delete-any/<int:pet_id>', methods=['DELETE'])
-def admin_delete_pet(pet_id):
-    try:
-        supabase.table("pets").delete().eq("id", pet_id).execute()
-        return jsonify({"msg": "Eliminado por admin"})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-        
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+# --- SUBIDA DE MASCOTAS ---
 
 @app.route('/pets/upload', methods=['POST'])
 def upload_pet():
     try:
-        print("--- Iniciando subida ---")
         f = request.files.get('file')
         d = request.form
-        print(f"Datos recibidos: {d}")
+        user_id = d.get('user_id')
 
-        # Intento con Cloudinary
-        try:
-            up = cloudinary.uploader.upload(f, folder="huellitas")
-            print(f"Cloudinary OK: {up['secure_url']}")
-        except Exception as e_cloud:
-            print(f"FALLÓ CLOUDINARY: {e_cloud}")
-            return jsonify({"msg": f"Error Cloudinary: {str(e_cloud)}"}), 500
+        if not user_id or user_id == "admin":
+            return jsonify({"msg": "Usa una cuenta de usuario real para publicar"}), 400
 
-        # Intento con Supabase
-        try:
-            # IMPORTANTE: Asegúrate de que user_id no sea null
-            user_id = d.get('user_id')
-            if not user_id or user_id == "undefined":
-                 return jsonify({"msg": "Error: ID de usuario no válido"}), 400
-
-            supabase.table("pets").insert({
-                "user_id": user_id, 
-                "name": d['name'], 
-                "status": d['status'],
-                "barrio": d['barrio'], 
-                "latitud": float(d['latitud']),
-                "longitud": float(d['longitud']), 
-                "image_url": up['secure_url'], 
-                "is_approved": False
-            }).execute()
-            print("Supabase INSERT exitoso")
-        except Exception as e_supa:
-            print(f"FALLÓ SUPABASE: {e_supa}")
-            return jsonify({"msg": f"Error Supabase: {str(e_supa)}"}), 500
-
+        up = cloudinary.uploader.upload(f, folder="huellitas")
+        
+        supabase.table("pets").insert({
+            "user_id": int(user_id), 
+            "name": d['name'], 
+            "status": d['status'],
+            "barrio": d['barrio'], 
+            "latitud": float(d['latitud']),
+            "longitud": float(d['longitud']), 
+            "image_url": up['secure_url'], 
+            "is_approved": False
+        }).execute()
         return jsonify({"msg": "OK"}), 201
     except Exception as e:
-        print(f"ERROR GENERAL: {e}")
+        print(f"Error subida: {e}")
         return jsonify({"msg": str(e)}), 500
-        
+
+# --- ADMINISTRACIÓN ---
+
 @app.route('/admin/data', methods=['GET'])
 def admin_data():
-    try:
-        u = supabase.table("users").select("*").eq("is_approved", False).execute()
-        p = supabase.table("pets").select("*").execute()
-        return jsonify({"users": u.data, "pets": p.data})
-    except:
-        return jsonify({"users": [], "pets": []})
+    u = supabase.table("users").select("*").eq("is_approved", False).execute()
+    p = supabase.table("pets").select("*").execute()
+    return jsonify({"users": u.data, "pets": p.data})
 
 @app.route('/admin/approve/<t>/<id>', methods=['POST'])
-def approve(t, id):
+def approve_item(t, id):
     table = "users" if t == "user" else "pets"
     supabase.table(table).update({"is_approved": True}).eq("id", id).execute()
     return jsonify({"msg": "OK"})
 
-@app.route('/admin/delete/pet/<id>', methods=['DELETE'])
-def delete_pet(id):
-    supabase.table("pets").delete().eq("id", id).execute()
-    return jsonify({"msg": "OK"})
+@app.route('/admin/delete-any/<int:pet_id>', methods=['DELETE'])
+def admin_delete_pet(pet_id):
+    supabase.table("pets").delete().eq("id", pet_id).execute()
+    return jsonify({"msg": "Eliminado por admin"})
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
