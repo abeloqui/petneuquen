@@ -64,16 +64,17 @@
             color: white; text-transform: uppercase; z-index: 20;
         }
 
-        /* Estilo oculto para la placa de Instagram */
+        /* Estilo mejorado para la placa de exportación */
         #canvas-export {
             position: fixed; left: -9999px; width: 1080px; height: 1080px;
             background: var(--logo-crema); display: flex; flex-direction: column;
-            align-items: center; justify-content: center; padding: 60px;
+            align-items: center; justify-content: center;
         }
 
         .section-container { animation: fadeIn 0.4s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; } }
         .hidden { display: none !important; }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
     </style>
 </head>
 <body>
@@ -81,17 +82,17 @@
     <datalist id="lista-barrios">
         <option value="Alta Barda"><option value="Altos del Limay"><option value="Área Centro"><option value="Belgrano">
         <option value="Canal V"><option value="Confluencia"><option value="Cuenca XV"><option value="Don Bosco">
-        <option value="Huilliches"><option value="Islas Malvinas"><option value="La Sirena"><option value="Mariano Moreno">
-        <option value="Melipal"><option value="Parque Industrial"><option value="Progreso"><option value="Provinciales Unidas">
-        <option value="Rincón de Emilio"><option value="Río Grande"><option value="San Lorenzo"><option value="Santa Genoveva">
-        <option value="Sapere"><option value="Terrazas del Neuquén"><option value="Unión de Mayo"><option value="Valentina Norte">
-        <option value="Valentina Sur"><option value="Villa Ceferino"><option value="Villa Florencia"><option value="Villa María">
+        <option value="Hibepa"><option value="Huilliches"><option value="Islas Malvinas"><option value="La Sirena">
+        <option value="Mariano Moreno"><option value="Melipal"><option value="Parque Industrial"><option value="Progreso">
+        <option value="Provinciales Unidas"><option value="Rincón de Emilio"><option value="Río Grande"><option value="San Lorenzo">
+        <option value="Santa Genoveva"><option value="Sapere"><option value="Terrazas del Neuquén"><option value="Unión de Mayo">
+        <option value="Valentina Norte"><option value="Valentina Sur"><option value="Villa Ceferino"><option value="Villa Florencia"><option value="Villa María">
     </datalist>
 
     <nav class="p-5 glass sticky top-0 z-[1000] flex justify-between items-center border-b border-white/20">
         <div onclick="location.reload()" class="cursor-pointer flex items-center gap-3">
             <div class="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-md border-2 border-white overflow-hidden">
-                <img id="nav-logo" src="/static/logo.png" onerror="this.src='https://cdn-icons-png.flaticon.com/512/194/194279.png'" class="w-full h-full object-cover">
+                <img src="/static/logo.png" onerror="this.src='https://cdn-icons-png.flaticon.com/512/194/194279.png'" class="w-full h-full object-cover">
             </div>
             <div>
                 <h1 class="font-black text-2xl tracking-tighter">Huellitas<span style="color: var(--logo-coral);">NQN</span></h1>
@@ -104,7 +105,6 @@
             <button onclick="toggleUserMenu()" id="user-anchor" class="w-12 h-12 rounded-full bg-white text-slate-400 flex items-center justify-center shadow-md active:scale-90">
                 <i class="fas fa-user text-xl"></i>
             </button>
-            
             <div id="user-menu" class="hidden absolute top-16 right-0 w-52 bg-white rounded-[2rem] shadow-2xl border border-slate-100 overflow-hidden z-[2001]">
                 <div class="p-5 border-b border-slate-50 bg-slate-50/30">
                     <p id="menu-email" class="text-[9px] font-black text-slate-400 truncate uppercase"></p>
@@ -120,34 +120,35 @@
     </nav>
 
     <div id="canvas-export">
-        <div style="background: white; padding: 40px; border-radius: 80px; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; border: 15px solid var(--logo-coral);">
-            <div style="width: 180px; height: 180px; margin-bottom: 30px;">
-                <img id="export-logo" src="/static/logo.png" style="width:100%; height:100%; object-fit: contain;">
+        <div style="background: white; width: 960px; height: 960px; border-radius: 100px; display: flex; flex-direction: column; align-items: center; border: 25px solid var(--logo-coral); position: relative; overflow: hidden;">
+            <div style="margin-top: 60px; width: 220px;">
+                <img src="/static/logo.png" style="width: 100%;">
             </div>
-            <div style="width: 700px; height: 500px; border-radius: 50px; overflow: hidden; margin-bottom: 40px; border: 10px solid var(--logo-crema);">
-                <img id="export-img" src="" style="width:100%; height:100%; object-fit: cover;">
+            <div style="margin-top: 40px; width: 750px; height: 450px; border-radius: 60px; overflow: hidden; border: 12px solid var(--logo-crema); box-shadow: 0 20px 40px rgba(0,0,0,0.1);">
+                <img id="export-img" src="" style="width: 100%; height: 100%; object-fit: cover;">
             </div>
-            <h2 id="export-name" style="font-size: 80px; font-weight: 900; text-transform: uppercase; color: var(--dark); margin: 0;"></h2>
-            <p id="export-status" style="font-size: 40px; font-weight: 900; color: var(--logo-coral); margin-bottom: 20px;"></p>
-            <div style="background: var(--logo-celeste); padding: 20px 60px; border-radius: 40px;">
-                <p id="export-barrio" style="font-size: 35px; font-weight: 900; color: white; margin: 0;"></p>
+            <div style="margin-top: 40px; text-align: center;">
+                <h2 id="export-name" style="font-size: 90px; font-weight: 900; color: var(--dark); margin: 0; text-transform: uppercase; letter-spacing: -2px;"></h2>
+                <p id="export-status" style="font-size: 45px; font-weight: 900; color: var(--logo-coral); margin-top: -10px; text-transform: uppercase;"></p>
             </div>
-            <p style="margin-top: auto; font-size: 24px; font-weight: 800; color: #94a3b8;">petneuquen.onrender.com</p>
+            <div style="margin-top: auto; margin-bottom: 60px; background: var(--logo-celeste); padding: 25px 80px; border-radius: 50px; box-shadow: 0 10px 0 #6d9682;">
+                <p id="export-barrio" style="font-size: 40px; font-weight: 900; color: white; margin: 0; text-transform: uppercase;"></p>
+            </div>
+            <p style="position: absolute; bottom: 20px; font-size: 22px; font-weight: 800; color: #cbd5e1;">petneuquen.onrender.com</p>
         </div>
     </div>
 
     <main class="p-4 max-w-2xl mx-auto">
+        
         <section id="sec-home" class="section-container space-y-6">
             <div id="main-map"></div>
-            
             <div class="space-y-4">
-                <div class="flex gap-2 overflow-x-auto pb-2">
+                <div class="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
                     <button onclick="setSpecies('todos', this)" class="btn-filter active">🔍 Todos</button>
                     <button onclick="setSpecies('perro', this)" class="btn-filter">🐶 Perros</button>
                     <button onclick="setSpecies('gato', this)" class="btn-filter">🐱 Gatos</button>
                     <button onclick="setSpecies('otro', this)" class="btn-filter">✨ Otros</button>
                 </div>
-                
                 <div class="flex gap-3">
                     <div class="relative flex-1">
                         <i class="fas fa-search absolute left-5 top-1/2 -translate-y-1/2 text-slate-300"></i>
@@ -155,13 +156,12 @@
                     </div>
                 </div>
             </div>
-
             <div id="pet-list" class="grid grid-cols-2 gap-4"></div>
         </section>
 
         <section id="sec-upload" class="section-container hidden">
             <div class="bg-white p-8 rounded-[3rem] shadow-2xl">
-                <h2 class="font-black text-2xl mb-8 uppercase text-center tracking-tighter">Reportar Mascota</h2>
+                <h2 class="font-black text-2xl mb-8 uppercase text-center tracking-tighter">Nueva Publicación</h2>
                 <form onsubmit="handleUpload(event)" class="space-y-6">
                     <div class="grid grid-cols-2 gap-4">
                         <select name="especie" id="especie-select" onchange="checkOtroEspecie(this.value)" class="p-4 bg-slate-50 rounded-2xl font-bold text-sm">
@@ -175,18 +175,15 @@
                         </select>
                     </div>
                     <input type="text" id="especie-otro" placeholder="¿Qué animal es?" class="hidden custom-input border-2 border-orange-100">
-                    <input type="text" name="name" placeholder="Nombre" class="custom-input" required>
-                    <input type="text" name="barrio" list="lista-barrios" onchange="autoZoomMap(this.value, 'upload')" placeholder="Barrio oficial" class="custom-input" required>
-                    
-                    <div id="map-upload" style="height: 200px;" class="rounded-[2rem] border-4 border-slate-50"></div>
+                    <input type="text" name="name" placeholder="Nombre de la mascota" class="custom-input" required>
+                    <input type="text" name="barrio" list="lista-barrios" onchange="autoZoomMap(this.value, 'upload')" placeholder="Elegí el barrio" class="custom-input" required>
+                    <div id="map-upload" style="height: 250px;" class="rounded-[2rem] border-4 border-slate-50"></div>
                     <input type="hidden" name="latitud" id="lat-in">
                     <input type="hidden" name="longitud" id="lng-in">
-
-                    <div class="p-6 bg-slate-50 rounded-[2rem] border-2 border-dashed border-slate-200 text-center relative">
-                        <input type="file" name="file" accept="image/*" class="w-full text-xs font-bold text-slate-400" required>
+                    <div class="p-6 bg-slate-50 rounded-[2rem] border-2 border-dashed border-slate-200 text-center">
+                        <input type="file" name="file" accept="image/*" class="w-full text-xs font-bold" required>
                     </div>
-
-                    <button type="submit" id="btn-up" class="w-full py-5 rounded-[2rem] font-black uppercase text-white shadow-xl" style="background: var(--logo-coral);">Publicar</button>
+                    <button type="submit" id="btn-up" class="w-full py-5 rounded-[2rem] font-black uppercase text-white shadow-xl" style="background: var(--logo-coral);">Publicar Reporte</button>
                 </form>
             </div>
         </section>
@@ -199,13 +196,37 @@
                     <input type="password" name="password" placeholder="Contraseña" class="custom-input" required>
                     <button class="w-full py-5 rounded-[2rem] font-black uppercase text-white" style="background: var(--dark);">Entrar</button>
                 </form>
+                <div class="mt-10 pt-10 border-t border-dashed border-slate-100">
+                    <p class="text-[10px] font-black uppercase text-slate-400 mb-4 tracking-widest">¿Sos nuevo? Registrate</p>
+                    <form onsubmit="handleRegister(event)" class="space-y-4">
+                        <input type="email" name="email" placeholder="Email" class="custom-input" required>
+                        <input type="password" name="password" placeholder="Contraseña" class="custom-input" required>
+                        <input type="tel" name="telefono" placeholder="Tu WhatsApp" class="custom-input" required>
+                        <button class="w-full border-2 border-slate-200 py-5 rounded-[2rem] font-black uppercase text-slate-400">Solicitar Acceso</button>
+                    </form>
+                </div>
             </div>
         </section>
 
         <section id="sec-profile" class="section-container hidden">
             <div class="bg-white p-8 rounded-[3rem] shadow-xl">
-                <h2 id="profile-greeting" class="font-black text-2xl uppercase mb-8">¡HOLA!</h2>
+                <h2 id="profile-greeting" class="font-black text-2xl uppercase mb-8">MIS REPORTES 🐾</h2>
                 <div id="user-pet-list" class="space-y-4"></div>
+            </div>
+        </section>
+
+        <section id="sec-admin" class="section-container hidden">
+            <div class="bg-white p-8 rounded-[3rem] shadow-xl">
+                <h2 class="font-black text-2xl mb-8 uppercase">Administración</h2>
+                <div class="grid grid-cols-3 gap-3 mb-8 text-center">
+                    <div class="bg-orange-50 p-4 rounded-3xl"><p class="text-xl font-black" id="stat-perdidos">0</p><p class="text-[7px] font-black uppercase">Perdidos</p></div>
+                    <div class="bg-emerald-50 p-4 rounded-3xl"><p class="text-xl font-black" id="stat-adopcion">0</p><p class="text-[7px] font-black uppercase">Adopción</p></div>
+                    <div class="bg-slate-50 p-4 rounded-3xl"><p class="text-xl font-black text-slate-400" id="stat-pendientes">0</p><p class="text-[7px] font-black uppercase">Espera</p></div>
+                </div>
+                <h3 class="font-black text-xs uppercase mb-4 text-slate-400">Usuarios por admitir</h3>
+                <div id="admin-users" class="space-y-3 mb-8"></div>
+                <h3 class="font-black text-xs uppercase mb-4 text-slate-400">Publicaciones pendientes</h3>
+                <div id="admin-pets" class="space-y-3"></div>
             </div>
         </section>
     </main>
@@ -217,142 +238,198 @@
         </button>
         <button onclick="location.reload()" class="w-14 h-14 text-slate-300"><i class="fas fa-sync-alt text-2xl"></i></button>
     </nav>
-        <script>
-        let mainMap, uploadMap, uploadMarker, allPets = [];
-        let currentSpecies = 'todos';
-        let user = JSON.parse(localStorage.getItem('user'));
+    <script>
+    let mainMap, uploadMap, uploadMarker, allPets = [];
+    let currentSpecies = 'todos';
+    let user = JSON.parse(localStorage.getItem('user'));
 
-        const coordsBarrios = {
-            "Alta Barda": [-38.932, -68.077], "Área Centro": [-38.951, -68.059],
-            "Belgrano": [-38.961, -68.046], "Confluencia": [-38.974, -68.028],
-            "San Lorenzo": [-38.948, -68.118], "Santa Genoveva": [-38.946, -68.041],
-            "Valentina Sur": [-38.988, -68.137], "Villa María": [-38.966, -68.056]
-            // Agregar el resto según necesites
-        };
+    const coordsBarrios = {
+        "Alta Barda": [-38.932, -68.077], "Área Centro": [-38.951, -68.059],
+        "Belgrano": [-38.961, -68.046], "Confluencia": [-38.974, -68.028],
+        "Hibepa": [-38.924, -68.125], "San Lorenzo": [-38.948, -68.118],
+        "Santa Genoveva": [-38.946, -68.041], "Villa María": [-38.966, -68.056]
+    };
 
-        function updateAuthUI() {
-            if (user) {
-                document.getElementById('user-anchor').classList.add('bg-orange-400', 'text-white');
-                if (user.role === 'admin') document.getElementById('admin-badge').classList.remove('hidden');
-            }
+    function updateAuthUI() {
+        if (user) {
+            const btn = document.getElementById('user-anchor');
+            btn.style.backgroundColor = 'var(--logo-coral)';
+            btn.style.color = 'white';
+            if (user.role === 'admin') document.getElementById('admin-badge').classList.remove('hidden');
         }
+    }
 
-        async function downloadPlate(name, barrio, status, imgSrc) {
-            const btn = event.currentTarget;
-            const originalContent = btn.innerHTML;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    // FUNCIÓN DE PLACA MEJORADA
+    async function downloadPlate(name, barrio, status, imgSrc) {
+        const btn = event.currentTarget;
+        const original = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
 
-            // Llenar el canvas invisible
-            document.getElementById('export-img').src = imgSrc;
-            document.getElementById('export-name').innerText = name;
-            document.getElementById('export-status').innerText = status.toUpperCase();
-            document.getElementById('export-barrio').innerText = "BARRIO " + barrio.toUpperCase();
+        document.getElementById('export-img').src = imgSrc;
+        document.getElementById('export-name').innerText = name;
+        document.getElementById('export-status').innerText = status === 'perdido' ? '¡SE BUSCA!' : 'EN ADOPCIÓN';
+        document.getElementById('export-barrio').innerText = "BARRIO " + barrio.toUpperCase();
 
-            // Esperar a que la imagen cargue
-            setTimeout(() => {
-                html2canvas(document.querySelector("#canvas-export"), {
-                    useCORS: true,
-                    allowTaint: true,
-                    scale: 2
-                }).then(canvas => {
-                    const link = document.createElement('a');
-                    link.download = `Huellitas-${name}.png`;
-                    link.href = canvas.toDataURL("image/png");
-                    link.click();
-                    btn.innerHTML = originalContent;
-                });
-            }, 1000);
-        }
-
-        function showSection(id) {
-            document.querySelectorAll('.section-container').forEach(s => s.classList.add('hidden'));
-            document.getElementById('sec-' + id).classList.remove('hidden');
-            if(id === 'home') { if(!mainMap) initMainMap(); setTimeout(() => { mainMap.invalidateSize(); loadPets(); }, 300); }
-            if(id === 'upload') { if(!uploadMap) initUploadMap(); setTimeout(() => uploadMap.invalidateSize(), 300); }
-        }
-
-        function autoZoomMap(barrio, mapa) {
-            if (coordsBarrios[barrio]) {
-                const target = mapa === 'main' ? mainMap : uploadMap;
-                target.flyTo(coordsBarrios[barrio], 15);
-                if(mapa === 'upload') {
-                    if(uploadMarker) uploadMarker.setLatLng(coordsBarrios[barrio]);
-                    else uploadMarker = L.marker(coordsBarrios[barrio]).addTo(uploadMap);
-                    document.getElementById('lat-in').value = coordsBarrios[barrio][0];
-                    document.getElementById('lng-in').value = coordsBarrios[barrio][1];
-                }
-            }
-        }
-
-        function initMainMap() {
-            mainMap = L.map('main-map', { zoomControl: false }).setView([-38.951, -68.061], 13);
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png').addTo(mainMap);
-        }
-
-        function initUploadMap() {
-            uploadMap = L.map('map-upload', { zoomControl: false }).setView([-38.951, -68.061], 13);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(uploadMap);
-            uploadMap.on('click', e => {
-                if(uploadMarker) uploadMarker.setLatLng(e.latlng);
-                else uploadMarker = L.marker(e.latlng).addTo(uploadMap);
-                document.getElementById('lat-in').value = e.latlng.lat;
-                document.getElementById('lng-in').value = e.latlng.lng;
+        setTimeout(() => {
+            html2canvas(document.querySelector("#canvas-export"), {
+                useCORS: true,
+                scale: 2,
+                backgroundColor: null
+            }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = `Huellitas-${name}.png`;
+                link.href = canvas.toDataURL("image/png");
+                link.click();
+                btn.innerHTML = original;
             });
+        }, 1200);
+    }
+
+    function showSection(id) {
+        document.querySelectorAll('.section-container').forEach(s => s.classList.add('hidden'));
+        document.getElementById('sec-' + id).classList.remove('hidden');
+        if(id === 'home') { if(!mainMap) initMainMap(); setTimeout(() => { mainMap.invalidateSize(); loadPets(); }, 300); }
+        if(id === 'upload') { if(!uploadMap) initUploadMap(); setTimeout(() => uploadMap.invalidateSize(), 300); }
+    }
+
+    function autoZoomMap(barrio, mapa) {
+        if (coordsBarrios[barrio]) {
+            const target = mapa === 'main' ? mainMap : uploadMap;
+            target.flyTo(coordsBarrios[barrio], 15, { duration: 2 });
+            if(mapa === 'upload') {
+                const latlng = coordsBarrios[barrio];
+                if(uploadMarker) uploadMarker.setLatLng(latlng);
+                else uploadMarker = L.marker(latlng).addTo(uploadMap);
+                document.getElementById('lat-in').value = latlng[0];
+                document.getElementById('lng-in').value = latlng[1];
+            }
         }
+    }
 
-        async function loadPets() {
-            const res = await fetch('/pets');
-            allPets = await res.json();
-            renderPets();
-        }
+    function initMainMap() {
+        mainMap = L.map('main-map', { zoomControl: false }).setView([-38.951, -68.061], 13);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png').addTo(mainMap);
+    }
 
-        function renderPets() {
-            const list = document.getElementById('pet-list');
-            const term = document.getElementById('search').value.toLowerCase();
-            list.innerHTML = "";
-            
-            const filtered = allPets.filter(p => p.barrio.toLowerCase().includes(term) && (currentSpecies === 'todos' || p.especie === currentSpecies));
+    function initUploadMap() {
+        uploadMap = L.map('map-upload', { zoomControl: false }).setView([-38.951, -68.061], 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(uploadMap);
+        uploadMap.on('click', e => {
+            if(uploadMarker) uploadMarker.setLatLng(e.latlng);
+            else uploadMarker = L.marker(e.latlng).addTo(uploadMap);
+            document.getElementById('lat-in').value = e.latlng.lat;
+            document.getElementById('lng-in').value = e.latlng.lng;
+        });
+    }
 
-            filtered.forEach(p => {
-                const color = p.status === 'perdido' ? 'var(--logo-rojo)' : 'var(--logo-celeste)';
-                list.innerHTML += `
-                    <div class="card-pet">
-                        <span class="status-badge" style="background:${color}">${p.status}</span>
-                        <img src="${p.image_url}" onclick="mainMap.flyTo([${p.latitud}, ${p.longitud}], 16)" class="w-full h-40 object-cover cursor-pointer">
-                        <div class="p-4 text-center">
-                            <p class="font-black text-xs uppercase mb-3">${p.name}</p>
-                            <div class="flex gap-1 justify-center">
-                                <button onclick="downloadPlate('${p.name}', '${p.barrio}', '${p.status}', '${p.image_url}')" class="bg-slate-100 text-slate-500 p-3 rounded-xl flex-1 text-[10px] font-bold"><i class="fas fa-download mr-1"></i> PLACA</button>
-                                <a href="https://wa.me/${p.users?.telefono || '2996894360'}" class="bg-emerald-400 text-white p-3 rounded-xl flex-1 flex items-center justify-center"><i class="fab fa-whatsapp text-lg"></i></a>
-                            </div>
+    async function loadPets() {
+        const res = await fetch('/pets');
+        allPets = await res.json();
+        renderPets();
+    }
+
+    function renderPets() {
+        const list = document.getElementById('pet-list');
+        const term = document.getElementById('search').value.toLowerCase();
+        list.innerHTML = "";
+        const filtered = allPets.filter(p => p.barrio.toLowerCase().includes(term) && (currentSpecies === 'todos' || p.especie === currentSpecies));
+
+        filtered.forEach(p => {
+            const color = p.status === 'perdido' ? 'var(--logo-rojo)' : 'var(--logo-celeste)';
+            list.innerHTML += `
+                <div class="card-pet">
+                    <span class="status-badge" style="background:${color}">${p.status}</span>
+                    <img src="${p.image_url}" onclick="mainMap.flyTo([${p.latitud}, ${p.longitud}], 16)" class="w-full h-40 object-cover cursor-pointer">
+                    <div class="p-4 text-center">
+                        <p class="font-black text-[11px] uppercase mb-3 truncate">${p.name}</p>
+                        <div class="flex gap-1">
+                            <button onclick="downloadPlate('${p.name}', '${p.barrio}', '${p.status}', '${p.image_url}')" class="bg-slate-50 text-slate-400 p-3 rounded-xl flex-1 text-[8px] font-black uppercase"><i class="fas fa-download mr-1"></i> Placa</button>
+                            <a href="https://wa.me/${p.users?.telefono || '2996894360'}" target="_blank" class="bg-emerald-400 text-white p-3 rounded-xl flex-1 flex items-center justify-center"><i class="fab fa-whatsapp"></i></a>
                         </div>
-                    </div>`;
-            });
-        }
+                    </div>
+                </div>`;
+        });
+    }
 
-        function toggleUserMenu() { 
-            if(!user) return showSection('auth');
-            document.getElementById('user-menu').classList.toggle('hidden');
-            document.getElementById('menu-email').innerText = user.email;
-        }
+    // Lógica de paneles
+    async function checkUserPanel() {
+        if(!user) return showSection('auth');
+        if(user.role === 'admin') { showSection('admin'); loadAdminData(); }
+        else { showSection('profile'); loadUserPets(); }
+    }
 
-        async function handleLogin(e) {
-            e.preventDefault();
-            const res = await fetch('/login', { method: 'POST', body: new FormData(e.target) });
-            if(res.ok) { localStorage.setItem('user', JSON.stringify(await res.json())); location.reload(); }
-        }
+    async function loadAdminData() {
+        const res = await fetch('/admin/data');
+        const data = await res.json();
+        document.getElementById('stat-perdidos').innerText = data.stats.perdidos;
+        document.getElementById('stat-adopcion').innerText = data.stats.adopcion;
+        document.getElementById('stat-pendientes').innerText = data.stats.pendientes;
+        
+        document.getElementById('admin-users').innerHTML = data.users.map(u => `
+            <div class="bg-slate-50 p-4 rounded-3xl flex justify-between items-center">
+                <span class="text-[10px] font-bold truncate flex-1">${u.email}</span>
+                <button onclick="approve('user', ${u.id})" class="bg-emerald-500 text-white text-[8px] font-black px-4 py-2 rounded-xl">ADMITIR</button>
+            </div>`).join('');
 
-        function logout() { localStorage.removeItem('user'); location.reload(); }
-        function checkAuth() { user ? showSection('upload') : showSection('auth'); }
-        function setSpecies(sp, btn) {
-            currentSpecies = sp;
-            document.querySelectorAll('.btn-filter').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            renderPets();
-        }
+        document.getElementById('admin-pets').innerHTML = data.pets.filter(p => !p.is_approved).map(p => `
+            <div class="bg-slate-50 p-3 rounded-3xl flex items-center gap-3">
+                <img src="${p.image_url}" class="w-10 h-10 rounded-xl object-cover">
+                <span class="text-[10px] font-black flex-1">${p.name}</span>
+                <button onclick="approve('pet', ${p.id})" class="bg-orange-400 text-white text-[8px] font-black px-4 py-2 rounded-xl">OK</button>
+            </div>`).join('');
+    }
 
-        window.onload = () => { updateAuthUI(); showSection('home'); };
+    async function loadUserPets() {
+        const res = await fetch(`/my-pets/${user.id}`);
+        const pets = await res.json();
+        document.getElementById('user-pet-list').innerHTML = pets.map(p => `
+            <div class="bg-slate-50 p-4 rounded-3xl flex items-center gap-4">
+                <img src="${p.image_url}" class="w-14 h-14 rounded-2xl object-cover">
+                <div class="flex-1">
+                    <p class="font-black text-xs uppercase">${p.name}</p>
+                    <p class="text-[8px] font-black uppercase ${p.is_approved ? 'text-emerald-500':'text-orange-400'}">${p.is_approved ? 'Aprobado':'En Revisión'}</p>
+                </div>
+                <button onclick="deletePet(${p.id})" class="text-red-400 bg-white w-10 h-10 rounded-full flex items-center justify-center"><i class="fas fa-trash-alt"></i></button>
+            </div>`).join('');
+    }
+
+    async function approve(t, id) { await fetch(`/admin/approve/${t}/${id}`, {method:'POST'}); loadAdminData(); }
+    async function deletePet(id) { if(confirm("¿Eliminar publicación?")) { await fetch(`/pets/user-delete/${id}`, {method:'DELETE'}); loadUserPets(); } }
+    
+    // Funciones básicas
+    function toggleUserMenu() { if(!user) return showSection('auth'); document.getElementById('user-menu').classList.toggle('hidden'); document.getElementById('menu-email').innerText = user.email; }
+    function logout() { localStorage.removeItem('user'); location.reload(); }
+    function checkAuth() { user ? showSection('upload') : showSection('auth'); }
+    function checkOtroEspecie(v) { v === 'otro' ? document.getElementById('especie-otro').classList.remove('hidden') : document.getElementById('especie-otro').classList.add('hidden'); }
+    
+    async function handleLogin(e) {
+        e.preventDefault();
+        const res = await fetch('/login', { method: 'POST', body: new FormData(e.target) });
+        if(res.ok) { localStorage.setItem('user', JSON.stringify(await res.json())); location.reload(); }
+    }
+
+    async function handleRegister(e) {
+        e.preventDefault();
+        const res = await fetch('/register', { method: 'POST', body: new FormData(e.target) });
+        if(res.ok) { alert("Solicitud enviada."); location.reload(); }
+    }
+
+    async function handleUpload(e) {
+        e.preventDefault();
+        if(!document.getElementById('lat-in').value) return alert("Marcá la ubicación en el mapa");
+        const fd = new FormData(e.target);
+        fd.append('user_id', user.id);
+        const res = await fetch('/pets/upload', { method: 'POST', body: fd });
+        if(res.ok) location.reload();
+    }
+
+    function setSpecies(sp, btn) {
+        currentSpecies = sp;
+        document.querySelectorAll('.btn-filter').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        renderPets();
+    }
+
+    window.onload = () => { updateAuthUI(); showSection('home'); };
     </script>
-</body>
-</html>
-
+    
