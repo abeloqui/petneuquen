@@ -17,33 +17,7 @@ app.config['MAIL_DEFAULT_SENDER'] = app.config['MAIL_USERNAME']
 
 mail = Mail(app)
 
-# --- MOTOR DE EMAILS ---
-def enviar_mail(email_destino, tipo_evento, datos=None):
-    temas = {
-        "bienvenida": {
-            "asunto": "¡Bienvenido a Huellitas NQN! 🐾",
-            "cuerpo": "¡Hola! Gracias por sumarte a la comunidad. Tu cuenta está en revisión por seguridad."
-        },
-        "cuenta_aprobada": {
-            "asunto": "¡Cuenta Activada! Ya podés ayudar 🐶",
-            "cuerpo": "Tu cuenta en Huellitas NQN ha sido aprobada. Ya podés reportar mascotas."
-        },
-        "publicacion_exitosa": {
-            "asunto": f"Recibimos el reporte de {datos.get('nombre') if datos else 'la mascota'}",
-            "cuerpo": "¡Gracias por tu compromiso! Pronto estará visible en el mapa."
-        }
-    }
-    evento = temas.get(tipo_evento)
-    if not evento or not email_destino: return False
-    msg = Message(evento["asunto"], recipients=[email_destino])
-    msg.body = evento["cuerpo"]
-    try:
-        mail.send(msg)
-        return True
-    except:
-        return False
-
-# --- CONFIGURACIONES DE SERVICIOS ---
+# --- CONFIGURACIÓN SERVICIOS EXTERNOS ---
 url = os.getenv("SUPABASE_URL", "").strip()
 key = os.getenv("SUPABASE_KEY", "").strip()
 supabase: Client = create_client(url, key)
@@ -55,18 +29,29 @@ cloudinary.config(
   secure = True
 )
 
+# --- FUNCIONES AUXILIARES ---
+def enviar_mail(email_destino, tipo_evento, datos=None):
+    temas = {
+        "bienvenida": {"asunto": "¡Bienvenido a Huellitas NQN! 🐾", "cuerpo": "Gracias por sumarte. Tu cuenta está en revisión."},
+        "cuenta_aprobada": {"asunto": "¡Cuenta Activada! 🐶", "cuerpo": "Ya podés publicar reportes en la plataforma."},
+        "publicacion_exitosa": {"asunto": "Reporte Recibido", "cuerpo": f"El reporte de {datos.get('nombre') if datos else 'la mascota'} está en revisión."}
+    }
+    ev = temas.get(tipo_evento)
+    if not ev or not email_destino: return
+    try:
+        msg = Message(ev["asunto"], recipients=[email_destino])
+        msg.body = ev["cuerpo"]
+        mail.send(msg)
+    except Exception as e: print(f"Error mail: {e}")
+
 def eliminar_foto_cloudinary(url_imagen):
-    """Borra la imagen físicamente de Cloudinary usando su public_id"""
     try:
         if "cloudinary" in url_imagen:
-            partes = url_imagen.split('/')
-            nombre_archivo = partes[-1].split('.')[0]
-            folder = partes[-2]
-            public_id = f"{folder}/{nombre_archivo}"
+            public_id = f"huellitas/{url_imagen.split('/')[-1].split('.')[0]}"
             cloudinary.uploader.destroy(public_id)
-    except Exception as e:
-        print(f"Error Cloudinary: {e}")
+    except Exception as e: print(f"Error Cloudinary: {e}")
 
+# --- RUTAS DE APLICACIÓN ---
 @app.route('/')
 def index():
     return send_from_directory('static', 'index.html')
@@ -75,52 +60,37 @@ def index():
 def login():
     data = request.form
     e, p = data.get('email'), data.get('password')
-    admin_email = os.getenv("ADMIN_EMAIL", "admin@huellitas.com")
-    admin_pass = os.getenv("ADMIN_PASS", "admin123")
-    
-    if e == admin_email and p == admin_pass:
+    if e == os.getenv("ADMIN_EMAIL") and p == os.getenv("ADMIN_PASS"):
         return jsonify({"id": "admin", "email": e, "role": "admin", "is_approved": True})
-    
     try:
         res = supabase.table("users").select("*").eq("email", e).execute()
         if res.data:
-            user = res.data[0]
-            if str(user.get('is_approved')).lower() == 'true':
-                if user.get('password') == p: return jsonify(user)
-                return jsonify({"msg": "Clave incorrecta"}), 401
-            return jsonify({"msg": "Cuenta pendiente de aprobación"}), 401
+            u = res.data[0]
+            if not u.get('is_approved'): return jsonify({"msg": "Cuenta pendiente"}), 401
+            if u.get('password') == p: return jsonify(u)
     except: pass
-    return jsonify({"msg": "Usuario no encontrado"}), 401
+    return jsonify({"msg": "Credenciales inválidas"}), 401
 
 @app.route('/register', methods=['POST'])
 def register():
+    d = request.form
     try:
-        data = request.form
-        email, password, tel = data.get('email'), data.get('password'), data.get('telefono')
-        check = supabase.table("users").select("*").eq("email", email).execute()
-        if check.data: return jsonify({"msg": "El email ya existe"}), 400
-        supabase.table("users").insert({"email": email, "password": password, "telefono": tel, "is_approved": False}).execute()
-        enviar_mail(email, "bienvenida")
+        supabase.table("users").insert({"email": d['email'], "password": d['password'], "telefono": d['telefono'], "is_approved": False}).execute()
+        enviar_mail(d['email'], "bienvenida")
         return jsonify({"msg": "OK"}), 201
-    except Exception as e: return jsonify({"msg": str(e)}), 500
+    except: return jsonify({"msg": "Error"}), 400
 
 @app.route('/pets/upload', methods=['POST'])
-def upload_pet():
+def upload():
     try:
         f, d = request.files.get('file'), request.form
-        lat, lng = d.get('latitud'), d.get('longitud')
-        if not lat or not lng: return jsonify({"msg": "Falta ubicación"}), 400
-        
         up = cloudinary.uploader.upload(f, folder="huellitas")
         supabase.table("pets").insert({
-            "user_id": int(d.get('user_id')), "name": d['name'], "status": d['status'],
-            "especie": d.get('especie', 'perro'), "barrio": d['barrio'], 
-            "latitud": float(lat), "longitud": float(lng), 
+            "user_id": d['user_id'], "name": d['name'], "status": d['status'],
+            "especie": d.get('especie', 'perro'), "barrio": d['barrio'],
+            "latitud": float(d['latitud']), "longitud": float(d['longitud']),
             "image_url": up['secure_url'], "is_approved": False
         }).execute()
-        
-        res_user = supabase.table("users").select("email").eq("id", d.get('user_id')).execute()
-        if res_user.data: enviar_mail(res_user.data[0]['email'], "publicacion_exitosa", {"nombre": d['name']})
         return jsonify({"msg": "OK"}), 201
     except Exception as e: return jsonify({"msg": str(e)}), 500
 
@@ -134,6 +104,7 @@ def my_pets(user_id):
     res = supabase.table("pets").select("*").eq("user_id", user_id).execute()
     return jsonify(res.data)
 
+# --- RUTAS ADMIN ---
 @app.route('/admin/data', methods=['GET'])
 def admin_data():
     u = supabase.table("users").select("*").order("id", desc=True).execute()
@@ -145,27 +116,18 @@ def approve(t, id):
     table = "users" if t == "user" else "pets"
     supabase.table(table).update({"is_approved": True}).eq("id", id).execute()
     if t == "user":
-        res = supabase.table("users").select("email").eq("id", id).execute()
-        if res.data: enviar_mail(res.data[0]['email'], "cuenta_aprobada")
+        u = supabase.table("users").select("email").eq("id", id).execute()
+        if u.data: enviar_mail(u.data[0]['email'], "cuenta_aprobada")
     return jsonify({"msg": "OK"})
 
 @app.route('/admin/delete/<t>/<id>', methods=['DELETE'])
 def admin_delete(t, id):
-    try:
-        table = "users" if t == "user" else "pets"
-        if table == "pets":
-            res = supabase.table("pets").select("image_url").eq("id", id).execute()
-            if res.data: eliminar_foto_cloudinary(res.data[0]['image_url'])
-        supabase.table(table).delete().eq("id", id).execute()
-        return jsonify({"msg": "OK"}), 200
-    except Exception as e: return jsonify({"msg": str(e)}), 500
-
-@app.route('/pets/user-delete/<int:pet_id>', methods=['DELETE'])
-def user_delete(pet_id):
-    # Por seguridad, el panel de usuario ahora llama a la lógica de limpieza
-    return admin_delete('pet', str(pet_id))
+    if t == "pet":
+        res = supabase.table("pets").select("image_url").eq("id", id).execute()
+        if res.data: eliminar_foto_cloudinary(res.data[0]['image_url'])
+    supabase.table("users" if t == "user" else "pets").delete().eq("id", id).execute()
+    return jsonify({"msg": "OK"})
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
-                                                                                         
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
+    
