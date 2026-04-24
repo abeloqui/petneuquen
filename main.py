@@ -3,24 +3,25 @@ from flask import Flask, request, jsonify, send_from_directory
 from supabase import create_client, Client
 import cloudinary
 import cloudinary.uploader
-
-app = Flask(__name__)
-from flask import Flask
 from flask_mail import Mail, Message
 
 app = Flask(__name__)
 
-# Configuración del servidor de correo
-app.config['MAIL_SERVER'] = 'smtp.gmail.com' # O el servidor de tu proveedor
+# --- CONFIGURACIÓN DEL SERVIDOR DE CORREO ---
+# Usamos os.getenv para que sea seguro en Render
+app.config['MAIL_SERVER'] = 'smtp.gmail.com'
 app.config['MAIL_PORT'] = 587
 app.config['MAIL_USE_TLS'] = True
-app.config['MAIL_USERNAME'] = 'admin@huellitas.com' 
-app.config['MAIL_PASSWORD'] = 'TU_CONTRASEÑA_DE_APLICACION'
-app.config['MAIL_DEFAULT_SENDER'] = 'admin@huellitas.com'
+app.config['MAIL_USERNAME'] = os.getenv("MAIL_USERNAME", "admin@huellitas.com")
+app.config['MAIL_PASSWORD'] = os.getenv("MAIL_PASSWORD") # Tu contraseña de aplicación
+app.config['MAIL_DEFAULT_SENDER'] = os.getenv("MAIL_USERNAME", "admin@huellitas.com")
 
 mail = Mail(app)
 
+# --- FUNCIÓN AUXILIAR DE EMAIL ---
 def enviar_mail_confirmacion(email_usuario, nombre_mascota):
+    if not email_usuario:
+        return False
     msg = Message("Recibimos tu publicación en Huellitas NQN",
                   recipients=[email_usuario])
     msg.body = f"""
@@ -40,7 +41,7 @@ def enviar_mail_confirmacion(email_usuario, nombre_mascota):
         print(f"Error enviando mail: {e}")
         return False
         
-# --- CONFIGURACIONES ---
+# --- CONFIGURACIONES DE SERVICIOS ---
 try:
     url = os.getenv("SUPABASE_URL", "").strip()
     key = os.getenv("SUPABASE_KEY", "").strip()
@@ -116,7 +117,10 @@ def upload_pet():
         if not user_id or user_id == "admin":
             return jsonify({"msg": "Inicia sesión como vecino"}), 400
 
+        # Subida a Cloudinary
         up = cloudinary.uploader.upload(f, folder="huellitas", transformation=[{'width': 800, 'crop': "limit"}, {'quality': "auto"}])
+        
+        # Inserción en Supabase
         supabase.table("pets").insert({
             "user_id": int(user_id), 
             "name": d['name'], 
@@ -128,6 +132,12 @@ def upload_pet():
             "image_url": up['secure_url'], 
             "is_approved": False
         }).execute()
+
+        # LOGICA DE EMAIL: Buscamos el mail del usuario para enviarle la confirmación
+        res_user = supabase.table("users").select("email").eq("id", user_id).execute()
+        if res_user.data:
+            enviar_mail_confirmacion(res_user.data[0]['email'], d['name'])
+
         return jsonify({"msg": "OK"}), 201
     except Exception as e:
         return jsonify({"msg": str(e)}), 500
@@ -171,4 +181,4 @@ def user_delete(pet_id):
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
-    
+            
