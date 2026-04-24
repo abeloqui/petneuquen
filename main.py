@@ -90,35 +90,49 @@ def get_pets():
     except Exception as e:
         print(f"Error pets: {e}")
         return jsonify([])
-
 @app.route('/pets/upload', methods=['POST'])
 def upload_pet():
     try:
-        if 'file' not in request.files:
-            return jsonify({"msg": "No hay imagen"}), 400
-            
+        print("--- Iniciando subida ---")
         f = request.files.get('file')
-        
-        # Subida a Cloudinary
-        up = cloudinary.uploader.upload(f, folder="huellitas", resource_type="auto")
-        
         d = request.form
-        supabase.table("pets").insert({
-            "user_id": d['user_id'], 
-            "name": d['name'], 
-            "status": d['status'],
-            "barrio": d['barrio'], 
-            "latitud": float(d['latitud']),
-            "longitud": float(d['longitud']), 
-            "image_url": up['secure_url'], 
-            "is_approved": False
-        }).execute()
-        
+        print(f"Datos recibidos: {d}")
+
+        # Intento con Cloudinary
+        try:
+            up = cloudinary.uploader.upload(f, folder="huellitas")
+            print(f"Cloudinary OK: {up['secure_url']}")
+        except Exception as e_cloud:
+            print(f"FALLÓ CLOUDINARY: {e_cloud}")
+            return jsonify({"msg": f"Error Cloudinary: {str(e_cloud)}"}), 500
+
+        # Intento con Supabase
+        try:
+            # IMPORTANTE: Asegúrate de que user_id no sea null
+            user_id = d.get('user_id')
+            if not user_id or user_id == "undefined":
+                 return jsonify({"msg": "Error: ID de usuario no válido"}), 400
+
+            supabase.table("pets").insert({
+                "user_id": user_id, 
+                "name": d['name'], 
+                "status": d['status'],
+                "barrio": d['barrio'], 
+                "latitud": float(d['latitud']),
+                "longitud": float(d['longitud']), 
+                "image_url": up['secure_url'], 
+                "is_approved": False
+            }).execute()
+            print("Supabase INSERT exitoso")
+        except Exception as e_supa:
+            print(f"FALLÓ SUPABASE: {e_supa}")
+            return jsonify({"msg": f"Error Supabase: {str(e_supa)}"}), 500
+
         return jsonify({"msg": "OK"}), 201
     except Exception as e:
-        print(f"Error upload: {e}")
+        print(f"ERROR GENERAL: {e}")
         return jsonify({"msg": str(e)}), 500
-
+        
 @app.route('/admin/data', methods=['GET'])
 def admin_data():
     try:
