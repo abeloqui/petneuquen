@@ -135,6 +135,27 @@
                 applyFilters();
             } catch (e) { console.error("Error cargando mascotas:", e); }
         }
+        function focusOnPet(lat, lng) {
+    // 1. Volvemos arriba para que el usuario vea el mapa
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    
+    // 2. Movemos el mapa a las coordenadas con un zoom más cercano (16)
+    if(mainMap) {
+        mainMap.flyTo([lat, lng], 16, {
+            animate: true,
+            duration: 1.5
+        });
+        
+        // 3. Opcional: Abrir el cartelito (popup) de esa ubicación
+        // Buscamos si hay un marcador cerca para abrir su popup
+        mainMap.eachLayer(l => {
+            if(l instanceof L.CircleMarker && l.getLatLng().lat == lat) {
+                l.openPopup();
+            }
+        });
+    }
+        }
+        
 
         function applyFilters() {
             const term = document.getElementById('search').value.toLowerCase();
