@@ -5,6 +5,20 @@ import cloudinary
 import cloudinary.uploader
 
 app = Flask(__name__)
+from flask import Flask
+from flask_mail import Mail, Message
+
+app = Flask(__name__)
+
+# Configuración del servidor de correo
+app.config['MAIL_SERVER'] = 'smtp.gmail.com' # O el servidor de tu proveedor
+app.config['MAIL_PORT'] = 587
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USERNAME'] = 'admin@huellitas.com' 
+app.config['MAIL_PASSWORD'] = 'TU_CONTRASEÑA_DE_APLICACION'
+app.config['MAIL_DEFAULT_SENDER'] = 'admin@huellitas.com'
+
+mail = Mail(app)
 
 # --- CONFIGURACIONES ---
 try:
