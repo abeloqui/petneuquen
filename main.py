@@ -73,34 +73,43 @@ def register():
         return jsonify({"msg": "Registro enviado. Un admin deberá aprobarte."}), 201
     except Exception as e:
         print(f"Error registro: {e}")
+', methods=['GET'])
         return jsonify({"msg": "Error en el registro"}), 400
-@app.route('/my-pets/<int:user_id>', methods=['GET'])
-def get_my_pets(user_id):
-    # Traemos todas (aprobadas o no) para que el usuario vea el estado de su trámite
-    res = supabase.table("pets").select("*").eq("user_id", user_id).execute()
-    return jsonify(res.data)
 
-@app.route('/pets/delete/<int:pet_id>', methods=['DELETE'])
-def delete_pet(pet_id):
-    # Aquí podrías verificar que el user_id coincida, por ahora borrado directo
-    supabase.table("pets").delete().eq("id", pet_id).execute()
-    return jsonify({"msg": "Mascota eliminada"})
-    
-@app.route('/pets', methods=['GET'])
-def get_pets():
+
+
+
+# RUTA PARA TRAER MASCOTAS DE UN USUARIO ESPECÍFICO
+@app.route('/my-pets/<int:user_id>', methods=['GET'])
+def get_user_pets(user_id): # Nombre cambiado para evitar conflictos
     try:
-        # Traemos solo las mascotas aprobadas
-        res = supabase.table("pets").select("*, users(telefono)").eq("is_approved", True).execute()
-        
-        for p in res.data:
-            # Limpiamos el teléfono para WhatsApp (solo números)
-            raw_tel = p.get('users', {}).get('telefono') if p.get('users') else "2996894360"
-            p['tel_final'] = "".join(filter(str.isdigit, str(raw_tel)))
-            
+        res = supabase.table("pets").select("*").eq("user_id", user_id).execute()
         return jsonify(res.data)
     except Exception as e:
-        print(f"Error pets: {e}")
-        return jsonify([])
+        return jsonify({"error": str(e)}), 500
+
+# RUTA PARA QUE EL USUARIO ELIMINE SU PROPIA MASCOTA
+@app.route('/pets/user-delete/<int:pet_id>', methods=['DELETE'])
+def user_delete_pet(pet_id): # Nombre cambiado para evitar conflictos
+    try:
+        supabase.table("pets").delete().eq("id", pet_id).execute()
+        return jsonify({"msg": "Mascota eliminada correctamente"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+        
+
+
+
+
+
+
+
+
+
+
+
+
+
 @app.route('/pets/upload', methods=['POST'])
 def upload_pet():
     try:
