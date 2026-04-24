@@ -59,24 +59,6 @@ def login():
     
     return jsonify({"msg": "Usuario no encontrado"}), 401
 
-@app.route('/register', methods=['POST'])
-def register():
-    data = request.form
-    try:
-        supabase.table("users").insert({
-            "email": data['email'], 
-            "password": data['password'], 
-            "telefono": data['telefono'], 
-            "role": "user", 
-            "is_approved": False
-        }).execute()
-        return jsonify({"msg": "Registro enviado. Un admin deberá aprobarte."}), 201
-    except Exception as e:
-        print(f"Error registro: {e}")', methods=['GET'])
-        return jsonify({"msg": "Error en el registro"}), 400
-
-
-
 # --- GESTIÓN PARA EL USUARIO LOGUEADO ---
 
 @app.route('/my-pets/<int:user_id>', methods=['GET'])
