@@ -161,6 +161,18 @@ def approve(t, id):
             
     return jsonify({"msg": "OK"})
 
+# --- RUTA PARA QUE EL ADMIN ELIMINE PUBLICACIONES ---
+@app.route('/admin/delete-pet/<int:pet_id>', methods=['DELETE'])
+def admin_delete_pet(pet_id):
+    # Nota: Aquí podrías agregar una validación extra de seguridad para 
+    # confirmar que quien hace el request es realmente el admin.
+    try:
+        supabase.table("pets").delete().eq("id", pet_id).execute()
+        return jsonify({"msg": "Publicación eliminada correctamente"}), 200
+    except Exception as e:
+        return jsonify({"msg": str(e)}), 500
+        
+
 @app.route('/pets/user-delete/<int:pet_id>', methods=['DELETE'])
 def user_delete(pet_id):
     supabase.table("pets").delete().eq("id", pet_id).execute()
