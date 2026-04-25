@@ -7,48 +7,15 @@ from flask_mail import Mail, Message
 
 app = Flask(__name__)
 
-# --- CONFIGURACIÓN DE CORREO (Ajustado a tus variables de Render) ---
+# --- CONFIGURACIÓN DE CORREO ---
 app.config['MAIL_SERVER'] = 'smtp.gmail.com'
 app.config['MAIL_PORT'] = 587
 app.config['MAIL_USE_TLS'] = True
-# Usamos .get() con ambas opciones por si acaso
 app.config['MAIL_USERNAME'] = os.getenv("Mail_Username") or os.getenv("MAIL_USERNAME")
 app.config['MAIL_PASSWORD'] = os.getenv("Mail_Password") or os.getenv("MAIL_PASSWORD")
 app.config['MAIL_DEFAULT_SENDER'] = app.config['MAIL_USERNAME']
 
 mail = Mail(app)
-
-# --- MOTOR DE EMAILS ---
-def enviar_mail(email_destino, tipo_evento, datos=None):
-    temas = {
-        "bienvenida": {
-            "asunto": "¡Bienvenido a Huellitas NQN! 🐾",
-            "cuerpo": "¡Hola! Gracias por sumarte a la comunidad. Tu cuenta está en revisión por seguridad. Te avisaremos apenas puedas empezar a publicar."
-        },
-        "cuenta_aprobada": {
-            "asunto": "¡Cuenta Activada! Ya podés ayudar 🐶",
-            "cuerpo": "Tu cuenta en Huellitas NQN ha sido aprobada. Ya podés entrar y reportar mascotas perdidas o en adopción."
-        },
-        "publicacion_exitosa": {
-            "asunto": f"Recibimos el reporte de {datos.get('nombre') if datos else 'la mascota'}",
-            "cuerpo": "¡Gracias por tu compromiso! El reporte entró en revisión y pronto estará visible en el mapa de Neuquén para todos los vecinos."
-        }
-    }
-    evento = temas.get(tipo_evento)
-    if not evento or not email_destino: 
-        print(f"Error: Datos insuficientes para enviar mail a {email_destino}")
-        return False
-
-    msg = Message(evento["asunto"], recipients=[email_destino])
-    msg.body = evento["cuerpo"]
-    
-    try:
-        mail.send(msg)
-        print(f"Mail de {tipo_evento} enviado exitosamente a {email_destino}")
-        return True
-    except Exception as e:
-        print(f"ERROR CRÍTICO MAIL: {e}")
-        return False
 
 # --- CONFIGURACIONES DE SERVICIOS ---
 url = os.getenv("SUPABASE_URL", "").strip()
@@ -62,70 +29,106 @@ cloudinary.config(
   secure = True
 )
 
+# --- MOTOR DE EMAILS ---
+def enviar_mail(email_destino, tipo_evento, datos=None):
+    temas = {
+        "bienvenida": {
+            "asunto": "¡Bienvenido a Huellitas NQN! 🐾",
+            "cuerpo": "¡Hola! Gracias por sumarte a la comunidad. Tu cuenta está en revisión."
+        },
+        "cuenta_aprobada": {
+            "asunto": "¡Cuenta Activada! Ya podés ayudar 🐶",
+            "cuerpo": "Tu cuenta en Huellitas NQN ha sido aprobada."
+        },
+        "publicacion_exitosa": {
+            "asunto": f"Recibimos el reporte de {datos.get('nombre') if datos else 'la mascota'}",
+            "cuerpo": "¡Gracias! Tu reporte pronto estará visible en el mapa."
+        }
+    }
+    evento = temas.get(tipo_evento)
+    if not evento or not email_destino: return False
+    msg = Message(evento["asunto"], recipients=[email_destino])
+    msg.body = evento["cuerpo"]
+    try:
+        mail.send(msg)
+        return True
+    except: return False
+
 @app.route('/')
 def index():
     return send_from_directory('static', 'index.html')
 
+# --- RUTA DINÁMICA PARA REDES SOCIALES ---
+@app.route('/mascota/<int:pet_id>')
+def pet_detail(pet_id):
+    try:
+        res = supabase.table("pets").select("*").eq("id", pet_id).execute()
+        if not res.data: return "Mascota no encontrada", 404
+        p = res.data[0]
+        # Generamos una previsualización con los datos reales para Facebook
+        return f"""
+        <!DOCTYPE html>
+        <html lang="es">
+        <head>
+            <meta charset="UTF-8">
+            <title>Huellitas NQN - {p['name']}</title>
+            <meta property="og:title" content="🐾 {p['name']} busca ayuda en {p['barrio']}" />
+            <meta property="og:description" content="Estado: {p['status'].upper()}. Mirá su ubicación exacta en el mapa de Huellitas NQN." />
+            <meta property="og:image" content="{p['image_url']}" />
+            <meta property="og:url" content="https://petneuquen.onrender.com/mascota/{pet_id}" />
+            <meta property="og:type" content="website" />
+            <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+            <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+            <style>
+                body {{ font-family: sans-serif; text-align: center; background: #F4F1DE; padding: 40px; color: #3D405B; }}
+                #m {{ height: 250px; width: 100%; max-width: 500px; margin: 20px auto; border-radius: 30px; border: 5px solid white; box-shadow: 0 15px 30px rgba(0,0,0,0.1); }}
+                .c {{ color: #E07A5F; font-weight: 900; font-size: 1.2rem; }}
+            </style>
+        </head>
+        <body>
+            <div class="c">Localizando a {p['name']}...</div>
+            <div id="m"></div>
+            <script>
+                var map = L.map('m', {{zoomControl:false}}).setView([{p['latitud']}, {p['longitud']}], 15);
+                L.tileLayer('https://{{s}}.basemaps.cartocdn.com/rastertiles/voyager/{{z}}/{{x}}/{{y}}{{r}}.png').addTo(map);
+                L.marker([{p['latitud']}, {p['longitud']}]).addTo(map);
+                setTimeout(function() {{ window.location.href = "/"; }}, 2000);
+            </script>
+        </body>
+        </html>
+        """
+    except: return "Error interno", 500
+
+# --- RUTAS DE API ---
 @app.route('/login', methods=['POST'])
 def login():
-    data = request.form
-    e, p = data.get('email'), data.get('password')
-    # Admin sacado de variables de entorno o default
-    admin_email = os.getenv("ADMIN_EMAIL", "admin@huellitas.com")
-    admin_pass = os.getenv("ADMIN_PASS", "admin123")
-    
-    if e == admin_email and p == admin_pass:
+    e, p = request.form.get('email'), request.form.get('password')
+    if e == os.getenv("ADMIN_EMAIL") and p == os.getenv("ADMIN_PASS"):
         return jsonify({"id": "admin", "email": e, "role": "admin", "is_approved": True})
-    
-    try:
-        res = supabase.table("users").select("*").eq("email", e).execute()
-        if res.data:
-            user = res.data[0]
-            if str(user.get('is_approved')).lower() == 'true':
-                if user.get('password') == p: return jsonify(user)
-                return jsonify({"msg": "Clave incorrecta"}), 401
-            return jsonify({"msg": "Cuenta pendiente de aprobación"}), 401
-    except Exception as err: print(f"Error login: {err}")
-    return jsonify({"msg": "Usuario no encontrado"}), 401
+    res = supabase.table("users").select("*").eq("email", e).execute()
+    if res.data and res.data[0]['password'] == p:
+        if res.data[0]['is_approved']: return jsonify(res.data[0])
+        return jsonify({"msg": "Pendiente de aprobación"}), 401
+    return jsonify({"msg": "No encontrado"}), 401
 
 @app.route('/register', methods=['POST'])
 def register():
-    try:
-        data = request.form
-        email, password, tel = data.get('email'), data.get('password'), data.get('telefono')
-        check = supabase.table("users").select("*").eq("email", email).execute()
-        if check.data: return jsonify({"msg": "El email ya existe"}), 400
-        
-        # Insertamos en la DB
-        supabase.table("users").insert({"email": email, "password": password, "telefono": tel, "is_approved": False}).execute()
-        
-        # Intentamos enviar el mail
-        enviar_mail(email, "bienvenida")
-        
-        return jsonify({"msg": "OK"}), 201
-    except Exception as e: 
-        print(f"Error en registro: {e}")
-        return jsonify({"msg": str(e)}), 500
+    d = request.form
+    supabase.table("users").insert({"email": d['email'], "password": d['password'], "telefono": d['telefono'], "is_approved": False}).execute()
+    enviar_mail(d['email'], "bienvenida")
+    return jsonify({"msg": "OK"}), 201
 
 @app.route('/pets/upload', methods=['POST'])
 def upload_pet():
-    try:
-        f, d = request.files.get('file'), request.form
-        user_id = d.get('user_id')
-        up = cloudinary.uploader.upload(f, folder="huellitas")
-        supabase.table("pets").insert({
-            "user_id": int(user_id), "name": d['name'], "status": d['status'],
-            "especie": d.get('especie', 'perro'), "barrio": d['barrio'], 
-            "latitud": float(d['latitud']), "longitud": float(d['longitud']), 
-            "image_url": up['secure_url'], "is_approved": False
-        }).execute()
-        
-        res_user = supabase.table("users").select("email").eq("id", user_id).execute()
-        if res_user.data: 
-            enviar_mail(res_user.data[0]['email'], "publicacion_exitosa", {"nombre": d['name']})
-            
-        return jsonify({"msg": "OK"}), 201
-    except Exception as e: return jsonify({"msg": str(e)}), 500
+    f, d = request.files.get('file'), request.form
+    up = cloudinary.uploader.upload(f, folder="huellitas")
+    supabase.table("pets").insert({
+        "user_id": int(d['user_id']), "name": d['name'], "status": d['status'],
+        "especie": d.get('especie', 'perro'), "barrio": d['barrio'], 
+        "latitud": float(d['latitud']), "longitud": float(d['longitud']), 
+        "image_url": up['secure_url'], "is_approved": False
+    }).execute()
+    return jsonify({"msg": "OK"}), 201
 
 @app.route('/pets', methods=['GET'])
 def get_pets():
@@ -141,24 +144,18 @@ def my_pets(user_id):
 def admin_data():
     u = supabase.table("users").select("*").eq("is_approved", False).execute()
     p = supabase.table("pets").select("*").execute()
-    pets_all = p.data if p.data else []
+    pets = p.data or []
     stats = {
-        "perdidos": len([x for x in pets_all if x.get('status') == 'perdido' and x.get('is_approved')]),
-        "adopcion": len([x for x in pets_all if x.get('status') == 'adopcion' and x.get('is_approved')]),
-        "pendientes": len([x for x in pets_all if not x.get('is_approved')])
+        "perdidos": len([x for x in pets if x['status'] == 'perdido' and x['is_approved']]),
+        "adopcion": len([x for x in pets if x['status'] == 'adopcion' and x['is_approved']]),
+        "pendientes": len([x for x in pets if not x['is_approved']])
     }
-    return jsonify({"users": u.data, "pets": pets_all, "stats": stats})
+    return jsonify({"users": u.data, "pets": pets, "stats": stats})
 
 @app.route('/admin/approve/<t>/<id>', methods=['POST'])
 def approve(t, id):
     table = "users" if t == "user" else "pets"
     supabase.table(table).update({"is_approved": True}).eq("id", id).execute()
-    
-    if t == "user":
-        res = supabase.table("users").select("email").eq("id", id).execute()
-        if res.data: 
-            enviar_mail(res.data[0]['email'], "cuenta_aprobada")
-            
     return jsonify({"msg": "OK"})
 
 @app.route('/pets/user-delete/<int:pet_id>', methods=['DELETE'])
@@ -166,44 +163,7 @@ def user_delete(pet_id):
     supabase.table("pets").delete().eq("id", pet_id).execute()
     return jsonify({"msg": "OK"})
 
-
-        # --- NUEVA RUTA PARA VISTA PREVIA EN REDES SOCIALES ---
-@app.route('/mascota/<int:pet_id>')
-def pet_detail(pet_id):
-    try:
-        # Buscamos la mascota en Supabase para obtener sus datos reales
-        res = supabase.table("pets").select("*").eq("id", pet_id).execute()
-        if not res.data:
-            return "Mascota no encontrada", 404
-        
-        mascota = res.data[0]
-        # Esta página es minimalista porque su fin principal es que Facebook lea los Meta Tags
-        return f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>Adoptar a {mascota['name']}</title>
-            <meta property="og:title" content="🐾 ¡Ayudame a difundir a {mascota['name']}!" />
-            <meta property="og:description" content="Barrio: {mascota['barrio']} | Estado: {mascota['status'].upper()}. Entrá para ver su ubicación en el mapa de Neuquén." />
-            <meta property="og:image" content="{mascota['image_url']}" />
-            <meta property="og:url" content="https://petneuquen.onrender.com/mascota/{pet_id}" />
-            <meta property="og:type" content="website" />
-            <script>
-                // Usamos doble llave {{ }} para que Python no se confunda con el f-string
-                setTimeout(function() {{
-                    window.location.href = "/";
-                }}, 500);
-            </script>
-        </head>
-        <body>
-            <p>Cargando información de {mascota['name']}...</p>
-        </body>
-        </html>
-        """
-    except Exception as e:
-        return str(e), 500
-
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
-    
+        
