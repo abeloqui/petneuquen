@@ -415,19 +415,24 @@
                 const color = p.status === 'perdido' ? 'var(--logo-rojo)' : 'var(--logo-celeste)';
                 const tel = p.users ? p.users.telefono : '2996894360';
                 if(mainMap) L.circleMarker([p.latitud, p.longitud], {color: color, radius: 9, fillOpacity: 0.8, weight: 3}).addTo(mainMap);
-                list.innerHTML += `
-                    <div class="card-pet">
-                        <span class="status-badge" style="background:${color}">${p.status}</span>
-                        <img src="${p.image_url}" onclick="focusOnPet(${p.latitud}, ${p.longitud})" class="w-full h-40 object-cover cursor-pointer">
-                        <div class="p-5 text-center">
-                            <p class="font-black text-sm uppercase">${p.name}</p>
-                            <p class="text-[9px] font-bold text-slate-400 mb-4 uppercase">${p.barrio}</p>
-                            <div class="flex gap-2">
-                                <a href="https://wa.me/${tel}" target="_blank" class="flex-1 text-white text-[10px] py-3 rounded-2xl font-black shadow-md" style="background: var(--logo-celeste)">WA</a>
-                                <button onclick="sharePet('${p.name}', '${p.barrio}')" class="bg-slate-50 text-slate-400 px-4 rounded-2xl"><i class="fas fa-share-alt"></i></button>
-                            </div>
-                        </div>
-                    </div>`;
+// Busca esta parte dentro de renderPets()
+list.innerHTML += `
+    <div class="card-pet">
+        <span class="status-badge" style="background:${color}">${p.status}</span>
+        <img src="${p.image_url}" onclick="focusOnPet(${p.latitud}, ${p.longitud})" class="w-full h-40 object-cover cursor-pointer">
+        <div class="p-5 text-center">
+            <p class="font-black text-sm uppercase">${p.name}</p>
+            <p class="text-[9px] font-bold text-slate-400 mb-4 uppercase">${p.barrio}</p>
+            <div class="flex gap-2">
+                <a href="https://wa.me/${tel}" target="_blank" class="flex-1 text-white text-[10px] py-3 rounded-2xl font-black shadow-md" style="background: var(--logo-celeste)">WA</a>
+                
+                <button onclick="shareOnFacebook(${p.id}, '${p.name}')" class="bg-[#1877F2] text-white px-4 rounded-2xl active:scale-90 transition-transform">
+                    <i class="fab fa-facebook-f"></i>
+                </button>
+            </div>
+        </div>
+    </div>`;
+            
             });
         }
 
