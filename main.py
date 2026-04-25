@@ -84,7 +84,7 @@ def register():
         email, password, tel = data.get('email'), data.get('password'), data.get('telefono')
         supabase.table("users").insert({"email": email, "password": password, "telefono": tel, "is_approved": False}).execute()
         enviar_mail(email, "bienvenida")
-        return jsonify({"msg": "Registro exitoso, espera aprobación"}), 201
+        return jsonify({"msg": "OK"}), 201
     except Exception as e: return jsonify({"msg": str(e)}), 500
 
 @app.route('/pets/upload', methods=['POST'])
@@ -94,33 +94,24 @@ def upload_pet():
         d = request.form
         user_id = d.get('user_id')
         user_email = d.get('user_email')
-
-        # 1. Subir a Cloudinary
         up = cloudinary.uploader.upload(f, folder="huellitas")
         
-        # 2. Guardar en Supabase (is_approved: False por defecto)
         supabase.table("pets").insert({
             "user_id": int(user_id) if (user_id and user_id != 'admin') else None, 
-            "name": d['name'], 
-            "status": d['status'],
-            "especie": d.get('especie', 'perro'), 
-            "barrio": d['barrio'], 
-            "latitud": float(d['latitud']), 
-            "longitud": float(d['longitud']), 
-            "image_url": up['secure_url'], 
-            "is_approved": False
+            "name": d['name'], "status": d['status'],
+            "especie": d.get('especie', 'perro'), "barrio": d['barrio'], 
+            "latitud": float(d['latitud']), "longitud": float(d['longitud']), 
+            "image_url": up['secure_url'], "is_approved": False
         }).execute()
         
-        # 3. Notificar por mail si tenemos el correo
         if user_email:
             enviar_mail(user_email, "publicacion_exitosa", {"nombre": d['name']})
-            
-        return jsonify({"msg": "¡Éxito! Tu mascota quedó a la espera de aprobación."}), 201
-    except Exception as e:
-        return jsonify({"msg": f"Error: {str(e)}"}), 500
+        return jsonify({"msg": "OK"}), 201
+    except Exception as e: return jsonify({"msg": str(e)}), 500
 
 @app.route('/pets', methods=['GET'])
 def get_pets():
+    # Crucial: Traemos los datos de la mascota Y el teléfono del usuario que la subió
     res = supabase.table("pets").select("*, users(telefono)").eq("is_approved", True).execute()
     return jsonify(res.data)
 
@@ -143,7 +134,7 @@ def approve(t, id):
     if t == "user":
         res = supabase.table("users").select("email").eq("id", id).execute()
         if res.data: enviar_mail(res.data[0]['email'], "cuenta_aprobada")
-    return jsonify({"msg": "Aprobado"})
+    return jsonify({"msg": "OK"})
 
 @app.route('/admin/delete-pet/<int:pet_id>', methods=['DELETE'])
 def admin_delete_pet(pet_id):
@@ -153,4 +144,4 @@ def admin_delete_pet(pet_id):
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
-    
+                     
