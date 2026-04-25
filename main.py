@@ -7,6 +7,10 @@ from flask_mail import Mail, Message
 
 app = Flask(__name__)
 
+@app.route('/')
+def serve_index():
+    return send_from_directory('', '/static/index.html')
+
 # --- CONFIGURACIÓN DE CLOUDINARY ---
 cloudinary.config(
   cloud_name = os.getenv("CLOUDINARY_CLOUD_NAME"),
