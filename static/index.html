@@ -268,13 +268,60 @@
         function flyToPet(lat, lng) { window.scrollTo({ top: 0, behavior: 'smooth' }); mainMap.flyTo([lat, lng], 16); }
 
         async function handleUpload(e) {
-            e.preventDefault();
-            if(!document.getElementById('lat-in').value) return alert("Marca la ubicación");
-            const btn = document.getElementById('btn-up'); btn.disabled = true; btn.innerText = "SUBIENDO...";
-            const fd = new FormData(e.target); fd.append('user_id', user.id); fd.append('user_email', user.email);
-            const res = await fetch('/pets/upload', { method: 'POST', body: fd });
-            if(res.ok) { alert("¡Recibido! En revisión."); location.reload(); }
+    e.preventDefault();
+    
+    // 1. Validaciones básicas antes de intentar subir
+    const lat = document.getElementById('lat-in').value;
+    const lng = document.getElementById('lng-in').value;
+    
+    if(!lat || !lng) {
+        alert("Por favor, toca el mapa para marcar dónde está la mascota.");
+        return;
+    }
+
+    if(!user) {
+        alert("Tu sesión expiró. Por favor ingresa de nuevo.");
+        showSection('auth');
+        return;
+    }
+
+    const btn = document.getElementById('btn-up');
+    const originalText = btn.innerText;
+    
+    // Bloquear botón
+    btn.disabled = true;
+    btn.innerText = "⏳ SUBIENDO FOTO...";
+
+    const fd = new FormData(e.target);
+    // Asegurar que enviamos un ID válido
+    const senderId = (user.id === 'admin') ? "0" : user.id;
+    fd.append('user_id', senderId);
+    fd.append('user_email', user.email);
+
+    try {
+        const res = await fetch('/pets/upload', { 
+            method: 'POST', 
+            body: fd 
+        });
+
+        const data = await res.json();
+
+        if(res.ok) {
+            alert("✅ ¡Publicado! Ahora un administrador debe aprobarlo.");
+            location.reload();
+        } else {
+            alert("❌ Error: " + (data.msg || "No se pudo subir"));
+            btn.disabled = false;
+            btn.innerText = originalText;
         }
+    } catch (error) {
+        console.error(error);
+        alert("📡 Error de conexión. La foto puede ser muy pesada o no tienes buena señal.");
+        btn.disabled = false;
+        btn.innerText = originalText;
+    }
+        }
+        
 
         async function handleLogin(e) {
             e.preventDefault();
