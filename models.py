@@ -24,3 +24,9 @@ class Pet(Base):
     is_approved = Column(Boolean, default=False)
     owner_id = Column(Integer, ForeignKey("users.id"))
     
+    # --- NUEVAS COLUMNAS ---
+    necesita_medicacion = Column(Boolean, default=False)
+    esta_herido = Column(Boolean, default=False)
+    estado_resguardo = Column(String, default="calle")
+    referencia = Column(String, nullable=True)
+    
