@@ -475,8 +475,40 @@
             document.getElementById('stat-adopcion').innerText = data.stats.adopcion;
             document.getElementById('stat-pendientes').innerText = data.stats.pendientes;
             document.getElementById('admin-users').innerHTML = data.users.map(u => `<div class="bg-white p-4 rounded-3xl flex justify-between items-center mb-2 shadow-sm"><span class="text-xs font-bold">${u.email}</span><button onclick="approve('user', ${u.id})" class="bg-emerald-500 text-white text-[10px] px-5 py-2 rounded-2xl font-black">ADMITIR</button></div>`).join('');
-            document.getElementById('admin-pets').innerHTML = data.pets.filter(p => !p.is_approved).map(p => `<div class="bg-white p-3 rounded-3xl flex items-center gap-4 mb-2 shadow-sm"><img src="${p.image_url}" class="w-12 h-12 rounded-2xl object-cover"><span class="flex-1 text-xs font-black">${p.name}</span><button onclick="approve('pet', ${p.id})" class="bg-orange-500 text-white text-[10px] px-5 py-2 rounded-2xl font-black">APROBAR</button></div>`).join('');
-        }
+            document.getElementById('admin-pets').innerHTML = data.pets.map(p => `
+            <div class="bg-white p-3 rounded-3xl flex items-center gap-4 mb-2 shadow-sm">
+            <img src="${p.image_url}" class="w-12 h-12 rounded-2xl object-cover">
+            <div class="flex-1">
+            <span class="block text-xs font-black">${p.name}</span>
+            <span class="text-[8px] uppercase text-slate-400">${p.is_approved ? 'Visible' : 'Pendiente'}</span>
+            </div>
+            <div class="flex gap-2">
+            ${!p.is_approved ? `<button onclick="approve('pet', ${p.id})" class="bg-emerald-500 text-white text-[8px] px-3 py-2 rounded-xl font-black uppercase">Aprobar</button>` : ''}
+            <button onclick="adminDeletePet(${p.id})" class="bg-red-100 text-red-500 px-3 py-2 rounded-xl">
+            <i class="fas fa-trash text-xs"></i>
+            </button>
+            </div>
+            </div>`).join('');
+
+
+
+            // Busca esta línea dentro de loadAdminData() y reemplázala:
+
+            
+
+
+
+
+
+
+
+
+
+
+
+
+
+            
             async function adminDeletePet(id) {
                 if (confirm("¿Estás seguro de que quieres eliminar esta publicación de forma permanente?")) {
                     const res = await fetch(`/admin/delete-pet/${id}`, { method: 'DELETE' });
