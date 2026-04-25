@@ -363,6 +363,29 @@
     document.body.style.overflow = 'hidden';
 }
 
+        function copiarResumen(mascota) {
+    // Definimos el estado para el texto
+    const estadoTxt = mascota.tipo_post === 'perdido' ? 'buscando a' : 'encontrado a';
+    const resguardoTxt = mascota.estado_resguardo === 'calle' ? 'Sigue en la calle, ¡necesita ayuda!' : 'Está a resguardo';
+
+    const texto = `🐾 *¡AYUDANOS A DIFUNDIR!* 🐾
+    
+Estamos ${estadoTxt} a *${mascota.nombre}*.
+📍 Visto en: ${mascota.zona} (${mascota.referencia})
+🏥 Estado: ${mascota.necesita_medicacion ? 'Necesita medicación urgente' : 'Estable'}
+🏠 Situación: ${resguardoTxt}
+
+Mas info y fotos acá: 
+https://huellitas-neuquen.render.com/mascota/${mascota.id}
+
+#MascotasNeuquen #RescateAnimal #Huellitas`;
+
+    // Copiar al portapapeles
+    navigator.clipboard.writeText(texto);
+    alert("¡Texto copiado! Ya puedes pegarlo en WhatsApp o Facebook.");
+        }
+        
+
 function closeImage() {
     const modal = document.getElementById('modal-image');
     modal.classList.add('hidden');
