@@ -178,6 +178,48 @@
             const res = await fetch('/login', { method: 'POST', body: new FormData(e.target) });
             if(res.ok) { localStorage.setItem('user', JSON.stringify(await res.json())); location.reload(); }
         }
+        // REEMPLAZA tu función handleUpload en index.html por esta:
+async function handleUpload(e) {
+    e.preventDefault();
+    const btn = document.getElementById('btn-up');
+    const originalText = btn.innerText;
+    
+    // Validar que eligió ubicación en el mapa
+    if(!document.getElementById('lat-in').value) {
+        alert("Por favor, marca la ubicación en el mapa haciendo un click.");
+        return;
+    }
+
+    btn.innerText = "SUBIENDO...";
+    btn.disabled = true;
+
+    const formData = new FormData(e.target);
+    formData.append('user_id', user.id);
+    formData.append('user_email', user.email);
+
+    try {
+        const res = await fetch('/pets/upload', { 
+            method: 'POST', 
+            body: formData 
+        });
+        const data = await res.json();
+
+        if(res.ok) {
+            alert("¡Publicación recibida! 🎉\n\nTu reporte de " + formData.get('name') + " ha sido enviado con éxito. Quedará visible en el mapa una vez que el administrador lo autorice.");
+            e.target.reset(); // Limpiar formulario
+            if(uploadMarker) uploadMap.removeLayer(uploadMarker); // Quitar marcador
+            showSection('home'); // Volver al inicio
+        } else {
+            alert("Error: " + data.msg);
+        }
+    } catch (err) {
+        alert("Hubo un problema con la conexión. Intenta de nuevo.");
+    } finally {
+        btn.innerText = originalText;
+        btn.disabled = false;
+    }
+}
+        
 
         async function loadAdminData() {
             const res = await fetch('/admin/data');
