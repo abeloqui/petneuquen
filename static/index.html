@@ -106,16 +106,28 @@
         </section>
 
         <section id="sec-admin" class="hidden space-y-6">
-            <div class="bg-white p-6 rounded-[2.5rem] shadow-sm">
-                <h2 class="font-black text-xl mb-6 uppercase">Panel Admin</h2>
-                <div class="grid grid-cols-3 gap-2 mb-6 text-center">
-                    <div class="bg-orange-50 p-3 rounded-2xl"><p id="stat-perdidos" class="font-black">0</p><p class="text-[6px] uppercase">Perdidos</p></div>
-                    <div class="bg-emerald-50 p-3 rounded-2xl"><p id="stat-adopcion" class="font-black">0</p><p class="text-[6px] uppercase">Adopción</p></div>
-                    <div class="bg-slate-50 p-3 rounded-2xl"><p id="stat-pendientes" class="font-black">0</p><p class="text-[6px] uppercase">Espera</p></div>
+    <div class="bg-white p-6 rounded-[2.5rem] shadow-sm">
+        <h2 class="font-black text-xl mb-6 uppercase">Panel Admin</h2>
+        
+        <div class="grid grid-cols-3 gap-2 mb-6 text-center">
+            <div class="bg-orange-50 p-3 rounded-2xl"><p id="stat-perdidos" class="font-black">0</p><p class="text-[6px] uppercase">Perdidos</p></div>
+            <div class="bg-emerald-50 p-3 rounded-2xl"><p id="stat-adopcion" class="font-black">0</p><p class="text-[6px] uppercase">Adopción</p></div>
+            <div class="bg-slate-50 p-3 rounded-2xl"><p id="stat-pendientes" class="font-black">0</p><p class="text-[6px] uppercase">Espera</p></div>
+        </div>
+
+        <div class="mb-8">
+            <h3 class="text-[10px] font-black uppercase text-slate-400 mb-3 ml-2">Nuevos Registros</h3>
+            <div id="admin-users" class="space-y-2">
                 </div>
-                <div id="admin-pets" class="space-y-2"></div>
-            </div>
+        </div>
+
+        <div>
+            <h3 class="text-[10px] font-black uppercase text-slate-400 mb-3 ml-2">Mascotas Reportadas</h3>
+            <div id="admin-pets" class="space-y-2"></div>
+        </div>
+    </div>
         </section>
+        
     </main>
 
     <nav class="fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] glass shadow-2xl rounded-[3rem] p-2 flex justify-around items-center z-[2000] border border-white">
@@ -248,19 +260,58 @@
         }
 
         async function loadAdminData() {
-            const res = await fetch('/admin/data'); const data = await res.json();
-            document.getElementById('stat-perdidos').innerText = data.stats.perdidos;
-            document.getElementById('stat-adopcion').innerText = data.stats.adopcion;
-            document.getElementById('stat-pendientes').innerText = data.stats.pendientes;
-            document.getElementById('admin-pets').innerHTML = data.pets.map(p => `
-                <div class="bg-slate-50 p-3 rounded-2xl flex items-center gap-3">
-                    <img src="${p.image_url}" class="w-10 h-10 rounded-lg object-cover">
-                    <div class="flex-1"><p class="text-[9px] font-black uppercase">${p.name}</p><p class="text-[7px] ${p.is_approved ? 'text-emerald-500':'text-orange-400'} uppercase">${p.is_approved ? 'Aprobado':'Espera'}</p></div>
-                    <div class="flex gap-1">
-                        ${!p.is_approved ? `<button onclick="approve('pet', ${p.id})" class="bg-emerald-500 text-white text-[8px] px-2 py-1 rounded">OK</button>` : ''}
-                        <button onclick="deletePet(${p.id})" class="text-red-400 px-2"><i class="fas fa-trash-alt"></i></button>
+    try {
+        const res = await fetch('/admin/data');
+        const data = await res.json();
+        
+        // Actualizar numeritos de arriba
+        document.getElementById('stat-perdidos').innerText = data.stats.perdidos;
+        document.getElementById('stat-adopcion').innerText = data.stats.adopcion;
+        document.getElementById('stat-pendientes').innerText = data.stats.pendientes;
+
+        // RENDERIZAR USUARIOS PENDIENTES
+        const userList = document.getElementById('admin-users');
+        if (data.users && data.users.length > 0) {
+            userList.innerHTML = data.users.map(u => `
+                <div class="bg-amber-50 p-4 rounded-2xl flex items-center justify-between border border-amber-100">
+                    <div class="flex-1">
+                        <p class="text-[10px] font-black truncate">${u.email}</p>
+                        <p class="text-[8px] font-bold text-amber-600 uppercase"><i class="fab fa-whatsapp"></i> ${u.telefono}</p>
                     </div>
-                </div>`).join('');
+                    <button onclick="approve('user', ${u.id})" class="bg-amber-500 text-white text-[9px] font-black px-4 py-2 rounded-xl shadow-sm">
+                        APROBAR
+                    </button>
+                </div>
+            `).join('');
+        } else {
+            userList.innerHTML = `<p class="text-center text-[9px] font-bold text-slate-300 py-4 uppercase">No hay usuarios pendientes</p>`;
+        }
+
+        // RENDERIZAR TODAS LAS MASCOTAS
+        const petList = document.getElementById('admin-pets');
+        petList.innerHTML = data.pets.map(p => `
+            <div class="bg-slate-50 p-3 rounded-2xl flex items-center gap-3 border border-white">
+                <img src="${p.image_url}" class="w-10 h-10 rounded-lg object-cover shadow-sm">
+                <div class="flex-1">
+                    <p class="text-[9px] font-black uppercase">${p.name}</p>
+                    <p class="text-[7px] font-bold uppercase ${p.is_approved ? 'text-emerald-500':'text-orange-400'}">
+                        ${p.is_approved ? 'Visible' : 'Pendiente'}
+                    </p>
+                </div>
+                <div class="flex gap-1">
+                    ${!p.is_approved ? `<button onclick="approve('pet', ${p.id})" class="bg-emerald-500 text-white text-[8px] px-3 py-2 rounded-lg font-black">OK</button>` : ''}
+                    <button onclick="deletePet(${p.id})" class="text-red-400 px-2 py-2 bg-white rounded-lg shadow-sm"><i class="fas fa-trash-alt text-[8px]"></i></button>
+                </div>
+            </div>
+        `).join('');
+
+    } catch (error) {
+        console.error("Error cargando datos de admin:", error);
+    }
+        }
+        
+
+        
         }
 
          async function deletePet(id) { if(confirm("¿Borrar reporte?")) { await fetch(`/pets/delete/${id}`, {method:'DELETE'}); if(user.role==='admin') loadAdminData(); else loadUserPets(); } }
