@@ -86,18 +86,34 @@ def upload_pet():
         f = request.files.get('file')
         d = request.form
         
-        # Subida a Cloudinary
-        up = cloudinary.uploader.upload(f, folder="huellitas")
+        if not f:
+            return jsonify({"msg": "No se recibió ninguna imagen"}), 400
+
+        # 1. Subida a Cloudinary con optimización para móviles
+        up = cloudinary.uploader.upload(f, 
+            folder="huellitas",
+            transformation=[{"quality": "auto", "fetch_format": "auto"}]
+        )
         
-        # Insertar en Supabase con los nuevos campos de salud
+        # 2. Manejo SEGURO del user_id
+        raw_user_id = d.get('user_id')
+        user_id_final = None
+        
+        if raw_user_id and raw_user_id != 'admin' and raw_user_id != 'undefined':
+            try:
+                user_id_final = int(raw_user_id)
+            except ValueError:
+                user_id_final = None
+
+        # 3. Insertar en Supabase
         supabase.table("pets").insert({
-            "user_id": d.get('user_id') if d.get('user_id') != 'admin' else None, 
-            "name": d['name'], 
-            "status": d['status'], 
+            "user_id": user_id_final, 
+            "name": d.get('name', 'Sin nombre'), 
+            "status": d.get('status', 'perdido'), 
             "especie": d.get('especie', 'perro'),
-            "barrio": d['barrio'], 
-            "latitud": float(d['latitud']), 
-            "longitud": float(d['longitud']), 
+            "barrio": d.get('barrio', 'Sin barrio'), 
+            "latitud": float(d.get('latitud', 0)), 
+            "longitud": float(d.get('longitud', 0)), 
             "image_url": up['secure_url'], 
             "is_approved": False,
             "necesita_medicacion": d.get('necesita_medicacion') == 'on',
@@ -107,8 +123,10 @@ def upload_pet():
         }).execute()
         
         return jsonify({"msg": "OK"}), 201
-    except Exception as e: 
+    except Exception as e:
+        print(f"ERROR EN UPLOAD: {str(e)}") # Esto aparecerá en los logs de Render
         return jsonify({"msg": str(e)}), 500
+      
 
 @app.route('/pets', methods=['GET'])
 def get_pets():
