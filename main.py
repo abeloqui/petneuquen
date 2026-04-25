@@ -88,19 +88,40 @@ def register():
 # --- RUTAS DE MASCOTAS ---
 @app.route('/pets/upload', methods=['POST'])
 def upload_pet():
-    try:
-        f, d = request.files.get('file'), request.form
-        up = cloudinary.uploader.upload(f, folder="huellitas")
-        supabase.table("pets").insert({
-            "user_id": int(d['user_id']) if d['user_id'] != 'admin' else None, 
-            "name": d['name'], "status": d['status'], "especie": d.get('especie', 'perro'),
-            "barrio": d['barrio'], "latitud": float(d['latitud']), "longitud": float(d['longitud']), 
-            "image_url": up['secure_url'], "is_approved": False
-        }).execute()
-        if d.get('user_email'):
-            enviar_mail(d['user_email'], "publicacion_exitosa", {"nombre": d['name']})
-        return jsonify({"msg": "OK"}), 201
-    except Exception as e: return jsonify({"msg": str(e)}), 500
+    file = request.files.get('file')
+    if not file:
+        return jsonify({"error": "No image"}), 400
+
+    # Subir imagen a Cloudinary
+    upload_result = cloudinary.uploader.upload(file)
+    img_url = upload_result.get('secure_url')
+
+    # CAPTURA DE NUEVOS CAMPOS
+    # Convertimos los strings 'true'/'false' del frontend a booleanos de Python
+    necesita_med = request.form.get('necesita_medicacion') == 'true'
+    esta_herido = request.form.get('esta_herido') == 'true'
+    
+    new_pet = {
+        "name": request.form.get('name'),
+        "especie": request.form.get('especie'),
+        "status": request.form.get('status'),
+        "barrio": request.form.get('barrio'),
+        "latitud": float(request.form.get('latitud')),
+        "longitud": float(request.form.get('longitud')),
+        "image_url": img_url,
+        "user_id": request.form.get('user_id'),
+        "user_email": request.form.get('user_email'),
+        "is_approved": False,
+        # AGREGAMOS LAS NUEVAS COLUMNAS
+        "necesita_medicacion": necesita_med,
+        "esta_herido": esta_herido,
+        "estado_resguardo": request.form.get('estado_resguardo'),
+        "referencia": request.form.get('referencia')
+    }
+
+    res = supabase.table("pets").insert(new_pet).execute()
+    return jsonify(res.data)
+    
 
 @app.route('/pets', methods=['GET'])
 def get_pets():
