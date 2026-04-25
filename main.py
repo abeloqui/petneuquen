@@ -166,6 +166,43 @@ def user_delete(pet_id):
     supabase.table("pets").delete().eq("id", pet_id).execute()
     return jsonify({"msg": "OK"})
 
+
+        # --- NUEVA RUTA PARA VISTA PREVIA EN REDES SOCIALES ---
+@app.route('/mascota/<int:pet_id>')
+def pet_detail(pet_id):
+    try:
+        # Buscamos la mascota en Supabase para obtener sus datos reales
+        res = supabase.table("pets").select("*").eq("id", pet_id).execute()
+        if not res.data:
+            return "Mascota no encontrada", 404
+        
+        mascota = res.data[0]
+        # Esta página es minimalista porque su fin principal es que Facebook lea los Meta Tags
+        return f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Adoptar a {mascota['name']}</title>
+            <meta property="og:title" content="🐾 ¡Ayudame a difundir a {mascota['name']}!" />
+            <meta property="og:description" content="Barrio: {mascota['barrio']} | Estado: {mascota['status'].upper()}. Entrá para ver su ubicación en el mapa de Neuquén." />
+            <meta property="og:image" content="{mascota['image_url']}" />
+            <meta property="og:url" content="https://petneuquen.onrender.com/mascota/{pet_id}" />
+            <meta property="og:type" content="website" />
+            <script>
+                // Usamos doble llave {{ }} para que Python no se confunda con el f-string
+                setTimeout(function() {{
+                    window.location.href = "/";
+                }}, 500);
+            </script>
+        </head>
+        <body>
+            <p>Cargando información de {mascota['name']}...</p>
+        </body>
+        </html>
+        """
+    except Exception as e:
+        return str(e), 500
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
