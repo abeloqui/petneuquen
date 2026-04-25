@@ -1,12 +1,23 @@
 import os
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify
 from supabase import create_client, Client
 import cloudinary
 import cloudinary.uploader
 from flask_mail import Mail, Message
 
-# Indicamos que los archivos estáticos están en la carpeta raíz si es necesario
-app = Flask(__name__, static_folder='static', static_url_path='/static')
+app = Flask(__name__)
+
+# --- CONFIGURACIÓN DE CLOUDINARY ---
+cloudinary.config(
+  cloud_name = os.getenv("CLOUDINARY_CLOUD_NAME"),
+  api_key = os.getenv("CLOUDINARY_API_KEY"),
+  api_secret = os.getenv("CLOUDINARY_API_SECRET")
+)
+
+# --- CONFIGURACIÓN DE SUPABASE ---
+url: str = os.getenv("SUPABASE_URL")
+key: str = os.getenv("SUPABASE_KEY")
+supabase: Client = create_client(url, key)
 
 # --- CONFIGURACIÓN DE CORREO ---
 app.config['MAIL_SERVER'] = 'smtp.gmail.com'
@@ -18,148 +29,88 @@ app.config['MAIL_DEFAULT_SENDER'] = app.config['MAIL_USERNAME']
 
 mail = Mail(app)
 
-# --- MOTOR DE EMAILS ---
 def enviar_mail(email_destino, tipo_evento, datos=None):
     temas = {
         "bienvenida": {
             "asunto": "¡Bienvenido a Huellitas NQN! 🐾",
-            "cuerpo": "¡Hola! Gracias por sumarte. Tu cuenta está en revisión por seguridad. Te avisaremos apenas sea aprobada."
+            "cuerpo": "Gracias por sumarte. Tu cuenta está en revisión."
         },
         "cuenta_aprobada": {
             "asunto": "¡Cuenta Activada! Ya podés ayudar 🐶",
-            "cuerpo": "Tu cuenta en Huellitas NQN ha sido aprobada. Ya podés reportar mascotas."
-        },
-        "publicacion_exitosa": {
-            "asunto": "Recibimos tu reporte 🐾",
-            "cuerpo": f"¡Gracias! El reporte de {datos.get('nombre') if datos else 'la mascota'} está en revisión."
+            "cuerpo": "Tu cuenta ha sido aprobada. Ya podés reportar mascotas."
         }
     }
-    evento = temas.get(tipo_evento)
-    if not evento or not email_destino: return False
-    msg = Message(evento["asunto"], recipients=[email_destino])
-    msg.body = evento["cuerpo"]
-    try:
-        mail.send(msg)
-        return True
-    except: return False
+    if tipo_evento in temas:
+        msg = Message(temas[tipo_evento]["asunto"], recipients=[email_destino])
+        msg.body = temas[tipo_evento]["cuerpo"]
+        try:
+            mail.send(msg)
+        except Exception as e:
+            print(f"Error enviando mail: {e}")
 
-# --- CONFIGURACIONES DE SERVICIOS ---
-supabase: Client = create_client(os.getenv("SUPABASE_URL", ""), os.getenv("SUPABASE_KEY", ""))
-cloudinary.config( 
-  cloud_name = os.getenv("CLOUDINARY_CLOUD_NAME"), 
-  api_key = os.getenv("CLOUDINARY_API_KEY"), 
-  api_secret = os.getenv("CLOUDINARY_API_SECRET"),
-  secure = True
-)
-
-@app.route('/')
-def index():
-    # Buscamos el index.html dentro de /static
-    return send_from_directory(app.static_folder, 'index.html')
-
-# --- RUTAS DE USUARIOS ---
-@app.route('/login', methods=['POST'])
-def login():
-    e, p = request.form.get('email'), request.form.get('password')
-    if e == os.getenv("ADMIN_EMAIL") and p == os.getenv("ADMIN_PASS"):
-        return jsonify({"id": "admin", "email": e, "role": "admin", "is_approved": True})
-    try:
-        res = supabase.table("users").select("*").eq("email", e).execute()
-        if res.data:
-            user = res.data[0]
-            if user.get('password') == p:
-                if user.get('is_approved'): return jsonify(user)
-                return jsonify({"msg": "Cuenta pendiente de aprobación"}), 401
-    except: pass
-    return jsonify({"msg": "Credenciales inválidas"}), 401
-
-@app.route('/register', methods=['POST'])
-def register():
-    try:
-        d = request.form
-        supabase.table("users").insert({
-            "email": d['email'], "password": d['password'], 
-            "telefono": d['telefono'], "is_approved": False
-        }).execute()
-        enviar_mail(d['email'], "bienvenida")
-        return jsonify({"msg": "OK"}), 201
-    except Exception as e: return jsonify({"msg": str(e)}), 500
-
-# --- RUTAS DE MASCOTAS ---
-@app.route('/pets/upload', methods=['POST'])
-def upload_pet():
-    file = request.files.get('file')
-    if not file:
-        return jsonify({"error": "No image"}), 400
-
-    # Subir imagen a Cloudinary
-    upload_result = cloudinary.uploader.upload(file)
-    img_url = upload_result.get('secure_url')
-
-    # CAPTURA DE NUEVOS CAMPOS
-    # Convertimos los strings 'true'/'false' del frontend a booleanos de Python
-    necesita_med = request.form.get('necesita_medicacion') == 'true'
-    esta_herido = request.form.get('esta_herido') == 'true'
-    
-    new_pet = {
-        "name": request.form.get('name'),
-        "especie": request.form.get('especie'),
-        "status": request.form.get('status'),
-        "barrio": request.form.get('barrio'),
-        "latitud": float(request.form.get('latitud')),
-        "longitud": float(request.form.get('longitud')),
-        "image_url": img_url,
-        "user_id": request.form.get('user_id'),
-        "user_email": request.form.get('user_email'),
-        "is_approved": False,
-        # AGREGAMOS LAS NUEVAS COLUMNAS
-        "necesita_medicacion": necesita_med,
-        "esta_herido": esta_herido,
-        "estado_resguardo": request.form.get('estado_resguardo'),
-        "referencia": request.form.get('referencia')
-    }
-
-    res = supabase.table("pets").insert(new_pet).execute()
-    return jsonify(res.data)
-    
+# --- RUTAS ---
 
 @app.route('/pets', methods=['GET'])
 def get_pets():
     res = supabase.table("pets").select("*, users(telefono)").eq("is_approved", True).execute()
     return jsonify(res.data)
 
-@app.route('/my-pets/<int:user_id>', methods=['GET'])
-def get_user_pets(user_id):
-    res = supabase.table("pets").select("*").eq("user_id", user_id).execute()
-    return jsonify(res.data)
+@app.route('/pets/upload', methods=['POST'])
+def upload_pet():
+    try:
+        file = request.files.get('file')
+        if not file:
+            return jsonify({"error": "No image"}), 400
 
-@app.route('/pets/delete/<int:pet_id>', methods=['DELETE'])
-def delete_pet(pet_id):
-    supabase.table("pets").delete().eq("id", pet_id).execute()
-    return jsonify({"msg": "OK"})
+        # Subir a Cloudinary
+        upload_result = cloudinary.uploader.upload(file)
+        img_url = upload_result.get('secure_url')
 
-# --- RUTAS DE ADMIN ---
+        # Procesar booleanos del FormData (vienen como strings 'true' o 'false')
+        necesita_med = request.form.get('necesita_medicacion') == 'true'
+        esta_herido = request.form.get('esta_herido') == 'true'
+
+        new_pet = {
+            "name": request.form.get('name'),
+            "especie": request.form.get('especie'),
+            "status": request.form.get('status'),
+            "barrio": request.form.get('barrio'),
+            "latitud": float(request.form.get('latitud')),
+            "longitud": float(request.form.get('longitud')),
+            "image_url": img_url,
+            "user_id": request.form.get('user_id'),
+            "user_email": request.form.get('user_email'),
+            "is_approved": False, # Requiere aprobación del admin
+            "necesita_medicacion": necesita_med,
+            "esta_herido": esta_herido,
+            "estado_resguardo": request.form.get('estado_resguardo', 'calle'),
+            "referencia": request.form.get('referencia', '')
+        }
+
+        res = supabase.table("pets").insert(new_pet).execute()
+        return jsonify(res.data)
+    except Exception as e:
+        print(f"Error detallado: {e}")
+        return jsonify({"error": str(e)}), 500
+
 @app.route('/admin/data', methods=['GET'])
 def admin_data():
-    u = supabase.table("users").select("*").eq("is_approved", False).execute()
+    u = supabase.table("users").select("*").eq("is_verified", False).execute()
     p = supabase.table("pets").select("*").execute()
-    pets_all = p.data if p.data else []
-    stats = {
-        "perdidos": len([x for x in pets_all if x['status'] == 'perdido' and x['is_approved']]),
-        "adopcion": len([x for x in pets_all if x['status'] == 'adopcion' and x['is_approved']]),
-        "pendientes": len([x for x in pets_all if not x['is_approved']])
-    }
-    return jsonify({"users": u.data, "pets": pets_all, "stats": stats})
+    return jsonify({"users": u.data, "pets": p.data})
 
 @app.route('/admin/approve/<t>/<id>', methods=['POST'])
 def approve(t, id):
-    supabase.table("users" if t == "user" else "pets").update({"is_approved": True}).eq("id", id).execute()
-    if t == "user":
-        res = supabase.table("users").select("email").eq("id", id).execute()
-        if res.data: enviar_mail(res.data[0]['email'], "cuenta_aprobada")
+    table = "users" if t == 'u' else "pets"
+    column = "is_verified" if t == 'u' else "is_approved"
+    
+    res = supabase.table(table).update({column: True}).eq("id", id).execute()
+    
+    if t == 'u' and res.data:
+        enviar_mail(res.data[0]['email'], "cuenta_aprobada")
+        
     return jsonify({"msg": "OK"})
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
+    app.run(debug=True, port=5000)
     
