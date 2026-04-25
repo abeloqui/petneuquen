@@ -1,172 +1,234 @@
 import os
 from flask import Flask, request, jsonify, send_from_directory
+from flask_bcrypt import Bcrypt
 from supabase import create_client, Client
 import cloudinary
 import cloudinary.uploader
 from flask_mail import Mail, Message
+from datetime import datetime
 
 app = Flask(__name__)
+bcrypt = Bcrypt(app)
 
-# --- CONFIGURACIÓN DE CORREO (Ajustado a tus variables de Render) ---
+# Configuración
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key-huellitas-nqn-2026')
 app.config['MAIL_SERVER'] = 'smtp.gmail.com'
 app.config['MAIL_PORT'] = 587
 app.config['MAIL_USE_TLS'] = True
-# Usamos .get() con ambas opciones por si acaso
-app.config['MAIL_USERNAME'] = os.getenv("Mail_Username") or os.getenv("MAIL_USERNAME")
-app.config['MAIL_PASSWORD'] = os.getenv("Mail_Password") or os.getenv("MAIL_PASSWORD")
+app.config['MAIL_USERNAME'] = os.getenv("MAIL_USERNAME") or os.getenv("Mail_Username")
+app.config['MAIL_PASSWORD'] = os.getenv("MAIL_PASSWORD") or os.getenv("Mail_Password")
 app.config['MAIL_DEFAULT_SENDER'] = app.config['MAIL_USERNAME']
 
 mail = Mail(app)
 
-# --- MOTOR DE EMAILS ---
-def enviar_mail(email_destino, tipo_evento, datos=None):
-    temas = {
-        "bienvenida": {
-            "asunto": "¡Bienvenido a Huellitas NQN! 🐾",
-            "cuerpo": "¡Hola! Gracias por sumarte a la comunidad. Tu cuenta está en revisión por seguridad. Te avisaremos apenas puedas empezar a publicar."
-        },
-        "cuenta_aprobada": {
-            "asunto": "¡Cuenta Activada! Ya podés ayudar 🐶",
-            "cuerpo": "Tu cuenta en Huellitas NQN ha sido aprobada. Ya podés entrar y reportar mascotas perdidas o en adopción."
-        },
-        "publicacion_exitosa": {
-            "asunto": f"Recibimos el reporte de {datos.get('nombre') if datos else 'la mascota'}",
-            "cuerpo": "¡Gracias por tu compromiso! El reporte entró en revisión y pronto estará visible en el mapa de Neuquén para todos los vecinos."
-        }
-    }
-    evento = temas.get(tipo_evento)
-    if not evento or not email_destino: 
-        print(f"Error: Datos insuficientes para enviar mail a {email_destino}")
-        return False
-
-    msg = Message(evento["asunto"], recipients=[email_destino])
-    msg.body = evento["cuerpo"]
-    
-    try:
-        mail.send(msg)
-        print(f"Mail de {tipo_evento} enviado exitosamente a {email_destino}")
-        return True
-    except Exception as e:
-        print(f"ERROR CRÍTICO MAIL: {e}")
-        return False
-
-# --- CONFIGURACIONES DE SERVICIOS ---
-url = os.getenv("SUPABASE_URL", "").strip()
-key = os.getenv("SUPABASE_KEY", "").strip()
-supabase: Client = create_client(url, key)
-
-cloudinary.config( 
-  cloud_name = os.getenv("CLOUDINARY_CLOUD_NAME"), 
-  api_key = os.getenv("CLOUDINARY_API_KEY"), 
-  api_secret = os.getenv("CLOUDINARY_API_SECRET"),
-  secure = True
+supabase: Client = create_client(
+    os.getenv("SUPABASE_URL", "").strip(),
+    os.getenv("SUPABASE_KEY", "").strip()
 )
 
+cloudinary.config(
+    cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME"),
+    api_key=os.getenv("CLOUDINARY_API_KEY"),
+    api_secret=os.getenv("CLOUDINARY_API_SECRET"),
+    secure=True
+)
+
+# ====================== EMAIL ======================
+def enviar_mail(email_destino, tipo_evento, datos=None):
+    temas = {
+        "bienvenida": {"asunto": "¡Bienvenido a Huellitas NQN! 🐾", "cuerpo": "Tu cuenta está en revisión."},
+        "cuenta_aprobada": {"asunto": "¡Cuenta Activada!", "cuerpo": "Ya podés publicar en Huellitas NQN."},
+        "publicacion_exitosa": {"asunto": f"Reporte de {datos.get('name', 'mascota')} recibido", "cuerpo": "¡Gracias! Está en revisión."},
+        "rechazo": {"asunto": "Actualización sobre tu reporte", "cuerpo": f"Motivo: {datos.get('motivo', 'No cumple con las normas.')}"}
+    }
+    evento = temas.get(tipo_evento)
+    if not evento or not email_destino: return False
+    msg = Message(evento["asunto"], recipients=[email_destino])
+    msg.body = evento["cuerpo"]
+    try:
+        mail.send(msg)
+        return True
+    except:
+        return False
+
+# ====================== ROUTES ======================
 @app.route('/')
 def index():
     return send_from_directory('static', 'index.html')
 
+# AUTH
 @app.route('/login', methods=['POST'])
 def login():
     data = request.form
-    e, p = data.get('email'), data.get('password')
-    # Admin sacado de variables de entorno o default
+    email = data.get('email')
+    password = data.get('password')
+
     admin_email = os.getenv("ADMIN_EMAIL", "admin@huellitas.com")
     admin_pass = os.getenv("ADMIN_PASS", "admin123")
-    
-    if e == admin_email and p == admin_pass:
-        return jsonify({"id": "admin", "email": e, "role": "admin", "is_approved": True})
-    
+
+    if email == admin_email and password == admin_pass:
+        return jsonify({"id": "admin", "email": email, "role": "admin", "is_approved": True})
+
     try:
-        res = supabase.table("users").select("*").eq("email", e).execute()
+        res = supabase.table("users").select("*").eq("email", email).execute()
         if res.data:
             user = res.data[0]
-            if str(user.get('is_approved')).lower() == 'true':
-                if user.get('password') == p: return jsonify(user)
-                return jsonify({"msg": "Clave incorrecta"}), 401
-            return jsonify({"msg": "Cuenta pendiente de aprobación"}), 401
-    except Exception as err: print(f"Error login: {err}")
+            if not user.get('is_approved'):
+                return jsonify({"msg": "Cuenta pendiente de aprobación"}), 401
+            if bcrypt.check_password_hash(user.get('password'), password):
+                return jsonify(user)
+            return jsonify({"msg": "Contraseña incorrecta"}), 401
+    except Exception as e:
+        print("Login error:", e)
     return jsonify({"msg": "Usuario no encontrado"}), 401
 
 @app.route('/register', methods=['POST'])
 def register():
     try:
         data = request.form
-        email, password, tel = data.get('email'), data.get('password'), data.get('telefono')
-        check = supabase.table("users").select("*").eq("email", email).execute()
-        if check.data: return jsonify({"msg": "El email ya existe"}), 400
-        
-        # Insertamos en la DB
-        supabase.table("users").insert({"email": email, "password": password, "telefono": tel, "is_approved": False}).execute()
-        
-        # Intentamos enviar el mail
-        enviar_mail(email, "bienvenida")
-        
-        return jsonify({"msg": "OK"}), 201
-    except Exception as e: 
-        print(f"Error en registro: {e}")
-        return jsonify({"msg": str(e)}), 500
+        email = data.get('email')
+        password = data.get('password')
+        telefono = data.get('telefono')
 
+        if not email or not password:
+            return jsonify({"msg": "Email y contraseña requeridos"}), 400
+
+        check = supabase.table("users").select("id").eq("email", email).execute()
+        if check.data:
+            return jsonify({"msg": "Email ya registrado"}), 400
+
+        hashed = bcrypt.generate_password_hash(password).decode('utf-8')
+        supabase.table("users").insert({
+            "email": email, "password": hashed, "telefono": telefono, "is_approved": False
+        }).execute()
+
+        enviar_mail(email, "bienvenida")
+        return jsonify({"msg": "Registro exitoso. Espera aprobación."}), 201
+    except Exception as e:
+        return jsonify({"msg": "Error interno"}), 500
+
+# UPLOAD
 @app.route('/pets/upload', methods=['POST'])
 def upload_pet():
     try:
-        f, d = request.files.get('file'), request.form
-        user_id = d.get('user_id')
-        up = cloudinary.uploader.upload(f, folder="huellitas")
-        supabase.table("pets").insert({
-            "user_id": int(user_id), "name": d['name'], "status": d['status'],
-            "especie": d.get('especie', 'perro'), "barrio": d['barrio'], 
-            "latitud": float(d['latitud']), "longitud": float(d['longitud']), 
-            "image_url": up['secure_url'], "is_approved": False
-        }).execute()
-        
-        res_user = supabase.table("users").select("email").eq("id", user_id).execute()
-        if res_user.data: 
-            enviar_mail(res_user.data[0]['email'], "publicacion_exitosa", {"nombre": d['name']})
-            
-        return jsonify({"msg": "OK"}), 201
-    except Exception as e: return jsonify({"msg": str(e)}), 500
+        form = request.form
+        files = request.files.getlist('file')[:3]
+        user_id = form.get('user_id')
+
+        if not user_id or not files:
+            return jsonify({"msg": "Faltan datos o imágenes"}), 400
+
+        image_urls = []
+        for f in files:
+            if f.filename:
+                result = cloudinary.uploader.upload(f, folder="huellitas")
+                image_urls.append(result['secure_url'])
+
+        pet_data = {
+            "user_id": int(user_id) if str(user_id) != "admin" else 0,
+            "name": form['name'],
+            "status": form['status'],
+            "especie": form.get('especie', 'perro'),
+            "raza": form.get('raza'),
+            "edad": form.get('edad'),
+            "color": form.get('color'),
+            "barrio": form['barrio'],
+            "latitud": float(form['latitud']),
+            "longitud": float(form['longitud']),
+            "descripcion": form.get('descripcion', ''),
+            "microchip": form.get('microchip') == 'on',
+            "fecha": form.get('fecha'),
+            "image_urls": image_urls,
+            "is_approved": False
+        }
+
+        supabase.table("pets").insert(pet_data).execute()
+
+        user_res = supabase.table("users").select("email").eq("id", user_id).execute()
+        if user_res.data:
+            enviar_mail(user_res.data[0]['email'], "publicacion_exitosa", {"name": form['name']})
+
+        return jsonify({"msg": "¡Reporte enviado a revisión!"}), 201
+    except Exception as e:
+        print("Upload error:", e)
+        return jsonify({"msg": str(e)}), 500
+
+# NUEVA RUTA: UPDATE PET
+@app.route('/pets/update/<int:pet_id>', methods=['PATCH'])
+def update_pet(pet_id):
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"msg": "No hay datos para actualizar"}), 400
+
+        # Solo actualizar campos permitidos
+        allowed = ['name', 'status', 'especie', 'raza', 'edad', 'color', 'barrio', 'descripcion', 'microchip', 'fecha', 'latitud', 'longitud']
+        update_data = {k: v for k, v in data.items() if k in allowed}
+
+        if 'image_urls' in data and isinstance(data['image_urls'], list):
+            update_data['image_urls'] = data['image_urls']
+
+        supabase.table("pets").update(update_data).eq("id", pet_id).execute()
+        return jsonify({"msg": "Publicación actualizada correctamente"}), 200
+    except Exception as e:
+        print("Update error:", e)
+        return jsonify({"msg": "Error al actualizar"}), 500
 
 @app.route('/pets', methods=['GET'])
 def get_pets():
     res = supabase.table("pets").select("*, users(telefono)").eq("is_approved", True).execute()
     return jsonify(res.data)
 
-@app.route('/my-pets/<int:user_id>', methods=['GET'])
+@app.route('/my-pets/<user_id>', methods=['GET'])
 def my_pets(user_id):
     res = supabase.table("pets").select("*").eq("user_id", user_id).execute()
     return jsonify(res.data)
 
+# ADMIN
 @app.route('/admin/data', methods=['GET'])
 def admin_data():
-    u = supabase.table("users").select("*").eq("is_approved", False).execute()
-    p = supabase.table("pets").select("*").execute()
-    pets_all = p.data if p.data else []
-    stats = {
-        "perdidos": len([x for x in pets_all if x.get('status') == 'perdido' and x.get('is_approved')]),
-        "adopcion": len([x for x in pets_all if x.get('status') == 'adopcion' and x.get('is_approved')]),
-        "pendientes": len([x for x in pets_all if not x.get('is_approved')])
-    }
-    return jsonify({"users": u.data, "pets": pets_all, "stats": stats})
+    users_pend = supabase.table("users").select("*").eq("is_approved", False).execute()
+    pets_all = supabase.table("pets").select("*, users(email, telefono)").execute()
 
-@app.route('/admin/approve/<t>/<id>', methods=['POST'])
+    pets = pets_all.data or []
+    stats = {
+        "perdidos": len([p for p in pets if p.get('status') == 'perdido' and p.get('is_approved')]),
+        "adopcion": len([p for p in pets if p.get('status') == 'adopcion' and p.get('is_approved')]),
+        "pendientes_pets": len([p for p in pets if not p.get('is_approved')]),
+        "pendientes_users": len(users_pend.data or [])
+    }
+
+    return jsonify({
+        "users_pending": users_pend.data,
+        "pets": pets,
+        "stats": stats
+    })
+
+@app.route('/admin/approve/<t>/<int:id>', methods=['POST'])
 def approve(t, id):
     table = "users" if t == "user" else "pets"
     supabase.table(table).update({"is_approved": True}).eq("id", id).execute()
-    
     if t == "user":
         res = supabase.table("users").select("email").eq("id", id).execute()
-        if res.data: 
+        if res.data:
             enviar_mail(res.data[0]['email'], "cuenta_aprobada")
-            
-    return jsonify({"msg": "OK"})
+    return jsonify({"msg": "Aprobado"})
+
+@app.route('/admin/reject/<t>/<int:id>', methods=['POST'])
+def reject(t, id):
+    table = "users" if t == "user" else "pets"
+    supabase.table(table).update({"is_approved": False}).eq("id", id).execute()
+    if t == "user":
+        res = supabase.table("users").select("email").eq("id", id).execute()
+        if res.data:
+            enviar_mail(res.data[0]['email'], "rechazo", {"motivo": "No cumple con las normas"})
+    return jsonify({"msg": "Rechazado"})
 
 @app.route('/pets/user-delete/<int:pet_id>', methods=['DELETE'])
 def user_delete(pet_id):
     supabase.table("pets").delete().eq("id", pet_id).execute()
-    return jsonify({"msg": "OK"})
+    return jsonify({"msg": "Eliminado"})
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
-    
