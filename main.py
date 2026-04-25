@@ -1,15 +1,12 @@
 import os
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 from supabase import create_client, Client
 import cloudinary
 import cloudinary.uploader
 from flask_mail import Mail, Message
 
-app = Flask(__name__)
-
-@app.route('/')
-def serve_index():
-    return send_from_directory('', '/static/index.html')
+# Configuramos Flask para que reconozca la carpeta static
+app = Flask(__name__, static_folder='static', static_url_path='/static')
 
 # --- CONFIGURACIÓN DE CLOUDINARY ---
 cloudinary.config(
@@ -35,24 +32,21 @@ mail = Mail(app)
 
 def enviar_mail(email_destino, tipo_evento, datos=None):
     temas = {
-        "bienvenida": {
-            "asunto": "¡Bienvenido a Huellitas NQN! 🐾",
-            "cuerpo": "Gracias por sumarte. Tu cuenta está en revisión."
-        },
-        "cuenta_aprobada": {
-            "asunto": "¡Cuenta Activada! Ya podés ayudar 🐶",
-            "cuerpo": "Tu cuenta ha sido aprobada. Ya podés reportar mascotas."
-        }
+        "bienvenida": { "asunto": "¡Bienvenido! 🐾", "cuerpo": "Tu cuenta está en revisión." },
+        "cuenta_aprobada": { "asunto": "¡Cuenta Activada! 🐶", "cuerpo": "Ya podés reportar mascotas." }
     }
     if tipo_evento in temas:
         msg = Message(temas[tipo_evento]["asunto"], recipients=[email_destino])
         msg.body = temas[tipo_evento]["cuerpo"]
-        try:
-            mail.send(msg)
-        except Exception as e:
-            print(f"Error enviando mail: {e}")
+        try: mail.send(msg)
+        except Exception as e: print(f"Error mail: {e}")
 
 # --- RUTAS ---
+
+# CORRECCIÓN AQUÍ: Ahora busca el index.html DENTRO de la carpeta 'static'
+@app.route('/')
+def serve_index():
+    return send_from_directory('static', 'index.html')
 
 @app.route('/pets', methods=['GET'])
 def get_pets():
@@ -63,16 +57,10 @@ def get_pets():
 def upload_pet():
     try:
         file = request.files.get('file')
-        if not file:
-            return jsonify({"error": "No image"}), 400
+        if not file: return jsonify({"error": "No image"}), 400
 
-        # Subir a Cloudinary
         upload_result = cloudinary.uploader.upload(file)
         img_url = upload_result.get('secure_url')
-
-        # Procesar booleanos del FormData (vienen como strings 'true' o 'false')
-        necesita_med = request.form.get('necesita_medicacion') == 'true'
-        esta_herido = request.form.get('esta_herido') == 'true'
 
         new_pet = {
             "name": request.form.get('name'),
@@ -84,9 +72,9 @@ def upload_pet():
             "image_url": img_url,
             "user_id": request.form.get('user_id'),
             "user_email": request.form.get('user_email'),
-            "is_approved": False, # Requiere aprobación del admin
-            "necesita_medicacion": necesita_med,
-            "esta_herido": esta_herido,
+            "is_approved": False,
+            "necesita_medicacion": request.form.get('necesita_medicacion') == 'true',
+            "esta_herido": request.form.get('esta_herido') == 'true',
             "estado_resguardo": request.form.get('estado_resguardo', 'calle'),
             "referencia": request.form.get('referencia', '')
         }
@@ -94,25 +82,14 @@ def upload_pet():
         res = supabase.table("pets").insert(new_pet).execute()
         return jsonify(res.data)
     except Exception as e:
-        print(f"Error detallado: {e}")
         return jsonify({"error": str(e)}), 500
-
-@app.route('/admin/data', methods=['GET'])
-def admin_data():
-    u = supabase.table("users").select("*").eq("is_verified", False).execute()
-    p = supabase.table("pets").select("*").execute()
-    return jsonify({"users": u.data, "pets": p.data})
 
 @app.route('/admin/approve/<t>/<id>', methods=['POST'])
 def approve(t, id):
     table = "users" if t == 'u' else "pets"
     column = "is_verified" if t == 'u' else "is_approved"
-    
     res = supabase.table(table).update({column: True}).eq("id", id).execute()
-    
-    if t == 'u' and res.data:
-        enviar_mail(res.data[0]['email'], "cuenta_aprobada")
-        
+    if t == 'u' and res.data: enviar_mail(res.data[0]['email'], "cuenta_aprobada")
     return jsonify({"msg": "OK"})
 
 if __name__ == '__main__':
