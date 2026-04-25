@@ -10,7 +10,7 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;600;900&display=swap');
-        :root { --logo-coral: #E07A5F; --logo-celeste: #81B29A; --logo-crema: #F4F1DE; --dark: #3D405B; }
+        :root { --logo-coral: #E07A5F; --logo-celeste: #81B29A; --logo-crema: #F4F1DE; --dark: #3D405B; --logo-rojo: #C94C4C; }
         body { font-family: 'Lexend', sans-serif; background-color: var(--logo-crema); color: var(--dark); padding-bottom: 120px; }
         .glass { background: rgba(244, 241, 222, 0.8); backdrop-filter: blur(10px); }
         #main-map { height: 350px; width: 100%; border-radius: 2rem; border: 5px solid white; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
@@ -106,33 +106,28 @@
         </section>
 
         <section id="sec-admin" class="hidden space-y-6">
-    <div class="bg-white p-6 rounded-[2.5rem] shadow-sm">
-        <h2 class="font-black text-xl mb-6 uppercase">Panel Admin</h2>
-        
-        <div class="grid grid-cols-3 gap-2 mb-6 text-center">
-            <div class="bg-orange-50 p-3 rounded-2xl"><p id="stat-perdidos" class="font-black">0</p><p class="text-[6px] uppercase">Perdidos</p></div>
-            <div class="bg-emerald-50 p-3 rounded-2xl"><p id="stat-adopcion" class="font-black">0</p><p class="text-[6px] uppercase">Adopción</p></div>
-            <div class="bg-slate-50 p-3 rounded-2xl"><p id="stat-pendientes" class="font-black">0</p><p class="text-[6px] uppercase">Espera</p></div>
-        </div>
-
-        <div class="mb-8">
-            <h3 class="text-[10px] font-black uppercase text-slate-400 mb-3 ml-2">Nuevos Registros</h3>
-            <div id="admin-users" class="space-y-2">
+            <div class="bg-white p-6 rounded-[2.5rem] shadow-sm">
+                <h2 class="font-black text-xl mb-6 uppercase">Panel Admin</h2>
+                <div class="grid grid-cols-3 gap-2 mb-6 text-center">
+                    <div class="bg-orange-50 p-3 rounded-2xl"><p id="stat-perdidos" class="font-black">0</p><p class="text-[6px] uppercase">Perdidos</p></div>
+                    <div class="bg-emerald-50 p-3 rounded-2xl"><p id="stat-adopcion" class="font-black">0</p><p class="text-[6px] uppercase">Adopción</p></div>
+                    <div class="bg-slate-50 p-3 rounded-2xl"><p id="stat-pendientes" class="font-black">0</p><p class="text-[6px] uppercase">Espera</p></div>
                 </div>
-        </div>
-
-        <div>
-            <h3 class="text-[10px] font-black uppercase text-slate-400 mb-3 ml-2">Mascotas Reportadas</h3>
-            <div id="admin-pets" class="space-y-2"></div>
-        </div>
-    </div>
+                <div class="mb-8">
+                    <h3 class="text-[10px] font-black uppercase text-slate-400 mb-3 ml-2">Nuevos Registros</h3>
+                    <div id="admin-users" class="space-y-2"></div>
+                </div>
+                <div>
+                    <h3 class="text-[10px] font-black uppercase text-slate-400 mb-3 ml-2">Mascotas Reportadas</h3>
+                    <div id="admin-pets" class="space-y-2"></div>
+                </div>
+            </div>
         </section>
-        
     </main>
 
     <nav class="fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] glass shadow-2xl rounded-[3rem] p-2 flex justify-around items-center z-[2000] border border-white">
         <button onclick="showSection('home')" class="p-4 text-slate-300"><i class="fas fa-home text-xl"></i></button>
-        <button onclick="checkAuth()" class="w-14 h-14 rounded-full -mt-10 border-8 border-[var(--logo-crema)] bg-coral text-white flex items-center justify-center shadow-lg" style="background: var(--logo-coral)"><i class="fas fa-plus"></i></button>
+        <button onclick="checkAuth()" class="w-14 h-14 rounded-full -mt-10 border-8 border-[var(--logo-crema)] text-white flex items-center justify-center shadow-lg" style="background: var(--logo-coral)"><i class="fas fa-plus"></i></button>
         <button onclick="location.reload()" class="p-4 text-slate-300"><i class="fas fa-sync-alt text-xl"></i></button>
     </nav>
 
@@ -143,8 +138,10 @@
 
         function updateAuthUI() {
             if (user) {
-                document.getElementById('user-anchor').style.backgroundColor = 'var(--logo-coral)';
-                document.getElementById('user-anchor').classList.replace('text-slate-300', 'text-white');
+                const anchor = document.getElementById('user-anchor');
+                anchor.style.backgroundColor = 'var(--logo-coral)';
+                anchor.classList.remove('text-slate-300');
+                anchor.classList.add('text-white');
                 document.getElementById('menu-email').innerText = user.email;
                 if (user.role === 'admin' || user.id === 'admin') document.getElementById('admin-badge').classList.remove('hidden');
             }
@@ -152,9 +149,17 @@
 
         function showSection(id) {
             document.querySelectorAll('main > section').forEach(s => s.classList.add('hidden'));
-            document.getElementById('sec-' + id).classList.remove('hidden');
-            if(id === 'home') { if(!mainMap) initMainMap(); setTimeout(() => { mainMap.invalidateSize(); loadPets(); }, 400); }
-            if(id === 'upload') { if(!uploadMap) initUploadMap(); setTimeout(() => uploadMap.invalidateSize(), 400); }
+            const target = document.getElementById('sec-' + id);
+            if(target) target.classList.remove('hidden');
+            
+            if(id === 'home') { 
+                if(!mainMap) initMainMap(); 
+                setTimeout(() => { mainMap.invalidateSize(); loadPets(); }, 400); 
+            }
+            if(id === 'upload') { 
+                if(!uploadMap) initUploadMap(); 
+                setTimeout(() => uploadMap.invalidateSize(), 400); 
+            }
         }
 
         function initMainMap() {
@@ -164,6 +169,7 @@
         }
 
         function initUploadMap() {
+            if(uploadMap) return;
             uploadMap = L.map('map-upload', { zoomControl: false }).setView([-38.951, -68.061], 13);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(uploadMap);
             
@@ -176,7 +182,6 @@
                     document.getElementById('lng-in').value = pos[1];
                 });
             }
-
             uploadMap.on('click', e => {
                 if(uploadMarker) uploadMarker.setLatLng(e.latlng); else uploadMarker = L.marker(e.latlng).addTo(uploadMap);
                 document.getElementById('lat-in').value = e.latlng.lat;
@@ -185,7 +190,11 @@
         }
 
         async function loadPets() {
-            const res = await fetch('/pets'); allPets = await res.json(); renderPets();
+            try {
+                const res = await fetch('/pets');
+                allPets = await res.json();
+                renderPets();
+            } catch(e) { console.error(e); }
         }
 
         function renderPets() {
@@ -198,7 +207,7 @@
             .forEach(p => {
                 const color = p.status === 'perdido' ? 'var(--logo-rojo)' : '#10b981';
                 const tel = p.users ? p.users.telefono : '';
-                const waLink = tel ? `https://wa.me/549${tel}?text=Hola! Te contacto por ${p.name} que vi en Huellitas NQN` : '#';
+                const waLink = tel ? `https://wa.me/549${tel}?text=Hola! Te contacto por ${p.name}` : '#';
 
                 list.innerHTML += `
                     <div class="card-pet">
@@ -207,18 +216,18 @@
                         <div class="p-3 space-y-2">
                             <div class="text-center"><p class="font-black text-[10px] uppercase">${p.name}</p><p class="text-[7px] font-bold text-slate-400 uppercase">${p.barrio}</p></div>
                             <div class="flex gap-1">
-                                <button onclick="flyToPet(${p.latitud}, ${p.longitud})" class="flex-1 py-2 bg-slate-50 rounded-lg text-[7px] font-black uppercase text-slate-400">Mapa</button>
-                                ${tel ? `<a href="${waLink}" target="_blank" class="flex-1 py-2 bg-emerald-500 rounded-lg text-[7px] font-black uppercase text-white text-center"><i class="fab fa-whatsapp"></i> WA</a>` : ''}
+                                <button onclick="flyToPet(${p.latitud}, ${p.longitud})" class="flex-1 py-2 bg-slate-50 rounded-lg text-[7px] font-black uppercase">Mapa</button>
+                                ${tel ? `<a href="${waLink}" target="_blank" class="flex-1 py-2 bg-emerald-500 rounded-lg text-[7px] font-black uppercase text-white text-center">WhatsApp</a>` : ''}
                             </div>
                         </div>
                     </div>`;
 
                 const icon = L.divIcon({
-                    className: 'custom-div-icon',
-                    html: `<div class="paw-marker" style="color: ${color}; font-size: 20px;"><i class="fas fa-paw"></i></div>`,
-                    iconSize: [20, 20], iconAnchor: [10, 10]
+                    className: 'paw-marker',
+                    html: `<div style="color: ${color}; font-size: 20px;"><i class="fas fa-paw"></i></div>`,
+                    iconSize: [20, 20]
                 });
-                L.marker([p.latitud, p.longitud], {icon: icon}).bindPopup(`<div class='text-center'><b>${p.name}</b><br><img src='${p.image_url}' class='w-16 h-16 object-cover rounded mt-1'><br><a href='${waLink}' target='_blank' style='color:#10b981;font-size:10px;font-weight:bold'>WhatsApp</a></div>`).addTo(markersGroup);
+                L.marker([p.latitud, p.longitud], {icon}).bindPopup(`<b>${p.name}</b>`).addTo(markersGroup);
             });
         }
 
@@ -226,25 +235,24 @@
 
         async function handleUpload(e) {
             e.preventDefault();
-            if(!document.getElementById('lat-in').value) return alert("Marca la ubicación en el mapa");
+            if(!document.getElementById('lat-in').value) return alert("Marca la ubicación");
             const btn = document.getElementById('btn-up'); btn.disabled = true; btn.innerText = "SUBIENDO...";
             const fd = new FormData(e.target); fd.append('user_id', user.id); fd.append('user_email', user.email);
             const res = await fetch('/pets/upload', { method: 'POST', body: fd });
-            if(res.ok) { alert("¡Recibido! En revisión por seguridad."); location.reload(); }
+            if(res.ok) { alert("¡Recibido! En revisión."); location.reload(); }
         }
 
         async function handleLogin(e) {
             e.preventDefault();
             const res = await fetch('/login', { method: 'POST', body: new FormData(e.target) });
             if(res.ok) { localStorage.setItem('user', JSON.stringify(await res.json())); location.reload(); }
-            else { const d = await res.json(); alert(d.msg); }
+            else alert("Error al ingresar.");
         }
 
         async function handleRegister(e) {
             e.preventDefault();
             const res = await fetch('/register', { method: 'POST', body: new FormData(e.target) });
-            if(res.ok) { alert("¡Registro exitoso! Tu cuenta está en revisión."); location.reload(); }
-            else alert("Error en el registro.");
+            if(res.ok) { alert("Registro exitoso. Espera aprobación."); location.reload(); }
         }
 
         async function loadUserPets() {
@@ -254,80 +262,107 @@
             list.innerHTML = pets.map(p => `
                 <div class="bg-slate-50 p-4 rounded-[2rem] flex items-center gap-4">
                     <img src="${p.image_url}" class="w-12 h-12 rounded-xl object-cover">
-                    <div class="flex-1"><p class="font-black text-xs uppercase">${p.name}</p><p class="text-[8px] font-bold uppercase ${p.is_approved ? 'text-emerald-500':'text-orange-400'}">${p.is_approved ? 'Aprobado':'En revisión'}</p></div>
-                    <button onclick="deletePet(${p.id})" class="text-red-400 p-3 bg-white rounded-full shadow-sm"><i class="fas fa-trash"></i></button>
+                    <div class="flex-1"><p class="font-black text-xs uppercase">${p.name}</p><p class="text-[8px] font-bold ${p.is_approved?'text-emerald-500':'text-orange-400'}">${p.is_approved?'Visible':'Pendiente'}</p></div>
+                    <button onclick="deletePet(${p.id})" class="text-red-400 p-3 bg-white rounded-full"><i class="fas fa-trash"></i></button>
                 </div>`).join('');
         }
 
         async function loadAdminData() {
-    try {
-        const res = await fetch('/admin/data');
-        const data = await res.json();
-        
-        // Actualizar numeritos de arriba
-        document.getElementById('stat-perdidos').innerText = data.stats.perdidos;
-        document.getElementById('stat-adopcion').innerText = data.stats.adopcion;
-        document.getElementById('stat-pendientes').innerText = data.stats.pendientes;
+            const res = await fetch('/admin/data'); const data = await res.json();
+            document.getElementById('stat-perdidos').innerText = data.stats.perdidos;
+            document.getElementById('stat-adopcion').innerText = data.stats.adopcion;
+            document.getElementById('stat-pendientes').innerText = data.stats.pendientes;
+            
+            document.getElementById('admin-users').innerHTML = data.users.map(u => `
+                <div class="bg-amber-50 p-3 rounded-xl flex justify-between items-center">
+                    <p class="text-[10px] font-black">${u.email}</p>
+                    <button onclick="approve('user', ${u.id})" class="bg-amber-500 text-white text-[8px] px-3 py-1 rounded-lg">APROBAR</button>
+                </div>`).join('') || '<p class="text-[8px] text-center">Sin usuarios nuevos</p>';
 
-        // RENDERIZAR USUARIOS PENDIENTES
-        const userList = document.getElementById('admin-users');
-        if (data.users && data.users.length > 0) {
-            userList.innerHTML = data.users.map(u => `
-                <div class="bg-amber-50 p-4 rounded-2xl flex items-center justify-between border border-amber-100">
-                    <div class="flex-1">
-                        <p class="text-[10px] font-black truncate">${u.email}</p>
-                        <p class="text-[8px] font-bold text-amber-600 uppercase"><i class="fab fa-whatsapp"></i> ${u.telefono}</p>
-                    </div>
-                    <button onclick="approve('user', ${u.id})" class="bg-amber-500 text-white text-[9px] font-black px-4 py-2 rounded-xl shadow-sm">
-                        APROBAR
-                    </button>
-                </div>
-            `).join('');
-        } else {
-            userList.innerHTML = `<p class="text-center text-[9px] font-bold text-slate-300 py-4 uppercase">No hay usuarios pendientes</p>`;
+            document.getElementById('admin-pets').innerHTML = data.pets.map(p => `
+                <div class="bg-slate-50 p-2 rounded-xl flex items-center gap-2">
+                    <img src="${p.image_url}" class="w-8 h-8 rounded object-cover">
+                    <div class="flex-1 text-[8px] font-black uppercase">${p.name}</div>
+                    ${!p.is_approved ? `<button onclick="approve('pet', ${p.id})" class="bg-emerald-500 text-white text-[8px] px-2 py-1 rounded">OK</button>` : ''}
+                    <button onclick="deletePet(${p.id})" class="text-red-400"><i class="fas fa-trash"></i></button>
+                </div>`).join('');
         }
 
-        // RENDERIZAR TODAS LAS MASCOTAS
-        const petList = document.getElementById('admin-pets');
-        petList.innerHTML = data.pets.map(p => `
-            <div class="bg-slate-50 p-3 rounded-2xl flex items-center gap-3 border border-white">
-                <img src="${p.image_url}" class="w-10 h-10 rounded-lg object-cover shadow-sm">
-                <div class="flex-1">
-                    <p class="text-[9px] font-black uppercase">${p.name}</p>
-                    <p class="text-[7px] font-bold uppercase ${p.is_approved ? 'text-emerald-500':'text-orange-400'}">
-                        ${p.is_approved ? 'Visible' : 'Pendiente'}
-                    </p>
-                </div>
-                <div class="flex gap-1">
-                    ${!p.is_approved ? `<button onclick="approve('pet', ${p.id})" class="bg-emerald-500 text-white text-[8px] px-3 py-2 rounded-lg font-black">OK</button>` : ''}
-                    <button onclick="deletePet(${p.id})" class="text-red-400 px-2 py-2 bg-white rounded-lg shadow-sm"><i class="fas fa-trash-alt text-[8px]"></i></button>
-                </div>
-            </div>
-        `).join('');
-
-    } catch (error) {
-        console.error("Error cargando datos de admin:", error);
-    }
-        }
-        
-
-        
+                async function deletePet(id) { 
+            if(confirm("¿Borrar reporte?")) { 
+                await fetch(`/pets/delete/${id}`, {method:'DELETE'}); 
+                if(user && (user.role === 'admin' || user.id === 'admin')) {
+                    loadAdminData(); 
+                } else {
+                    loadUserPets(); 
+                }
+            } 
         }
 
-         async function deletePet(id) { if(confirm("¿Borrar reporte?")) { await fetch(`/pets/delete/${id}`, {method:'DELETE'}); if(user.role==='admin') loadAdminData(); else loadUserPets(); } }
-        async function approve(t, id) { await fetch(`/admin/approve/${t}/${id}`, {method:'POST'}); loadAdminData(); }
-        function toggleUserMenu() { if(user) document.getElementById('user-menu').classList.toggle('hidden'); else showSection('auth'); }
+        async function approve(t, id) { 
+            await fetch(`/admin/approve/${t}/${id}`, {method:'POST'}); 
+            loadAdminData(); 
+        }
+
+        function toggleUserMenu() { 
+            if(user) {
+                document.getElementById('user-menu').classList.toggle('hidden'); 
+            } else {
+                showSection('auth'); 
+            }
+        }
+
         function toggleAuthMode(m) { 
-            document.getElementById('form-login').classList.toggle('hidden', m==='register');
-            document.getElementById('form-register').classList.toggle('hidden', m==='login');
-            document.getElementById('btn-mode-login').style.borderColor = m==='login' ? 'var(--logo-coral)':'transparent';
-            document.getElementById('btn-mode-reg').style.borderColor = m==='register' ? 'var(--logo-coral)':'transparent';
+            document.getElementById('form-login').classList.toggle('hidden', m === 'register');
+            document.getElementById('form-register').classList.toggle('hidden', m === 'login');
+            
+            const btnLogin = document.getElementById('btn-mode-login');
+            const btnReg = document.getElementById('btn-mode-reg');
+            
+            if(m === 'login') {
+                btnLogin.style.borderColor = 'var(--logo-coral)';
+                btnReg.style.borderColor = 'transparent';
+                btnReg.classList.add('text-slate-300');
+                btnLogin.classList.remove('text-slate-300');
+            } else {
+                btnReg.style.borderColor = 'var(--logo-coral)';
+                btnLogin.style.borderColor = 'transparent';
+                btnLogin.classList.add('text-slate-300');
+                btnReg.classList.remove('text-slate-300');
+            }
         }
-        function checkAuth() { user ? showSection('upload') : showSection('auth'); }
-        function checkUserPanel() { if(user.role==='admin'||user.id==='admin') { showSection('admin'); loadAdminData(); } else { showSection('user-panel'); loadUserPets(); } }
-        function logout() { localStorage.removeItem('user'); location.reload(); }
-        function setSpecies(sp, btn) { currentSpecies = sp; document.querySelectorAll('.btn-filter').forEach(b => b.classList.remove('active')); btn.classList.add('active'); renderPets(); }
-        window.onload = () => { updateAuthUI(); showSection('home'); };
+
+        function checkAuth() { 
+            user ? showSection('upload') : showSection('auth'); 
+        }
+
+        function checkUserPanel() { 
+            if(user.role === 'admin' || user.id === 'admin') { 
+                showSection('admin'); 
+                loadAdminData(); 
+            } else { 
+                showSection('user-panel'); 
+                loadUserPets(); 
+            } 
+        }
+
+        function logout() { 
+            localStorage.removeItem('user'); 
+            location.reload(); 
+        }
+
+        function setSpecies(sp, btn) { 
+            currentSpecies = sp; 
+            document.querySelectorAll('.btn-filter').forEach(b => b.classList.remove('active')); 
+            btn.classList.add('active'); 
+            renderPets(); 
+        }
+
+        // Única ejecución al cargar la página
+        window.onload = () => { 
+            updateAuthUI(); 
+            showSection('home'); 
+        };
     </script>
 </body>
 </html>
