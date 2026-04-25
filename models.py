@@ -14,7 +14,8 @@ class Pet(Base):
     __tablename__ = "pets"
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String)
-    status = Column(String) 
+    especie = Column(String) # Perro, Gato, etc.
+    status = Column(String) # Perdido, Adopción
     barrio = Column(String)
     raza = Column(String, nullable=True)
     edad = Column(String, nullable=True)
@@ -22,11 +23,12 @@ class Pet(Base):
     latitud = Column(Float, nullable=True)
     longitud = Column(Float, nullable=True)
     is_approved = Column(Boolean, default=False)
-    owner_id = Column(Integer, ForeignKey("users.id"))
+    user_id = Column(String) # ID de Supabase Auth
+    user_email = Column(String)
     
-    # --- NUEVAS COLUMNAS ---
+    # --- NUEVOS CAMPOS DE FUNCIONALIDAD ---
     necesita_medicacion = Column(Boolean, default=False)
     esta_herido = Column(Boolean, default=False)
-    estado_resguardo = Column(String, default="calle")
+    estado_resguardo = Column(String, default="calle") # calle, transito, veterinaria
     referencia = Column(String, nullable=True)
     
