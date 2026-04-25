@@ -369,6 +369,26 @@
                 </div>`).join('');
         }
 
+
+// Función para borrar mascotas (Omnipotente)
+async function deletePet(id) {
+    if(confirm("¿Estás seguro de ELIMINAR esta mascota para siempre?")) {
+        const res = await fetch(`/admin/delete-pet/${id}`, { method: 'DELETE' });
+        if(res.ok) {
+            // Si estamos en el panel admin, refrescamos los datos de admin
+            if(user.role === 'admin') loadAdminData();
+            // Si estamos en el panel de usuario, refrescamos sus mascotas
+            else loadUserPets();
+            alert("Eliminado correctamente");
+        } else {
+            alert("Error al eliminar");
+        }
+    }
+}
+
+
+        
+
                 async function deletePet(id) { 
             if(confirm("¿Borrar reporte?")) { 
                 await fetch(`/pets/delete/${id}`, {method:'DELETE'}); 
