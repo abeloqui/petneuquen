@@ -203,8 +203,11 @@
             const status = document.getElementById('filter-status').value;
             list.innerHTML = ""; markersGroup.clearLayers();
 
+            // Busca esta línea dentro del .forEach de renderPets y cámbiala por esta:
+
             allPets.filter(p => p.barrio.toLowerCase().includes(term) && (status === 'todos' || p.status === status) && (currentSpecies === 'todos' || p.especie === currentSpecies))
             .forEach(p => {
+                
                 const color = p.status === 'perdido' ? 'var(--logo-rojo)' : '#10b981';
                 const tel = p.users ? p.users.telefono : '';
                 const waLink = tel ? `https://wa.me/549${tel}?text=Hola! Te contacto por ${p.name}` : '#';
@@ -212,7 +215,7 @@
                 list.innerHTML += `
                     <div class="card-pet">
                         <span class="status-badge" style="background:${color}">${p.status}</span>
-                        <img src="${p.image_url}" class="w-full h-36 object-cover" onclick="flyToPet(${p.latitud}, ${p.longitud})">
+                        <img src="${p.image_url}" class="w-full h-36 object-cover cursor-zoom-in" onclick="openImage('${p.image_url}')">
                         <div class="p-3 space-y-2">
                             <div class="text-center"><p class="font-black text-[10px] uppercase">${p.name}</p><p class="text-[7px] font-bold text-slate-400 uppercase">${p.barrio}</p></div>
                             <div class="flex gap-1">
@@ -351,6 +354,23 @@
             location.reload(); 
         }
 
+        function openImage(url) {
+    const modal = document.getElementById('modal-image');
+    const img = document.getElementById('img-full');
+    img.src = url;
+    modal.classList.remove('hidden');
+    // Bloquear scroll del cuerpo al abrir
+    document.body.style.overflow = 'hidden';
+}
+
+function closeImage() {
+    const modal = document.getElementById('modal-image');
+    modal.classList.add('hidden');
+    // Restaurar scroll
+    document.body.style.overflow = 'auto';
+}
+        
+
         function setSpecies(sp, btn) { 
             currentSpecies = sp; 
             document.querySelectorAll('.btn-filter').forEach(b => b.classList.remove('active')); 
@@ -364,5 +384,11 @@
             showSection('home'); 
         };
     </script>
+
+    <div id="modal-image" class="hidden fixed inset-0 z-[3000] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4" onclick="closeImage()">
+    <button class="absolute top-6 right-6 text-white text-2xl"><i class="fas fa-times"></i></button>
+    <img id="img-full" src="" class="max-w-full max-h-[80vh] rounded-3xl shadow-2xl border-4 border-white/10 object-contain">
+    </div>
+    
 </body>
 </html>
