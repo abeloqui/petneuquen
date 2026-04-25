@@ -72,6 +72,28 @@
                 <div id="map-upload" style="height: 200px;" class="rounded-2xl border-4 border-slate-50"></div>
                 <input type="hidden" name="latitud" id="lat-in"><input type="hidden" name="longitud" id="lng-in">
                 <input type="file" name="file" accept="image/*" class="text-[10px] block w-full" required>
+                <div class="space-y-3 bg-slate-50 p-4 rounded-3xl">
+    <p class="text-[10px] font-bold text-slate-400 uppercase mb-2">Estado de Salud y Resguardo:</p>
+    
+    <label class="flex items-center gap-2 text-xs font-bold">
+        <input type="checkbox" name="necesita_medicacion" class="w-4 h-4 accent-red-500"> 
+        💊 Necesita medicación urgente
+    </label>
+
+    <label class="flex items-center gap-2 text-xs font-bold">
+        <input type="checkbox" name="esta_herido" class="w-4 h-4 accent-red-500"> 
+        🩹 Está herido / lastimado
+    </label>
+
+    <select name="estado_resguardo" class="custom-input bg-white mt-2">
+        <option value="calle">Sigue en la calle</option>
+        <option value="transito">Lo tengo conmigo (Tránsito)</option>
+        <option value="veterinaria">Está en una veterinaria</option>
+    </select>
+    
+    <input type="text" name="referencia" placeholder="Referencia (ej: frente al kiosco)" class="custom-input bg-white mt-2">
+                </div>
+                
                 <button type="submit" id="btn-up" class="w-full py-5 rounded-[2rem] font-black text-white uppercase shadow-lg" style="background: var(--logo-coral)">Publicar Reporte</button>
             </form>
         </section>
@@ -197,31 +219,38 @@
             } catch(e) { console.error(e); }
         }
 
-        function renderPets() {
+                function renderPets() {
             const list = document.getElementById('pet-list');
             const term = document.getElementById('search').value.toLowerCase();
             const status = document.getElementById('filter-status').value;
             list.innerHTML = ""; markersGroup.clearLayers();
 
-            // Busca esta línea dentro del .forEach de renderPets y cámbiala por esta:
-
             allPets.filter(p => p.barrio.toLowerCase().includes(term) && (status === 'todos' || p.status === status) && (currentSpecies === 'todos' || p.especie === currentSpecies))
             .forEach(p => {
-                
                 const color = p.status === 'perdido' ? 'var(--logo-rojo)' : '#10b981';
                 const tel = p.users ? p.users.telefono : '';
                 const waLink = tel ? `https://wa.me/549${tel}?text=Hola! Te contacto por ${p.name}` : '#';
 
+                // --- NUEVA LÓGICA DE URGENCIA ---
+                const esUrgente = p.necesita_medicacion || p.esta_herido;
+                const badgeUrgente = esUrgente ? `<span class="status-badge" style="background:var(--logo-rojo); left: auto; right: 10px;">⚠️ URGENTE</span>` : '';
+                const borderStyle = esUrgente ? 'border: 2px solid var(--logo-rojo);' : '';
+
                 list.innerHTML += `
-                    <div class="card-pet">
+                    <div class="card-pet" style="${borderStyle}">
                         <span class="status-badge" style="background:${color}">${p.status}</span>
+                        ${badgeUrgente}
                         <img src="${p.image_url}" class="w-full h-36 object-cover cursor-zoom-in" onclick="openImage('${p.image_url}')">
                         <div class="p-3 space-y-2">
-                            <div class="text-center"><p class="font-black text-[10px] uppercase">${p.name}</p><p class="text-[7px] font-bold text-slate-400 uppercase">${p.barrio}</p></div>
+                            <div class="text-center">
+                                <p class="font-black text-[10px] uppercase">${p.name}</p>
+                                <p class="text-[7px] font-bold text-slate-400 uppercase">${p.barrio}</p>
+                            </div>
                             <div class="flex gap-1">
                                 <button onclick="flyToPet(${p.latitud}, ${p.longitud})" class="flex-1 py-2 bg-slate-50 rounded-lg text-[7px] font-black uppercase">Mapa</button>
-                                ${tel ? `<a href="${waLink}" target="_blank" class="flex-1 py-2 bg-emerald-500 rounded-lg text-[7px] font-black uppercase text-white text-center">WhatsApp</a>` : ''}
+                                <button onclick='copiarResumen(${JSON.stringify(p)})' class="flex-1 py-2 bg-blue-500 rounded-lg text-[7px] font-black uppercase text-white">Difundir</button>
                             </div>
+                            ${tel ? `<a href="${waLink}" target="_blank" class="block w-full py-2 bg-emerald-500 rounded-lg text-[7px] font-black uppercase text-white text-center">Contactar dueño</a>` : ''}
                         </div>
                     </div>`;
 
@@ -232,7 +261,9 @@
                 });
                 L.marker([p.latitud, p.longitud], {icon}).bindPopup(`<b>${p.name}</b>`).addTo(markersGroup);
             });
-        }
+                }
+        
+
 
         function flyToPet(lat, lng) { window.scrollTo({ top: 0, behavior: 'smooth' }); mainMap.flyTo([lat, lng], 16); }
 
