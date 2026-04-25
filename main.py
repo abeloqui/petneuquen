@@ -5,9 +5,10 @@ import cloudinary
 import cloudinary.uploader
 from flask_mail import Mail, Message
 
-app = Flask(__name__)
+# Indicamos que los archivos estáticos están en la carpeta raíz si es necesario
+app = Flask(__name__, static_folder='static', static_url_path='/static')
 
-# --- CONFIGURACIÓN DE CORREO (Ajustado a variables de Render) ---
+# --- CONFIGURACIÓN DE CORREO ---
 app.config['MAIL_SERVER'] = 'smtp.gmail.com'
 app.config['MAIL_PORT'] = 587
 app.config['MAIL_USE_TLS'] = True
@@ -53,16 +54,15 @@ cloudinary.config(
 
 @app.route('/')
 def index():
-    return send_from_directory('static', 'index.html')
+    # Buscamos el index.html dentro de /static
+    return send_from_directory(app.static_folder, 'index.html')
 
 # --- RUTAS DE USUARIOS ---
 @app.route('/login', methods=['POST'])
 def login():
     e, p = request.form.get('email'), request.form.get('password')
-    # Admin check
     if e == os.getenv("ADMIN_EMAIL") and p == os.getenv("ADMIN_PASS"):
         return jsonify({"id": "admin", "email": e, "role": "admin", "is_approved": True})
-    
     try:
         res = supabase.table("users").select("*").eq("email", e).execute()
         if res.data:
@@ -104,7 +104,6 @@ def upload_pet():
 
 @app.route('/pets', methods=['GET'])
 def get_pets():
-    # Trae mascotas aprobadas con el teléfono del dueño para el botón WA
     res = supabase.table("pets").select("*, users(telefono)").eq("is_approved", True).execute()
     return jsonify(res.data)
 
@@ -123,12 +122,13 @@ def delete_pet(pet_id):
 def admin_data():
     u = supabase.table("users").select("*").eq("is_approved", False).execute()
     p = supabase.table("pets").select("*").execute()
+    pets_all = p.data if p.data else []
     stats = {
-        "perdidos": len([x for x in p.data if x['status'] == 'perdido' and x['is_approved']]),
-        "adopcion": len([x for x in p.data if x['status'] == 'adopcion' and x['is_approved']]),
-        "pendientes": len([x for x in p.data if not x['is_approved']])
+        "perdidos": len([x for x in pets_all if x['status'] == 'perdido' and x['is_approved']]),
+        "adopcion": len([x for x in pets_all if x['status'] == 'adopcion' and x['is_approved']]),
+        "pendientes": len([x for x in pets_all if not x['is_approved']])
     }
-    return jsonify({"users": u.data, "pets": p.data, "stats": stats})
+    return jsonify({"users": u.data, "pets": pets_all, "stats": stats})
 
 @app.route('/admin/approve/<t>/<id>', methods=['POST'])
 def approve(t, id):
