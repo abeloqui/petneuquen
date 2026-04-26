@@ -250,24 +250,63 @@
         </section>
 
         <section id="sec-profile" class="section-container hidden">
-            <div class="bg-white p-8 rounded-[3rem] shadow-xl">
-                <h2 id="profile-greeting" class="font-black text-2xl uppercase tracking-tighter mb-8">¡HOLA!</h2>
-                <div id="user-pet-list" class="space-y-4"></div>
+    <div class="bg-white p-8 rounded-[3rem] shadow-xl">
+        <div class="flex justify-between items-center mb-8">
+            <h2 id="profile-greeting" class="font-black text-2xl uppercase tracking-tighter">MIS REPORTES 🐾</h2>
+            <span id="user-post-count" class="bg-orange-100 text-orange-600 text-[10px] font-black px-3 py-1 rounded-full">0 POSTS</span>
+        </div>
+        
+        <div id="user-pet-list" class="space-y-4">
             </div>
+
+        <div id="user-empty-state" class="hidden text-center py-10">
+            <i class="fas fa-paw text-slate-200 text-5xl mb-4"></i>
+            <p class="text-slate-400 font-bold text-sm">Aún no tenés publicaciones activas.</p>
+        </div>
+    </div>
         </section>
 
-        <section id="sec-admin" class="section-container hidden">
-            <div class="bg-white p-8 rounded-[3rem] shadow-xl">
-                <h2 class="font-black text-2xl mb-8 uppercase tracking-tighter">Administración</h2>
-                <div class="grid grid-cols-3 gap-3 mb-10 text-center">
-                    <div class="bg-orange-50 p-5 rounded-[1.5rem]"><p class="text-2xl font-black text-orange-500" id="stat-perdidos">0</p><p class="text-[8px] font-black uppercase">Perdidos</p></div>
-                    <div class="bg-emerald-50 p-5 rounded-[1.5rem]"><p class="text-2xl font-black text-emerald-500" id="stat-adopcion">0</p><p class="text-[8px] font-black uppercase">Adopción</p></div>
-                    <div class="bg-slate-50 p-5 rounded-[1.5rem]"><p class="text-2xl font-black text-slate-400" id="stat-pendientes">0</p><p class="text-[8px] font-black uppercase">Espera</p></div>
-                </div>
-                <div id="admin-users" class="space-y-4 mb-8"></div>
-                <div id="admin-pets" class="space-y-4"></div>
+
+
+            <section id="sec-admin" class="section-container hidden">
+    <div class="bg-white p-8 rounded-[3rem] shadow-xl">
+        <h2 class="font-black text-2xl mb-6 uppercase tracking-tighter text-slate-800">Panel Maestro</h2>
+        
+        <div class="grid grid-cols-3 gap-3 mb-8 text-center">
+            <div class="bg-red-50 p-4 rounded-2xl border border-red-100">
+                <p class="text-xl font-black text-red-500" id="stat-perdidos">0</p>
+                <p class="text-[7px] font-black uppercase text-red-400">Perdidos</p>
             </div>
-        </section>
+            <div class="bg-emerald-50 p-4 rounded-2xl border border-emerald-100">
+                <p class="text-xl font-black text-emerald-500" id="stat-adopcion">0</p>
+                <p class="text-[7px] font-black uppercase text-emerald-400">Adopción</p>
+            </div>
+            <div class="bg-amber-50 p-4 rounded-2xl border border-amber-100">
+                <p class="text-xl font-black text-amber-500" id="stat-pendientes">0</p>
+                <p class="text-[7px] font-black uppercase text-amber-400">Nuevos</p>
+            </div>
+        </div>
+
+        <div class="space-y-8">
+            <div>
+                <h3 class="text-[10px] font-black uppercase text-slate-400 mb-4 tracking-widest flex items-center gap-2">
+                    <i class="fas fa-users"></i> Solicitudes de Acceso
+                </h3>
+                <div id="admin-users" class="space-y-2"></div>
+            </div>
+
+            <div>
+                <h3 class="text-[10px] font-black uppercase text-slate-400 mb-4 tracking-widest flex items-center gap-2">
+                    <i class="fas fa-shield-alt"></i> Moderación Global
+                </h3>
+                <div id="admin-pets" class="space-y-3"></div>
+            </div>
+        </div>
+    </div>
+            </section>
+        
+
+        
     </main>
 
     <nav class="fixed bottom-6 left-1/2 -translate-x-1/2 w-[92%] glass shadow-2xl rounded-[3rem] p-3 flex justify-around items-center z-[2000] border-2 border-white">
@@ -277,224 +316,295 @@
         </button>
         <button onclick="location.reload()" class="w-14 h-14 text-slate-300"><i class="fas fa-sync-alt text-2xl"></i></button>
     </nav>
-        <script>
-        let mainMap, uploadMap, uploadMarker, allPets = [];
-        let currentSpecies = 'todos';
-        let user = JSON.parse(localStorage.getItem('user'));
 
-        // DICCIONARIO DE COORDENADAS PARA AUTO-ZOOM
-        const coordsBarrios = {
-            "Alta Barda": [-38.932, -68.077],
-            "Altos del Limay": [-38.981, -68.083],
-            "Área Centro": [-38.951, -68.059],
-            "Belgrano": [-38.961, -68.046],
-            "Canal V": [-38.957, -68.125],
-            "Confluencia": [-38.974, -68.028],
-            "Cuenca XV": [-38.936, -68.136],
-            "Don Bosco": [-38.971, -68.068],
-            "Huilliches": [-38.959, -68.106],
-            "Islas Malvinas": [-38.942, -68.069],
-            "La Sirena": [-38.974, -68.093],
-            "Mariano Moreno": [-38.958, -68.032],
-            "Melipal": [-38.937, -68.097],
-            "Parque Industrial": [-38.905, -68.069],
-            "Progreso": [-38.954, -68.088],
-            "Provinciales Unidas": [-38.943, -68.046],
-            "Rincón de Emilio": [-38.919, -68.048],
-            "Río Grande": [-38.975, -68.054],
-            "San Lorenzo": [-38.948, -68.118],
-            "Santa Genoveva": [-38.946, -68.041],
-            "Sapere": [-38.951, -68.025],
-            "Terrazas del Neuquén": [-38.911, -68.079],
-            "Unión de Mayo": [-38.944, -68.101],
-            "Valentina Norte": [-38.941, -68.163],
-            "Valentina Sur": [-38.988, -68.137],
-            "Villa Ceferino": [-38.936, -68.088],
-            "Villa Florencia": [-38.966, -68.076],
-            "Villa María": [-38.966, -68.056]
-        };
 
-        function autoZoomMap(barrio, mapaDestino) {
-            if (coordsBarrios[barrio]) {
-                const latlng = coordsBarrios[barrio];
-                if (mapaDestino === 'main' && mainMap) {
-                    mainMap.flyTo(latlng, 15, { duration: 2 });
-                } else if (mapaDestino === 'upload' && uploadMap) {
-                    uploadMap.flyTo(latlng, 15, { duration: 2 });
-                    // Si no hay marcador, ponemos uno sugerido
-                    if (!uploadMarker) {
-                        uploadMarker = L.marker(latlng).addTo(uploadMap);
-                        document.getElementById('lat-in').value = latlng[0];
-                        document.getElementById('lng-in').value = latlng[1];
-                    } else {
-                        uploadMarker.setLatLng(latlng);
-                        document.getElementById('lat-in').value = latlng[0];
-                        document.getElementById('lng-in').value = latlng[1];
-                    }
-                }
+    <script>
+    let mainMap, uploadMap, uploadMarker, allPets = [];
+    let currentSpecies = 'todos';
+    let user = JSON.parse(localStorage.getItem('user'));
+
+    // --- CONFIGURACIÓN DE BARRIOS (COORDINADAS) ---
+    const coordsBarrios = {
+        "Alta Barda": [-38.932, -68.077], "Altos del Limay": [-38.981, -68.083],
+        "Área Centro": [-38.951, -68.059], "Belgrano": [-38.961, -68.046],
+        "Canal V": [-38.957, -68.125], "Confluencia": [-38.974, -68.028],
+        "Cuenca XV": [-38.936, -68.136], "Don Bosco": [-38.971, -68.068],
+        "Huilliches": [-38.959, -68.106], "Islas Malvinas": [-38.942, -68.069],
+        "La Sirena": [-38.974, -68.093], "Mariano Moreno": [-38.958, -68.032],
+        "Melipal": [-38.937, -68.097], "Parque Industrial": [-38.905, -68.069],
+        "Progreso": [-38.954, -68.088], "Provinciales Unidas": [-38.943, -68.046],
+        "Rincón de Emilio": [-38.919, -68.048], "Río Grande": [-38.975, -68.054],
+        "San Lorenzo": [-38.948, -68.118], "Santa Genoveva": [-38.946, -68.041],
+        "Sapere": [-38.951, -68.025], "Terrazas del Neuquén": [-38.911, -68.079],
+        "Unión de Mayo": [-38.944, -68.101], "Valentina Norte": [-38.941, -68.163],
+        "Valentina Sur": [-38.988, -68.137], "Villa Ceferino": [-38.936, -68.088],
+        "Villa Florencia": [-38.966, -68.076], "Villa María": [-38.966, -68.056]
+    };
+
+    // --- INICIALIZACIÓN Y NAVEGACIÓN ---
+    window.onload = () => { 
+        updateAuthUI(); 
+        showSection('home'); 
+    };
+
+    function updateAuthUI() {
+        const userBtn = document.getElementById('user-anchor');
+        const adminBadge = document.getElementById('admin-badge');
+        if (user) {
+            userBtn.style.backgroundColor = 'var(--logo-coral)';
+            userBtn.style.color = 'white';
+            if (user.role === 'admin') adminBadge.classList.remove('hidden');
+        }
+    }
+
+    function showSection(id) {
+        document.querySelectorAll('.section-container').forEach(s => s.classList.add('hidden'));
+        const target = document.getElementById('sec-' + id);
+        if (target) target.classList.remove('hidden');
+
+        if (id === 'home') { 
+            if (!mainMap) initMainMap(); 
+            setTimeout(() => { mainMap.invalidateSize(); loadPets(); }, 300); 
+        }
+        if (id === 'upload') { 
+            if (!uploadMap) initUploadMap(); 
+            setTimeout(() => uploadMap.invalidateSize(), 300); 
+        }
+    }
+
+    // --- MAPAS (LEAFLET) ---
+    function initMainMap() {
+        mainMap = L.map('main-map', { zoomControl: false }).setView([-38.951, -68.061], 13);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png').addTo(mainMap);
+    }
+
+    function initUploadMap() {
+        if (uploadMap) return;
+        uploadMap = L.map('map-upload', { zoomControl: false }).setView([-38.951, -68.061], 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(uploadMap);
+        uploadMap.on('click', e => {
+            if (uploadMarker) uploadMarker.setLatLng(e.latlng);
+            else uploadMarker = L.marker(e.latlng).addTo(uploadMap);
+            document.getElementById('lat-in').value = e.latlng.lat;
+            document.getElementById('lng-in').value = e.latlng.lng;
+        });
+    }
+
+    function autoZoomMap(barrio, mapaDestino) {
+        if (coordsBarrios[barrio]) {
+            const latlng = coordsBarrios[barrio];
+            if (mapaDestino === 'main' && mainMap) mainMap.flyTo(latlng, 15, { duration: 2 });
+            if (mapaDestino === 'upload' && uploadMap) {
+                uploadMap.flyTo(latlng, 15, { duration: 2 });
+                if (!uploadMarker) uploadMarker = L.marker(latlng).addTo(uploadMap);
+                else uploadMarker.setLatLng(latlng);
+                document.getElementById('lat-in').value = latlng[0];
+                document.getElementById('lng-in').value = latlng[1];
             }
         }
+    }
 
-        function updateAuthUI() {
-            const userBtn = document.getElementById('user-anchor');
-            const adminBadge = document.getElementById('admin-badge');
-            if (user) {
-                userBtn.style.backgroundColor = 'var(--logo-coral)';
-                userBtn.style.color = 'white';
-                if (user.role === 'admin') adminBadge.classList.remove('hidden');
-            }
-        }
-
-        function toggleUserMenu() {
-            if (!user) { showSection('auth'); return; }
-            document.getElementById('user-menu').classList.toggle('hidden');
-            document.getElementById('menu-email').innerText = user.email;
-        }
-
-        function showSection(id) {
-            document.querySelectorAll('.section-container').forEach(s => s.classList.add('hidden'));
-            document.getElementById('sec-' + id).classList.remove('hidden');
-            if(id === 'home') { if(!mainMap) initMainMap(); setTimeout(() => { mainMap.invalidateSize(); loadPets(); }, 300); }
-            if(id === 'upload') { if(!uploadMap) initUploadMap(); setTimeout(() => uploadMap.invalidateSize(), 300); }
-        }
-
-        function checkUserPanel() {
-            if(!user) showSection('auth');
-            else if(user.role === 'admin') { showSection('admin'); loadAdminData(); }
-            else { 
-                showSection('profile'); 
-                document.getElementById('profile-greeting').innerText = user.email.includes('andre') ? "¡HOLA ANDRÉ! 🐾" : "MIS REPORTES 🐾";
-                loadUserPets(); 
-            }
-        }
-
-        function checkAuth() { user ? showSection('upload') : showSection('auth'); }
-
-        function initMainMap() {
-            mainMap = L.map('main-map', { zoomControl: false }).setView([-38.951, -68.061], 13);
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png').addTo(mainMap);
-        }
-
-        function initUploadMap() {
-            if(uploadMap) return;
-            uploadMap = L.map('map-upload', { zoomControl: false }).setView([-38.951, -68.061], 13);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(uploadMap);
-            uploadMap.on('click', e => {
-                if(uploadMarker) uploadMarker.setLatLng(e.latlng);
-                else uploadMarker = L.marker(e.latlng).addTo(uploadMap);
-                document.getElementById('lat-in').value = e.latlng.lat;
-                document.getElementById('lng-in').value = e.latlng.lng;
-            });
-        }
-
-        function focusOnPet(lat, lng) {
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-            if (mainMap) mainMap.flyTo([lat, lng], 16, { animate: true, duration: 1.5 });
-        }
-
-        async function loadPets() {
+    // --- GESTIÓN DE MASCOTAS (RENDER & FILTROS) ---
+    async function loadPets() {
+        try {
             const res = await fetch('/pets');
             allPets = await res.json();
             renderPets();
-        }
+        } catch (err) { console.error("Error cargando mascotas:", err); }
+    }
 
-        function renderPets() {
-            const list = document.getElementById('pet-list');
-            const term = document.getElementById('search').value.toLowerCase();
-            const status = document.getElementById('filter-status').value;
-            list.innerHTML = "";
-            if(mainMap) mainMap.eachLayer(l => { if(l instanceof L.CircleMarker) mainMap.removeLayer(l); });
+    function renderPets() {
+        const list = document.getElementById('pet-list');
+        const term = document.getElementById('search').value.toLowerCase();
+        const status = document.getElementById('filter-status').value;
+        list.innerHTML = "";
+        
+        if (mainMap) mainMap.eachLayer(l => { if (l instanceof L.CircleMarker) mainMap.removeLayer(l); });
 
-            const filtered = allPets.filter(p => 
-                (p.barrio.toLowerCase().includes(term) || p.name.toLowerCase().includes(term)) &&
-                (status === 'todos' || p.status === status) &&
-                (currentSpecies === 'todos' || p.especie === currentSpecies)
-            );
+        const filtered = allPets.filter(p => 
+            (p.barrio.toLowerCase().includes(term) || p.name.toLowerCase().includes(term)) &&
+            (status === 'todos' || p.status === status) &&
+            (currentSpecies === 'todos' || p.especie === currentSpecies)
+        );
 
-            filtered.forEach(p => {
-                const color = p.status === 'perdido' ? 'var(--logo-rojo)' : 'var(--logo-celeste)';
-                const tel = p.users ? p.users.telefono : '2996894360';
-                if(mainMap) L.circleMarker([p.latitud, p.longitud], {color: color, radius: 9, fillOpacity: 0.8, weight: 3}).addTo(mainMap);
-                list.innerHTML += `
-                    <div class="card-pet">
-                        <span class="status-badge" style="background:${color}">${p.status}</span>
-                        <img src="${p.image_url}" onclick="focusOnPet(${p.latitud}, ${p.longitud})" class="w-full h-40 object-cover cursor-pointer">
-                        <div class="p-5 text-center">
-                            <p class="font-black text-sm uppercase">${p.name}</p>
-                            <p class="text-[9px] font-bold text-slate-400 mb-4 uppercase">${p.barrio}</p>
-                            <div class="flex gap-2">
-                                <a href="https://wa.me/${tel}" target="_blank" class="flex-1 text-white text-[10px] py-3 rounded-2xl font-black shadow-md" style="background: var(--logo-celeste)">WA</a>
-                                <button onclick="sharePet('${p.name}', '${p.barrio}')" class="bg-slate-50 text-slate-400 px-4 rounded-2xl"><i class="fas fa-share-alt"></i></button>
-                            </div>
+        filtered.forEach(p => {
+            const color = p.status === 'perdido' ? '#C94C4C' : '#81B29A';
+            const tel = p.users ? p.users.telefono : '2996894360';
+            
+            if (mainMap) {
+                L.circleMarker([p.latitud, p.longitud], {
+                    color: 'white', fillColor: color, radius: 10, fillOpacity: 0.9, weight: 2
+                }).addTo(mainMap).bindPopup(`<b>${p.name}</b><br>${p.barrio}`);
+            }
+
+            list.innerHTML += `
+                <div class="card-pet">
+                    <span class="status-badge" style="background:${color}">${p.status}</span>
+                    <img src="${p.image_url}" onclick="focusOnPet(${p.latitud}, ${p.longitud})" class="w-full h-40 object-cover cursor-pointer">
+                    <div class="p-5 text-center">
+                        <p class="font-black text-sm uppercase">${p.name}</p>
+                        <p class="text-[9px] font-bold text-slate-400 mb-4 uppercase">${p.barrio}</p>
+                        <div class="flex gap-2">
+                            <a href="https://wa.me/${tel}" target="_blank" class="flex-1 text-white text-[10px] py-3 rounded-2xl font-black shadow-md" style="background: var(--logo-celeste)">WA</a>
+                            <button onclick="sharePet('${p.name}', '${p.barrio}')" class="bg-slate-50 text-slate-400 px-4 rounded-2xl"><i class="fas fa-share-alt"></i></button>
                         </div>
-                    </div>`;
-            });
+                    </div>
+                </div>`;
+        });
+    }
+
+    function setSpecies(sp, btn) {
+        currentSpecies = sp;
+        document.querySelectorAll('.btn-filter').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        renderPets();
+    }
+
+    function focusOnPet(lat, lng) {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        if (mainMap) mainMap.flyTo([lat, lng], 16, { duration: 1.5 });
+    }
+
+    // --- AUTENTICACIÓN ---
+    async function handleLogin(e) {
+        e.preventDefault();
+        const res = await fetch('/login', { method: 'POST', body: new FormData(e.target) });
+        if (res.ok) { localStorage.setItem('user', JSON.stringify(await res.json())); location.reload(); }
+        else alert("Credenciales incorrectas");
+    }
+
+    async function handleRegister(e) {
+        e.preventDefault();
+        const res = await fetch('/register', { method: 'POST', body: new FormData(e.target) });
+        if (res.ok) { alert("¡Solicitud enviada! André la revisará pronto."); location.reload(); }
+    }
+
+    function logout() { localStorage.removeItem('user'); location.reload(); }
+    function checkAuth() { user ? showSection('upload') : showSection('auth'); }
+    function toggleUserMenu() {
+        if (!user) { showSection('auth'); return; }
+        document.getElementById('user-menu').classList.toggle('hidden');
+        document.getElementById('menu-email').innerText = user.email;
+    }
+
+    // --- PANEL DE USUARIO (MIS REPORTES) ---
+    async function loadUserPets() {
+        const res = await fetch(`/my-pets/${user.id}`);
+        const pets = await res.json();
+        const list = document.getElementById('user-pet-list');
+        
+        document.getElementById('user-post-count').innerText = `${pets.length} POSTS`;
+        
+        if (pets.length === 0) {
+            list.innerHTML = `<p class="text-center text-slate-400 text-xs py-10">No tenés publicaciones aún.</p>`;
+            return;
         }
+        
+        list.innerHTML = pets.map(p => `
+            <div class="bg-slate-50 p-4 rounded-3xl flex items-center gap-4 border border-white shadow-sm">
+                <img src="${p.image_url}" class="w-16 h-16 rounded-2xl object-cover">
+                <div class="flex-1">
+                    <p class="font-black text-sm">${p.name}</p>
+                    <span class="text-[8px] font-black px-2 py-0.5 rounded-full ${p.is_approved ? 'bg-emerald-100 text-emerald-600' : 'bg-orange-100 text-orange-600'}">
+                        ${p.is_approved ? 'APROBADO' : 'PENDIENTE'}
+                    </span>
+                </div>
+                <button onclick="deletePet(${p.id}, 'user')" class="w-10 h-10 text-red-400 bg-white rounded-full shadow-sm"><i class="fas fa-trash-alt"></i></button>
+            </div>
+        `).join('');
+    }
 
-        function sharePet(n, b) {
-            const txt = `🐾 Ayudanos con ${n} en barrio ${b}. Miralo acá: https://petneuquen.onrender.com`;
-            window.open(`https://wa.me/?text=${encodeURIComponent(txt)}`, '_blank');
+    // --- PANEL DE ADMIN (CONTROL TOTAL) ---
+    async function loadAdminData() {
+        const res = await fetch('/admin/data');
+        const data = await res.json();
+        
+        document.getElementById('stat-perdidos').innerText = data.stats.perdidos;
+        document.getElementById('stat-adopcion').innerText = data.stats.adopcion;
+        document.getElementById('stat-pendientes').innerText = data.stats.pendientes;
+
+        // Usuarios por admitir
+        document.getElementById('admin-users').innerHTML = data.users.length ? data.users.map(u => `
+            <div class="bg-slate-50 p-4 rounded-2xl flex justify-between items-center border border-slate-100">
+                <span class="text-[10px] font-black">${u.email}</span>
+                <button onclick="approve('user', ${u.id})" class="bg-emerald-500 text-white text-[9px] px-4 py-2 rounded-xl font-black">ADMITIR</button>
+            </div>
+        `).join('') : '<p class="text-[9px] text-center text-slate-300">Sin nuevos usuarios</p>';
+
+        // Moderación Global de mascotas
+        document.getElementById('admin-pets').innerHTML = data.pets.map(p => `
+            <div class="bg-white p-3 rounded-2xl flex items-center gap-3 shadow-sm border border-slate-50">
+                <img src="${p.image_url}" class="w-12 h-12 rounded-xl object-cover">
+                <div class="flex-1">
+                    <p class="text-[10px] font-black">${p.name} <span class="text-slate-300">(${p.status})</span></p>
+                    <p class="text-[8px] font-bold text-slate-400">${p.barrio}</p>
+                </div>
+                <div class="flex gap-1">
+                    ${!p.is_approved ? `<button onclick="approve('pet', ${p.id})" class="bg-amber-400 text-white p-2 rounded-lg text-[8px]"><i class="fas fa-check"></i></button>` : ''}
+                    <button onclick="deletePet(${p.id}, 'admin')" class="bg-slate-100 text-red-400 p-2 rounded-lg text-[8px]"><i class="fas fa-trash"></i></button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function checkUserPanel() {
+        if (!user) { showSection('auth'); return; }
+        if (user.role === 'admin') { showSection('admin'); loadAdminData(); }
+        else { 
+            showSection('profile'); 
+            document.getElementById('profile-greeting').innerText = user.email.includes('andre') ? "¡HOLA ANDRÉ! 🐾" : "MIS REPORTES 🐾";
+            loadUserPets(); 
         }
+    }
 
-        async function handleLogin(e) {
-            e.preventDefault();
-            const res = await fetch('/login', { method: 'POST', body: new FormData(e.target) });
-            if(res.ok) { localStorage.setItem('user', JSON.stringify(await res.json())); location.reload(); }
-            else alert("Error");
+    // --- ACCIONES DE ADMIN ---
+    async function approve(type, id) {
+        await fetch(`/admin/approve/${type}/${id}`, { method: 'POST' });
+        loadAdminData();
+    }
+
+    async function deletePet(id, context) {
+        const msg = context === 'admin' ? "ADMIN: ¿Eliminar publicación permanentemente?" : "¿Borrar tu publicación?";
+        if (!confirm(msg)) return;
+
+        const route = context === 'admin' ? `/admin/delete-pet/${id}` : `/pets/user-delete/${id}`;
+        const res = await fetch(route, { method: 'DELETE' });
+        if (res.ok) context === 'admin' ? loadAdminData() : loadUserPets();
+        else alert("Error al eliminar");
+    }
+
+    // --- UPLOAD ---
+    function checkOtroEspecie(val) {
+        const input = document.getElementById('especie-otro');
+        val === 'otro' ? input.classList.remove('hidden') : input.classList.add('hidden');
+    }
+
+    async function handleUpload(e) {
+        e.preventDefault();
+        if (!document.getElementById('lat-in').value) return alert("Ubicá el punto en el mapa");
+        
+        const btn = document.getElementById('btn-up');
+        btn.innerText = "Subiendo..."; btn.disabled = true;
+
+        const fd = new FormData(e.target);
+        if (document.getElementById('especie-select').value === 'otro') {
+            fd.set('especie', document.getElementById('especie-otro').value || 'Otro');
         }
+        fd.append('user_id', user.id);
 
-        async function handleRegister(e) {
-            e.preventDefault();
-            const res = await fetch('/register', { method: 'POST', body: new FormData(e.target) });
-            if(res.ok) { alert("¡Solicitud enviada, André!"); location.reload(); }
-        }
+        const res = await fetch('/pets/upload', { method: 'POST', body: fd });
+        if (res.ok) location.reload();
+        else { alert("Error al subir"); btn.disabled = false; btn.innerText = "Publicar Reporte"; }
+    }
 
-        function logout() { localStorage.removeItem('user'); location.reload(); }
+    function sharePet(n, b) {
+        const txt = `🐾 Ayudanos con ${n} en barrio ${b}. Miralo acá: https://petneuquen.onrender.com`;
+        window.open(`https://wa.me/?text=${encodeURIComponent(txt)}`, '_blank');
+    }
+            </script>
+    
 
-        function checkOtroEspecie(val) {
-            const input = document.getElementById('especie-otro');
-            val === 'otro' ? input.classList.remove('hidden') : input.classList.add('hidden');
-        }
 
-        async function handleUpload(e) {
-            e.preventDefault();
-            if(!document.getElementById('lat-in').value) return alert("Ubicá en el mapa");
-            const btn = document.getElementById('btn-up'); btn.innerText = "Subiendo..."; btn.disabled = true;
-            const fd = new FormData(e.target);
-            if(document.getElementById('especie-select').value === 'otro') fd.set('especie', document.getElementById('especie-otro').value || 'Otro');
-            fd.append('user_id', user.id);
-            const res = await fetch('/pets/upload', { method: 'POST', body: fd });
-            if(res.ok) location.reload();
-            else { alert("Error"); btn.disabled = false; }
-        }
 
-        async function loadAdminData() {
-            const res = await fetch('/admin/data');
-            const data = await res.json();
-            document.getElementById('stat-perdidos').innerText = data.stats.perdidos;
-            document.getElementById('stat-adopcion').innerText = data.stats.adopcion;
-            document.getElementById('stat-pendientes').innerText = data.stats.pendientes;
-            document.getElementById('admin-users').innerHTML = data.users.map(u => `<div class="bg-white p-4 rounded-3xl flex justify-between items-center mb-2 shadow-sm"><span class="text-xs font-bold">${u.email}</span><button onclick="approve('user', ${u.id})" class="bg-emerald-500 text-white text-[10px] px-5 py-2 rounded-2xl font-black">ADMITIR</button></div>`).join('');
-            document.getElementById('admin-pets').innerHTML = data.pets.filter(p => !p.is_approved).map(p => `<div class="bg-white p-3 rounded-3xl flex items-center gap-4 mb-2 shadow-sm"><img src="${p.image_url}" class="w-12 h-12 rounded-2xl object-cover"><span class="flex-1 text-xs font-black">${p.name}</span><button onclick="approve('pet', ${p.id})" class="bg-orange-500 text-white text-[10px] px-5 py-2 rounded-2xl font-black">APROBAR</button></div>`).join('');
-        }
-
-        async function loadUserPets() {
-            const res = await fetch(`/my-pets/${user.id}`);
-            const pets = await res.json();
-            document.getElementById('user-pet-list').innerHTML = pets.map(p => `<div class="bg-slate-50 p-4 rounded-[2rem] flex items-center gap-4 mb-2"><img src="${p.image_url}" class="w-14 h-14 rounded-2xl object-cover"><div class="flex-1"><p class="font-black text-sm">${p.name}</p><p class="text-[9px] font-black uppercase ${p.is_approved ? 'text-emerald-500':'text-orange-400'}">${p.is_approved ? 'Aprobado':'En revisión'}</p></div><button onclick="deletePet(${p.id})" class="text-red-400 p-3 bg-white rounded-full"><i class="fas fa-trash"></i></button></div>`).join('');
-        }
-
-        async function approve(t, id) { await fetch(`/admin/approve/${t}/${id}`, {method:'POST'}); loadAdminData(); }
-        async function deletePet(id) { if(confirm("¿Borrar?")) { await fetch(`/pets/user-delete/${id}`, {method:'DELETE'}); loadUserPets(); } }
-
-        function setSpecies(sp, btn) {
-            currentSpecies = sp;
-            document.querySelectorAll('.btn-filter').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            renderPets();
-        }
-
-        window.onload = () => { updateAuthUI(); showSection('home'); };
-    </script>
 </body>
 </html>
