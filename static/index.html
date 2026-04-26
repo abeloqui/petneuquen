@@ -390,10 +390,14 @@ async function rejectUser(id) {
 }
 
 async function deletePet(id) {
-    if(confirm("¿Eliminar reporte permanentemente?")) {
+    if(confirm("¿Borrar reporte permanentemente?")) {
         await fetch(`/admin/delete-pet/${id}`, { method: 'DELETE' });
-        if(user.role === 'admin') loadAdminData();
-        else loadUserPets();
+        // Si eres admin refresca el panel, si no, refresca tus mascotas
+        if(user && (user.role === 'admin' || user.id === 'admin')) {
+            loadAdminData();
+        } else {
+            loadUserPets();
+        }
     }
 }
         
@@ -406,6 +410,18 @@ async function deletePet(id) {
             await fetch(`/admin/approve/${t}/${id}`, {method:'POST'}); 
             loadAdminData(); 
         }
+
+        async function rejectUser(id) {
+    if(confirm("¿Eliminar a este usuario permanentemente?")) {
+        const res = await fetch(`/admin/delete-user/${id}`, { method: 'DELETE' });
+        if(res.ok) {
+            loadAdminData(); // Refresca la lista automáticamente
+        } else {
+            alert("Error al eliminar");
+        }
+    }
+        }
+        
 
 
         function toggleUserMenu() { 
@@ -486,32 +502,20 @@ function closeImage() {
             showSection('home'); 
         };
 
-        function compartirMascota(id) {
-    // 1. IMPORTANTE: Buscamos en 'allPets', que es tu variable global con los datos cargados
-    const mascota = allPets.find(p => p.id === id);
-    
-    if (!mascota) {
-        console.error("No se encontró mascota con ID:", id);
-        alert("Error: No se pudo cargar la información de la mascota.");
-        return;
-    }
-
-    // 2. Lógica de estados prolija
-    const statusTxt = mascota.status === 'perdido' ? 'buscando a' : 'dando en adopción a';
-    const resguardoTxt = mascota.estado_resguardo === 'casa' ? 'Está a resguardo' : 'Está en la calle / lugar del reporte';
-    
-    // 3. El Mensaje (Aseguramos que mascota.id no sea undefined)
-    const texto = `🐾 *¡AYUDANOS A DIFUNDIR!* 🐾
-    
-Estamos ${statusTxt} *${mascota.name}*.
-📍 Visto en: ${mascota.barrio} (${mascota.referencia || 'Sin referencia'})
-🏥 Estado: ${mascota.necesita_medicacion ? 'Necesita medicación urgente' : 'Estable'}
-🏠 Situación: ${resguardoTxt}
-
-Mas info y fotos acá: 
-https://huellitas-neuquen.render.com/mascota/${mascota.id}
-
-#MascotasNeuquen #RescateAnimal #Huellitas`;
+        
+    function compartirMascota(id) {
+        const mascota = allPets.find(p => p.id === id); // Cambiado 'pets' por 'allPets'
+        if (!mascota) return;
+        const statusTxt = mascota.status === 'perdido' ? 'buscando a' : 'dando en adopción a';
+        // 3. El Mensaje (Aseguramos que mascota.id no sea undefined)
+        const texto = `🐾 *¡AYUDANOS A DIFUNDIR!* 🐾
+        Estamos ${statusTxt} *${mascota.name}*
+        📍 Visto en: ${mascota.barrio} (${mascota.referencia || 'Sin referencia'})
+        🏥 Estado: ${mascota.necesita_medicacion ? 'Necesita medicación urgente' : 'Estable'}
+        🏠 Situación: ${resguardoTxt}
+        Mas info y fotos acá: 
+        https://petneuquen.onrender.com/mascota ${mascota.id}
+        #MascotasNeuquen #RescateAnimal #Huellitas`;
 
     // 4. Método de compartir para móviles (Intenta usar el menú nativo, si no, WhatsApp)
     if (navigator.share) {
