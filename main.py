@@ -97,18 +97,25 @@ def register():
         return jsonify({"msg": "OK"}), 201
     except Exception as e: return jsonify({"msg": str(e)}), 500
 
-# --- RUTAS DE MASCOTAS ---
+
 @app.route('/pets/upload', methods=['POST'])
 def upload_pet():
     try:
         f, d = request.files.get('file'), request.form
         user_id = d.get('user_id')
         up = cloudinary.uploader.upload(f, folder="huellitas")
+        
         supabase.table("pets").insert({
-            "user_id": int(user_id), "name": d['name'], "status": d['status'],
-            "especie": d.get('especie', 'perro'), "barrio": d['barrio'], 
-            "latitud": float(d['latitud']), "longitud": float(d['longitud']), 
-            "image_url": up['secure_url'], "is_approved": False
+            "user_id": int(user_id), 
+            "name": d['name'], 
+            "status": d['status'],
+            "especie": d.get('especie', 'perro'), 
+            "barrio": d['barrio'], 
+            "descripcion": d.get('descripcion', ''), # <-- CAPTURAMOS LA DESCRIPCIÓN AQUÍ
+            "latitud": float(d['latitud']), 
+            "longitud": float(d['longitud']), 
+            "image_url": up['secure_url'], 
+            "is_approved": False
         }).execute()
         
         res_user = supabase.table("users").select("email").eq("id", user_id).execute()
