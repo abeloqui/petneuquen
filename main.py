@@ -141,11 +141,13 @@ def get_pets():
 @app.route('/admin/delete-pet/<int:pet_id>', methods=['DELETE'])
 def admin_delete_pet(pet_id):
     try:
-        # Borra la mascota sin importar su estado
+        # Borra la mascota de la tabla
         supabase.table("pets").delete().eq("id", pet_id).execute()
-        return jsonify({"msg": "Mascota eliminada del sistema"}), 200
+        return jsonify({"msg": "Mascota eliminada"}), 200
     except Exception as e:
+        print(f"Error al borrar: {e}")
         return jsonify({"msg": str(e)}), 500
+      
 
 @app.route('/admin/delete-user/<int:user_id>', methods=['DELETE'])
 def admin_delete_user(user_id):
