@@ -425,47 +425,72 @@
             allPets = await res.json();
             renderPets();
         } catch (err) { console.error("Error cargando mascotas:", err); }
-    }
 
-    function renderPets() {
-        const list = document.getElementById('pet-list');
-        const term = document.getElementById('search').value.toLowerCase();
-        const status = document.getElementById('filter-status').value;
-        list.innerHTML = "";
+        function renderPets() {
+    const list = document.getElementById('pet-list');
+    const term = document.getElementById('search').value.toLowerCase();
+    const status = document.getElementById('filter-status').value;
+    list.innerHTML = "";
+    
+    if (mainMap) mainMap.eachLayer(l => { if (l instanceof L.CircleMarker) mainMap.removeLayer(l); });
+
+    const filtered = allPets.filter(p => 
+        (p.barrio.toLowerCase().includes(term) || p.name.toLowerCase().includes(term)) &&
+        (status === 'todos' || p.status === status) &&
+        (currentSpecies === 'todos' || p.especie === currentSpecies)
+    );
+
+    filtered.forEach(p => {
+        const color = p.status === 'perdido' ? '#C94C4C' : '#81B29A';
+        const tel = p.users ? p.users.telefono : '2996894360';
         
-        if (mainMap) mainMap.eachLayer(l => { if (l instanceof L.CircleMarker) mainMap.removeLayer(l); });
+        // Manejo de la descripción para que no rompa el diseño
+        // Si no hay descripción, ponemos un espacio vacío
+        const descripcionCorta = p.descripcion 
+            ? (p.descripcion.length > 60 ? p.descripcion.substring(0, 60) + "..." : p.descripcion)
+            : "";
 
-        const filtered = allPets.filter(p => 
-            (p.barrio.toLowerCase().includes(term) || p.name.toLowerCase().includes(term)) &&
-            (status === 'todos' || p.status === status) &&
-            (currentSpecies === 'todos' || p.especie === currentSpecies)
-        );
+        if (mainMap) {
+            L.circleMarker([p.latitud, p.longitud], {
+                color: 'white', fillColor: color, radius: 10, fillOpacity: 0.9, weight: 2
+            }).addTo(mainMap).bindPopup(`<b>${p.name}</b><br>${p.barrio}`);
+        }
 
-        filtered.forEach(p => {
-            const color = p.status === 'perdido' ? '#C94C4C' : '#81B29A';
-            const tel = p.users ? p.users.telefono : '2996894360';
-            
-            if (mainMap) {
-                L.circleMarker([p.latitud, p.longitud], {
-                    color: 'white', fillColor: color, radius: 10, fillOpacity: 0.9, weight: 2
-                }).addTo(mainMap).bindPopup(`<b>${p.name}</b><br>${p.barrio}`);
-            }
-
-            list.innerHTML += `
-                <div class="card-pet">
-                    <span class="status-badge" style="background:${color}">${p.status}</span>
-                    <img src="${p.image_url}" onclick="focusOnPet(${p.latitud}, ${p.longitud})" class="w-full h-40 object-cover cursor-pointer">
-                    <div class="p-5 text-center">
-                        <p class="font-black text-sm uppercase">${p.name}</p>
-                        <p class="text-[9px] font-bold text-slate-400 mb-4 uppercase">${p.barrio}</p>
-                        <div class="flex gap-2">
-                            <a href="https://wa.me/${tel}" target="_blank" class="flex-1 text-white text-[10px] py-3 rounded-2xl font-black shadow-md" style="background: var(--logo-celeste)">WA</a>
-                            <button onclick="sharePet('${p.name}', '${p.barrio}')" class="bg-slate-50 text-slate-400 px-4 rounded-2xl"><i class="fas fa-share-alt"></i></button>
-                        </div>
+        list.innerHTML += `
+            <div class="card-pet flex flex-col h-full bg-white rounded-[2.5rem] shadow-sm overflow-hidden border border-slate-50">
+                <div class="relative">
+                    <span class="status-badge absolute top-3 left-3 z-10 text-[8px] font-black uppercase px-3 py-1 rounded-full text-white" style="background:${color}">${p.status}</span>
+                    <img src="${p.image_url}" onclick="focusOnPet(${p.latitud}, ${p.longitud})" class="w-full h-40 object-cover cursor-pointer hover:scale-105 transition-transform duration-500">
+                </div>
+                
+                <div class="p-4 flex-1 flex flex-col justify-between">
+                    <div>
+                        <p class="font-black text-sm uppercase text-slate-800">${p.name}</p>
+                        <p class="text-[9px] font-bold text-slate-400 uppercase tracking-tighter mb-2">${p.barrio}</p>
+                        
+                        ${descripcionCorta ? `
+                            <p class="text-[10px] text-slate-500 italic leading-snug mb-4 bg-slate-50 p-2 rounded-xl border border-white">
+                                "${descripcionCorta}"
+                            </p>
+                        ` : '<div class="mb-4"></div>'}
                     </div>
-                </div>`;
-        });
+
+                    <div class="flex gap-2 mt-auto">
+                        <a href="https://wa.me/${tel}" target="_blank" class="flex-1 text-white text-[10px] py-3 rounded-2xl font-black shadow-md text-center transition-transform active:scale-95" style="background: var(--logo-celeste)">
+                            WHATSAPP
+                        </a>
+                        <button onclick="sharePet('${p.name}', '${p.barrio}')" class="bg-slate-100 text-slate-400 px-4 rounded-2xl active:scale-90 transition-all">
+                            <i class="fas fa-share-alt"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>`;
+    });
+        }
     }
+        }
+
+        
 
     function setSpecies(sp, btn) {
         currentSpecies = sp;
