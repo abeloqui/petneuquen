@@ -351,7 +351,10 @@
                 </div>`).join('');
         }
 
-        async function loadAdminData() {
+        
+
+
+async function loadAdminData() {
     const res = await fetch('/admin/data'); 
     const data = await res.json();
     
@@ -359,35 +362,54 @@
     document.getElementById('stat-adopcion').innerText = data.stats.adopcion;
     document.getElementById('stat-pendientes').innerText = data.stats.pendientes;
     
-    // PANEL DE USUARIOS (Aquí agregamos la X)
+    // Panel de usuarios con botón de rechazar (X roja)
     document.getElementById('admin-users').innerHTML = data.users.map(u => `
-        <div class="bg-amber-50 p-3 rounded-xl flex justify-between items-center">
-            <p class="text-[10px] font-black">${u.email}</p>
-            <div class="flex items-center gap-2">
+        <div class="bg-amber-50 p-3 rounded-xl flex justify-between items-center border border-amber-100 mb-2">
+            <div>
+                <p class="text-[10px] font-black">${u.email}</p>
+                <p class="text-[8px] text-amber-600 font-bold">${u.telefono || ''}</p>
+            </div>
+            <div class="flex gap-2 items-center">
                 <button onclick="approve('user', ${u.id})" class="bg-amber-500 text-white text-[8px] px-3 py-1 rounded-lg">APROBAR</button>
-                <button onclick="rejectUser(${u.id})" class="text-red-500 bg-white w-6 h-6 rounded-full flex items-center justify-center shadow-sm">
+                <button onclick="rejectUser(${u.id})" class="text-red-500 bg-white w-7 h-7 rounded-lg shadow-sm flex items-center justify-center">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
-        </div>`).join('') || '<p class="text-[8px] text-center">Sin usuarios nuevos</p>';
+        </div>`).join('') || '<p class="text-[8px] text-center py-2">Sin usuarios nuevos</p>';
 
-    // PANEL DE MASCOTAS
+    // Panel de mascotas
     document.getElementById('admin-pets').innerHTML = data.pets.map(p => `
-        <div class="bg-slate-50 p-2 rounded-xl flex items-center gap-2">
-            <img src="${p.image_url}" class="w-8 h-8 rounded object-cover">
+        <div class="bg-slate-50 p-2 rounded-xl flex items-center gap-2 mb-2 border border-slate-100">
+            <img src="${p.image_url}" class="w-8 h-8 rounded object-cover shadow-sm" onclick="openImage('${p.image_url}')">
             <div class="flex-1 text-[8px] font-black uppercase">${p.name}</div>
             ${!p.is_approved ? `<button onclick="approve('pet', ${p.id})" class="bg-emerald-500 text-white text-[8px] px-2 py-1 rounded">OK</button>` : ''}
-            <button onclick="deletePet(${p.id})" class="text-red-400"><i class="fas fa-trash"></i></button>
-        </div>`).join('');
-        }
-        
-        }
+            <button onclick="deletePet(${p.id})" class="text-red-400 p-1"><i class="fas fa-trash"></i></button>
+        </div>`).join('') || '<p class="text-[8px] text-center py-2">No hay reportes</p>';
+}
 
+// COLOCA ESTA FUNCIÓN JUSTO AQUÍ ABAJO:
+async function rejectUser(id) {
+    if(confirm("¿Eliminar a este usuario permanentemente?")) {
+        const res = await fetch(`/admin/delete-user/${id}`, { method: 'DELETE' });
+        if(res.ok) {
+            loadAdminData();
+        } else {
+            alert("No se pudo eliminar");
+        }
+    }
+}
 
-// Función para borrar mascotas (Omnipotente)
+// Y asegúrate de borrar cualquier otra versión de deletePet duplicada y dejar solo esta:
 async function deletePet(id) {
-    if(confirm("¿Estás seguro de ELIMINAR esta mascota para siempre?")) {
+    if(confirm("¿Eliminar este reporte permanentemente?")) {
         const res = await fetch(`/admin/delete-pet/${id}`, { method: 'DELETE' });
+        if(res.ok) {
+            if(user.role === 'admin') loadAdminData();
+            else loadUserPets();
+        }
+    }
+}
+        ' });
         if(res.ok) {
             // Si estamos en el panel admin, refrescamos los datos de admin
             if(user.role === 'admin') loadAdminData();
