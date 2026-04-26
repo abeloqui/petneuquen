@@ -7,7 +7,6 @@ from flask_mail import Mail, Message
 
 # Configuración de Flask
 app = Flask(__name__, static_folder='static', static_url_path='/static')
-# Permitir archivos de hasta 16MB
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 
 # --- CONFIGURACIÓN DE CORREO ---
@@ -33,13 +32,11 @@ cloudinary.config(
 def index():
     return send_from_directory(app.static_folder, 'index.html')
 
-# RUTA PARA COMPARTIR: Evita el error 404
 @app.route('/mascota/<int:pet_id>')
 def pet_detail(pet_id):
     return send_from_directory(app.static_folder, 'index.html')
 
 # --- RUTAS DE USUARIOS ---
-
 @app.route('/login', methods=['POST'])
 def login():
     e = request.form.get('email')
@@ -54,7 +51,7 @@ def login():
                 if user.get('is_approved'): return jsonify(user)
                 return jsonify({"msg": "Cuenta pendiente de aprobación"}), 401
     except Exception as err:
-        print(f"Error login: {err}")
+        return jsonify({"msg": "Error en el servidor"}), 500
     return jsonify({"msg": "Credenciales inválidas"}), 401
 
 @app.route('/register', methods=['POST'])
@@ -69,7 +66,6 @@ def register():
     except Exception as e: return jsonify({"msg": str(e)}), 500
 
 # --- RUTAS DE MASCOTAS ---
-
 @app.route('/pets/upload', methods=['POST'])
 def upload_pet():
     try:
@@ -78,12 +74,10 @@ def upload_pet():
         up = cloudinary.uploader.upload(f, folder="huellitas", transformation=[{"quality": "auto", "fetch_format": "auto"}])
         
         u_id = d.get('user_id')
-        # Validamos el ID de usuario para guardarlo correctamente
         user_id_val = int(u_id) if (u_id and u_id not in ['admin', 'undefined'] and u_id.isdigit()) else None
 
         supabase.table("pets").insert({
-            "user_id": user_id_val, 
-            "name": d['name'], "status": d['status'], 
+            "user_id": user_id_val, "name": d['name'], "status": d['status'], 
             "especie": d.get('especie', 'perro'), "barrio": d['barrio'], 
             "latitud": float(d['latitud']), "longitud": float(d['longitud']), 
             "image_url": up['secure_url'], "is_approved": False,
@@ -97,14 +91,11 @@ def upload_pet():
 
 @app.route('/pets', methods=['GET'])
 def get_pets():
-    # MODIFICACIÓN: Traemos TODAS las mascotas (aprobadas y no aprobadas)
-    # El filtrado de qué se ve en el mapa se hace en el Frontend.
-    # Esto permite que el usuario vea sus propias mascotas "Pendientes" en su panel.
+    # Enviamos todas para que el dueño vea sus pendientes. El mapa filtra por 'is_approved'
     res = supabase.table("pets").select("*, users(telefono)").execute()
     return jsonify(res.data)
 
-# --- RUTAS DE ADMIN (OMNIPOTENTE) ---
-
+# --- RUTAS DE ADMIN ---
 @app.route('/admin/data', methods=['GET'])
 def admin_data():
     u = supabase.table("users").select("*").eq("is_approved", False).execute()
@@ -127,17 +118,17 @@ def approve(t, id):
 def admin_delete_pet(pet_id):
     try:
         supabase.table("pets").delete().eq("id", pet_id).execute()
-        return jsonify({"msg": "Eliminado"}), 200
+        return jsonify({"msg": "OK"}), 200
     except Exception as e: return jsonify({"msg": str(e)}), 500
 
 @app.route('/admin/delete-user/<int:user_id>', methods=['DELETE'])
 def admin_delete_user(user_id):
     try:
         supabase.table("users").delete().eq("id", user_id).execute()
-        return jsonify({"msg": "Usuario eliminado"}), 200
+        return jsonify({"msg": "OK"}), 200
     except Exception as e: return jsonify({"msg": str(e)}), 500
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
-              
+      
