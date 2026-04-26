@@ -7,7 +7,7 @@ from flask_mail import Mail, Message
 
 # Configuración de Flask
 app = Flask(__name__, static_folder='static', static_url_path='/static')
-# Permitir archivos de hasta 16MB para fotos de celulares modernos
+# Permitir archivos de hasta 16MB
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 
 # --- CONFIGURACIÓN DE CORREO ---
@@ -33,7 +33,7 @@ cloudinary.config(
 def index():
     return send_from_directory(app.static_folder, 'index.html')
 
-# RUTA RECOMENDADA: Evita el error 404 cuando alguien abre un link de WhatsApp
+# RUTA PARA COMPARTIR: Evita el error 404
 @app.route('/mascota/<int:pet_id>')
 def pet_detail(pet_id):
     return send_from_directory(app.static_folder, 'index.html')
@@ -75,10 +75,10 @@ def upload_pet():
     try:
         f = request.files.get('file')
         d = request.form
-        # Subida optimizada para móviles
         up = cloudinary.uploader.upload(f, folder="huellitas", transformation=[{"quality": "auto", "fetch_format": "auto"}])
         
         u_id = d.get('user_id')
+        # Validamos el ID de usuario para guardarlo correctamente
         user_id_val = int(u_id) if (u_id and u_id not in ['admin', 'undefined'] and u_id.isdigit()) else None
 
         supabase.table("pets").insert({
@@ -97,7 +97,10 @@ def upload_pet():
 
 @app.route('/pets', methods=['GET'])
 def get_pets():
-    res = supabase.table("pets").select("*, users(telefono)").eq("is_approved", True).execute()
+    # MODIFICACIÓN: Traemos TODAS las mascotas (aprobadas y no aprobadas)
+    # El filtrado de qué se ve en el mapa se hace en el Frontend.
+    # Esto permite que el usuario vea sus propias mascotas "Pendientes" en su panel.
+    res = supabase.table("pets").select("*, users(telefono)").execute()
     return jsonify(res.data)
 
 # --- RUTAS DE ADMIN (OMNIPOTENTE) ---
@@ -137,4 +140,4 @@ def admin_delete_user(user_id):
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
-  
+              
