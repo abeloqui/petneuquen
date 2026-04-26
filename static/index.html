@@ -192,42 +192,56 @@
             <div id="pet-list" class="grid grid-cols-2 gap-4"></div>
         </section>
 
-        <section id="sec-upload" class="section-container hidden">
-            <div class="bg-white p-8 rounded-[3rem] shadow-2xl">
-                <h2 class="font-black text-2xl mb-8 uppercase text-center tracking-tighter">Nueva Publicación</h2>
-                <form onsubmit="handleUpload(event)" class="space-y-6">
-                    <div class="grid grid-cols-2 gap-4">
-                        <select name="especie" id="especie-select" onchange="checkOtroEspecie(this.value)" class="p-4 bg-slate-50 rounded-2xl font-bold text-sm outline-none">
-                            <option value="perro">🐶 Perro</option>
-                            <option value="gato">🐱 Gato</option>
-                            <option value="otro">✨ Otro...</option>
-                        </select>
-                        <select name="status" class="p-4 bg-slate-50 rounded-2xl font-bold text-sm outline-none" style="color: var(--logo-coral);">
-                            <option value="perdido">Perdido</option>
-                            <option value="adopcion">Adopción</option>
-                        </select>
-                    </div>
-                    <input type="text" id="especie-otro" placeholder="¿Qué animal es?" class="hidden custom-input border-2 border-orange-100">
-                    <input type="text" name="name" placeholder="Nombre de la mascota" class="custom-input" required>
-                    
-                    <input type="text" name="barrio" list="lista-barrios" onchange="autoZoomMap(this.value, 'upload')" placeholder="Elegí el barrio oficial" class="custom-input" required>
-                    
-                    <div class="space-y-2">
-                        <p class="text-[9px] font-black text-slate-400 uppercase ml-2 tracking-widest text-center">Ubica el punto exacto en el mapa</p>
-                        <div id="map-upload" style="height: 250px;" class="rounded-[2rem] border-4 border-slate-50 shadow-inner"></div>
-                        <input type="hidden" name="latitud" id="lat-in">
-                        <input type="hidden" name="longitud" id="lng-in">
-                    </div>
-
-                    <div class="p-6 bg-slate-50 rounded-[2rem] border-2 border-dashed border-slate-200 text-center relative">
-                        <i class="fas fa-camera text-2xl text-slate-300 mb-2"></i>
-                        <input type="file" name="file" accept="image/*" class="w-full text-[10px] font-bold text-slate-400" required>
-                    </div>
-
-                    <button type="submit" id="btn-up" class="w-full py-5 rounded-[2rem] font-black uppercase shadow-xl text-white active:scale-95 transition-all" style="background: var(--logo-coral);">Publicar Reporte</button>
-                </form>
+<section id="sec-upload" class="section-container hidden">
+    <div class="bg-white p-8 rounded-[3rem] shadow-2xl">
+        <h2 class="font-black text-2xl mb-8 uppercase text-center tracking-tighter">Nueva Publicación</h2>
+        <form onsubmit="handleUpload(event)" class="space-y-6">
+            
+            <div class="grid grid-cols-2 gap-4">
+                <select name="especie" id="especie-select" onchange="checkOtroEspecie(this.value)" class="p-4 bg-slate-50 rounded-2xl font-bold text-sm outline-none">
+                    <option value="perro">🐶 Perro</option>
+                    <option value="gato">🐱 Gato</option>
+                    <option value="otro">✨ Otro...</option>
+                </select>
+                <select name="status" class="p-4 bg-slate-50 rounded-2xl font-bold text-sm outline-none" style="color: var(--logo-coral);">
+                    <option value="perdido">Perdido</option>
+                    <option value="adopcion">Adopción</option>
+                </select>
             </div>
-        </section>
+
+            <input type="text" id="especie-otro" placeholder="¿Qué animal es?" class="hidden custom-input border-2 border-orange-100">
+            
+            <input type="text" name="name" placeholder="Nombre de la mascota" class="custom-input" required>
+            
+            <input type="text" name="barrio" list="lista-barrios" onchange="autoZoomMap(this.value, 'upload')" placeholder="Elegí el barrio oficial" class="custom-input" required>
+
+            <div class="space-y-1">
+                <p class="text-[8px] font-black text-slate-400 uppercase ml-4 tracking-widest">Descripción o Comentarios</p>
+                <textarea name="descripcion" 
+                    placeholder="Ej: Tenía un collar azul, es muy asustadizo, se lo vio por última vez cerca de la plaza..." 
+                    class="custom-input min-h-[110px] resize-none text-sm leading-relaxed" 
+                    maxlength="300"></textarea>
+            </div>
+            
+            <div class="space-y-2">
+                <p class="text-[9px] font-black text-slate-400 uppercase ml-2 tracking-widest text-center">Ubica el punto exacto en el mapa</p>
+                <div id="map-upload" style="height: 250px;" class="rounded-[2rem] border-4 border-slate-50 shadow-inner"></div>
+                <input type="hidden" name="latitud" id="lat-in">
+                <input type="hidden" name="longitud" id="lng-in">
+            </div>
+
+            <div class="p-6 bg-slate-50 rounded-[2rem] border-2 border-dashed border-slate-200 text-center relative">
+                <i class="fas fa-camera text-2xl text-slate-300 mb-2"></i>
+                <input type="file" name="file" accept="image/*" class="w-full text-[10px] font-bold text-slate-400" required>
+            </div>
+
+            <button type="submit" id="btn-up" class="w-full py-5 rounded-[2rem] font-black uppercase shadow-xl text-white active:scale-95 transition-all" style="background: var(--logo-coral);">
+                Publicar Reporte
+            </button>
+        </form>
+    </div>
+</section>
+        
 
         <section id="sec-auth" class="section-container hidden">
             <div class="bg-white p-8 rounded-[3rem] shadow-2xl text-center">
