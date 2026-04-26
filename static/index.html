@@ -519,16 +519,16 @@ function closeImage() {
             showSection('home'); 
         };
 
-        
-function compartirMascota(id) {
+
+
+        function compartirMascota(id) {
     const mascota = allPets.find(p => p.id === id);
     if (!mascota) return;
 
-    // Definimos la variable que faltaba
+    // DEFINIMOS LA VARIABLE QUE FALTABA
     const resguardoTxt = mascota.estado_resguardo === 'casa' ? 'Está a resguardo' : 'Está en la calle / lugar del reporte';
     const statusTxt = mascota.status === 'perdido' ? 'buscando a' : 'dando en adopción a';
-    
-    // Corregimos la URL (añadimos la barra / y usamos la URL de Render correcta)
+
     const texto = `🐾 *¡AYUDANOS A DIFUNDIR!* 🐾
 Estamos ${statusTxt} *${mascota.name}*
 📍 Visto en: ${mascota.barrio} (${mascota.referencia || 'Sin referencia'})
@@ -550,7 +550,7 @@ https://petneuquen.onrender.com/mascota/${mascota.id}
         navigator.clipboard.writeText(texto);
         alert("¡Texto copiado! Ya puedes pegarlo en WhatsApp o Facebook.");
     }
-}
+        }
         
 
 
