@@ -349,24 +349,35 @@
         }
 
         async function loadAdminData() {
-            const res = await fetch('/admin/data'); const data = await res.json();
-            document.getElementById('stat-perdidos').innerText = data.stats.perdidos;
-            document.getElementById('stat-adopcion').innerText = data.stats.adopcion;
-            document.getElementById('stat-pendientes').innerText = data.stats.pendientes;
-            
-            document.getElementById('admin-users').innerHTML = data.users.map(u => `
-                <div class="bg-amber-50 p-3 rounded-xl flex justify-between items-center">
-                    <p class="text-[10px] font-black">${u.email}</p>
-                    <button onclick="approve('user', ${u.id})" class="bg-amber-500 text-white text-[8px] px-3 py-1 rounded-lg">APROBAR</button>
-                </div>`).join('') || '<p class="text-[8px] text-center">Sin usuarios nuevos</p>';
+    const res = await fetch('/admin/data'); 
+    const data = await res.json();
+    
+    document.getElementById('stat-perdidos').innerText = data.stats.perdidos;
+    document.getElementById('stat-adopcion').innerText = data.stats.adopcion;
+    document.getElementById('stat-pendientes').innerText = data.stats.pendientes;
+    
+    // PANEL DE USUARIOS (Aquí agregamos la X)
+    document.getElementById('admin-users').innerHTML = data.users.map(u => `
+        <div class="bg-amber-50 p-3 rounded-xl flex justify-between items-center">
+            <p class="text-[10px] font-black">${u.email}</p>
+            <div class="flex items-center gap-2">
+                <button onclick="approve('user', ${u.id})" class="bg-amber-500 text-white text-[8px] px-3 py-1 rounded-lg">APROBAR</button>
+                <button onclick="rejectUser(${u.id})" class="text-red-500 bg-white w-6 h-6 rounded-full flex items-center justify-center shadow-sm">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>`).join('') || '<p class="text-[8px] text-center">Sin usuarios nuevos</p>';
 
-            document.getElementById('admin-pets').innerHTML = data.pets.map(p => `
-                <div class="bg-slate-50 p-2 rounded-xl flex items-center gap-2">
-                    <img src="${p.image_url}" class="w-8 h-8 rounded object-cover">
-                    <div class="flex-1 text-[8px] font-black uppercase">${p.name}</div>
-                    ${!p.is_approved ? `<button onclick="approve('pet', ${p.id})" class="bg-emerald-500 text-white text-[8px] px-2 py-1 rounded">OK</button>` : ''}
-                    <button onclick="deletePet(${p.id})" class="text-red-400"><i class="fas fa-trash"></i></button>
-                </div>`).join('');
+    // PANEL DE MASCOTAS
+    document.getElementById('admin-pets').innerHTML = data.pets.map(p => `
+        <div class="bg-slate-50 p-2 rounded-xl flex items-center gap-2">
+            <img src="${p.image_url}" class="w-8 h-8 rounded object-cover">
+            <div class="flex-1 text-[8px] font-black uppercase">${p.name}</div>
+            ${!p.is_approved ? `<button onclick="approve('pet', ${p.id})" class="bg-emerald-500 text-white text-[8px] px-2 py-1 rounded">OK</button>` : ''}
+            <button onclick="deletePet(${p.id})" class="text-red-400"><i class="fas fa-trash"></i></button>
+        </div>`).join('');
+        }
+        
         }
 
 
@@ -393,6 +404,23 @@ async function deletePet(id) {
         async function approve(t, id) { 
             await fetch(`/admin/approve/${t}/${id}`, {method:'POST'}); 
             loadAdminData(); 
+        }
+
+        async function rejectUser(id) {
+    if(confirm("¿Estás seguro de eliminar permanentemente a este usuario?")) {
+        try {
+            const res = await fetch(`/admin/delete-user/${id}`, { method: 'DELETE' });
+            if(res.ok) {
+                alert("Usuario eliminado correctamente");
+                loadAdminData(); // Refresca el panel para que desaparezca de la lista
+            } else {
+                alert("Error al eliminar el usuario");
+            }
+        } catch (error) {
+            console.error("Error:", error);
+            alert("No se pudo conectar con el servidor");
+        }
+    }
         }
 
         function toggleUserMenu() { 
@@ -494,6 +522,9 @@ function closeImage() {
             updateAuthUI(); 
             showSection('home'); 
         };
+
+
+        
     </script>
 
     <div id="modal-image" class="hidden fixed inset-0 z-[3000] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4" onclick="closeImage()">
