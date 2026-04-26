@@ -263,38 +263,7 @@
             });
                 }
 
-        function compartirMascota(id) {
-    // Buscamos la mascota en la lista global 'allPets' usando el ID
-    const mascota = allPets.find(p => p.id === id);
-    
-    if (!mascota) {
-        console.error("No se encontró la mascota con ID:", id);
-        return;
-    }
-
-    // Definimos el estado para el mensaje
-    const resguardoTxt = mascota.estado_resguardo === 'casa' ? 'Está a resguardo' : 'Está en la calle / lugar del reporte';
-    const statusTxt = mascota.status === 'perdido' ? 'buscando a' : 'dando en adopción a';
-
-    // ARMADO DEL MENSAJE (Aquí podés cambiar el texto a tu gusto)
-    const texto = `🐾 *¡AYUDANOS A DIFUNDIR!* 🐾
-    
-Estamos ${statusTxt} *${mascota.name}*.
-📍 Visto en: ${mascota.barrio} (${mascota.referencia || 'Sin referencia'})
-🏥 Estado: ${mascota.esta_herido ? 'Está herido/a' : 'Estable'}
-🏠 Situación: ${resguardoTxt}
-
-Mas info y fotos acá: 
-https://huellitas-neuquen.render.com/mascota/${mascota.id}
-
-#MascotasNeuquen #RescateAnimal #Huellitas`;
-
-    // Codificamos el texto para URL
-    const encodedText = encodeURIComponent(texto);
-    
-    // Abrimos WhatsApp
-    window.open(`https://wa.me/?text=${encodedText}`, '_blank');
-        }
+        
         
         
 
@@ -513,28 +482,6 @@ async function deletePet(id) {
     document.body.style.overflow = 'hidden';
 }
 
-        function copiarResumen(mascota) {
-    // Definimos el estado para el texto
-    const estadoTxt = mascota.tipo_post === 'perdido' ? 'buscando a' : 'encontrado a';
-    const resguardoTxt = mascota.estado_resguardo === 'calle' ? 'Sigue en la calle, ¡necesita ayuda!' : 'Está a resguardo';
-
-    const texto = `🐾 *¡AYUDANOS A DIFUNDIR!* 🐾
-    
-Estamos ${estadoTxt} a *${mascota.nombre}*.
-📍 Visto en: ${mascota.barrio} (${mascota.referencia || 'Sin referencia'})
-🏥 Estado: ${mascota.necesita_medicacion ? 'Necesita medicación urgente' : 'Estable'}
-🏠 Situación: ${resguardoTxt}
-
-Mas info y fotos acá: 
-https://huellitas-neuquen.render.com/mascota/${mascota.id}
-
-#MascotasNeuquen #RescateAnimal #Huellitas`;
-
-    // Copiar al portapapeles
-    navigator.clipboard.writeText(texto);
-    alert("¡Texto copiado! Ya puedes pegarlo en WhatsApp o Facebook.");
-        }
-        
 
 function closeImage() {
     const modal = document.getElementById('modal-image');
@@ -556,6 +503,48 @@ function closeImage() {
             updateAuthUI(); 
             showSection('home'); 
         };
+
+        function compartirMascota(id) {
+    // 1. IMPORTANTE: Buscamos en 'allPets', que es tu variable global con los datos cargados
+    const mascota = allPets.find(p => p.id === id);
+    
+    if (!mascota) {
+        console.error("No se encontró mascota con ID:", id);
+        alert("Error: No se pudo cargar la información de la mascota.");
+        return;
+    }
+
+    // 2. Lógica de estados prolija
+    const statusTxt = mascota.status === 'perdido' ? 'buscando a' : 'dando en adopción a';
+    const resguardoTxt = mascota.estado_resguardo === 'casa' ? 'Está a resguardo' : 'Está en la calle / lugar del reporte';
+    
+    // 3. El Mensaje (Aseguramos que mascota.id no sea undefined)
+    const texto = `🐾 *¡AYUDANOS A DIFUNDIR!* 🐾
+    
+Estamos ${statusTxt} *${mascota.name}*.
+📍 Visto en: ${mascota.barrio} (${mascota.referencia || 'Sin referencia'})
+🏥 Estado: ${mascota.necesita_medicacion ? 'Necesita medicación urgente' : 'Estable'}
+🏠 Situación: ${resguardoTxt}
+
+Mas info y fotos acá: 
+https://huellitas-neuquen.render.com/mascota/${mascota.id}
+
+#MascotasNeuquen #RescateAnimal #Huellitas`;
+
+    // 4. Método de compartir para móviles (Intenta usar el menú nativo, si no, WhatsApp)
+    if (navigator.share) {
+        navigator.share({
+            title: `Ayuda a ${mascota.name}`,
+            text: texto,
+            url: `https://huellitas-neuquen.render.com/mascota/${mascota.id}`
+        }).catch(err => console.log("Error al compartir:", err));
+    } else {
+        // Opción B: Copiar y avisar (lo que tenías antes)
+        navigator.clipboard.writeText(texto);
+        alert("¡Texto copiado! Ya puedes pegarlo en WhatsApp o Facebook.");
+    }
+        }
+        
 
 
         
