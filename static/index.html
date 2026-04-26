@@ -339,17 +339,34 @@
             if(res.ok) { alert("Registro exitoso. Espera aprobación."); location.reload(); }
         }
 
-        async function loadUserPets() {
-            const list = document.getElementById('user-pet-list');
-            const res = await fetch(`/my-pets/${user.id}`); const pets = await res.json();
-            document.getElementById('no-pets-msg').classList.toggle('hidden', pets.length > 0);
-            list.innerHTML = pets.map(p => `
-                <div class="bg-slate-50 p-4 rounded-[2rem] flex items-center gap-4">
-                    <img src="${p.image_url}" class="w-12 h-12 rounded-xl object-cover">
-                    <div class="flex-1"><p class="font-black text-xs uppercase">${p.name}</p><p class="text-[8px] font-bold ${p.is_approved?'text-emerald-500':'text-orange-400'}">${p.is_approved?'Visible':'Pendiente'}</p></div>
-                    <button onclick="deletePet(${p.id})" class="text-red-400 p-3 bg-white rounded-full"><i class="fas fa-trash"></i></button>
-                </div>`).join('');
+        function loadUserPets() {
+    if (!user || user.id === 'admin') return;
+
+    // Filtramos de allPets las que pertenecen al ID del usuario logueado
+    const myPets = allPets.filter(p => p.user_id == user.id);
+    const container = document.getElementById('user-pets-list');
+    
+    if (myPets.length === 0) {
+        container.innerHTML = '<p class="text-center text-slate-400 text-sm py-5">No tienes publicaciones aún.</p>';
+        return;
+    }
+
+    container.innerHTML = myPets.map(p => `
+        <div class="bg-white p-3 rounded-2xl flex items-center gap-3 shadow-sm mb-3 border border-slate-100">
+            <img src="${p.image_url}" class="w-14 h-14 rounded-xl object-cover">
+            <div class="flex-1">
+                <p class="font-bold text-xs uppercase">${p.name}</p>
+                <p class="text-[9px] font-bold ${p.is_approved ? 'text-emerald-500' : 'text-amber-500'}">
+                    ${p.is_approved ? '● Publicado' : '● Revisión pendiente'}
+                </p>
+            </div>
+            <button onclick="deletePet(${p.id})" class="text-red-400 p-2"><i class="fas fa-trash"></i></button>
+        </div>
+    `).join('');
         }
+        
+
+
 
         
 
