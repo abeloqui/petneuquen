@@ -389,17 +389,7 @@ async function deletePet(id) {
 
         
 
-                async function deletePet(id) { 
-            if(confirm("¿Borrar reporte?")) { 
-                await fetch(`/pets/delete/${id}`, {method:'DELETE'}); 
-                if(user && (user.role === 'admin' || user.id === 'admin')) {
-                    loadAdminData(); 
-                } else {
-                    loadUserPets(); 
-                }
-            } 
-        }
-
+                
         async function approve(t, id) { 
             await fetch(`/admin/approve/${t}/${id}`, {method:'POST'}); 
             loadAdminData(); 
