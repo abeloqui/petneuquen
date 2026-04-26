@@ -5,8 +5,10 @@ import cloudinary
 import cloudinary.uploader
 from flask_mail import Mail, Message
 
-# 1. [span_0](start_span)Configuración de Flask y Carpeta Static[span_0](end_span)
+# Configuración de Flask
 app = Flask(__name__, static_folder='static', static_url_path='/static')
+# Permitir archivos de hasta 16MB para fotos de celulares modernos
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 
 # --- CONFIGURACIÓN DE CORREO ---
 app.config['MAIL_SERVER'] = 'smtp.gmail.com'
@@ -31,52 +33,40 @@ cloudinary.config(
 def index():
     return send_from_directory(app.static_folder, 'index.html')
 
+# RUTA RECOMENDADA: Evita el error 404 cuando alguien abre un link de WhatsApp
+@app.route('/mascota/<int:pet_id>')
+def pet_detail(pet_id):
+    return send_from_directory(app.static_folder, 'index.html')
+
 # --- RUTAS DE USUARIOS ---
 
 @app.route('/login', methods=['POST'])
 def login():
-    # CAMBIO CLAVE: Usamos request.form porque tu index manda FormData
     e = request.form.get('email')
     p = request.form.get('password')
-    
-    # Validación Admin desde Render
     if e == os.getenv("ADMIN_EMAIL") and p == os.getenv("ADMIN_PASS"):
-        return jsonify({
-            "id": "admin", 
-            "email": e, 
-            "role": "admin", 
-            "is_approved": True
-        })
-
+        return jsonify({"id": "admin", "email": e, "role": "admin", "is_approved": True})
     try:
-        # Validación Usuarios desde Supabase
         res = supabase.table("users").select("*").eq("email", e).execute()
         if res.data:
             user = res.data[0]
-            # Si en tu DB la clave no está hasheada, la comparación es directa
             if user.get('password') == p:
-                if user.get('is_approved'):
-                    return jsonify(user)
+                if user.get('is_approved'): return jsonify(user)
                 return jsonify({"msg": "Cuenta pendiente de aprobación"}), 401
     except Exception as err:
         print(f"Error login: {err}")
-        
     return jsonify({"msg": "Credenciales inválidas"}), 401
 
 @app.route('/register', methods=['POST'])
 def register():
     try:
-        # Tu index manda email, password y telefono
         d = request.form
         supabase.table("users").insert({
-            "email": d['email'], 
-            "password": d['password'], 
-            "telefono": d['telefono'], 
-            "is_approved": False
+            "email": d['email'], "password": d['password'], 
+            "telefono": d['telefono'], "is_approved": False
         }).execute()
         return jsonify({"msg": "OK"}), 201
-    except Exception as e: 
-        return jsonify({"msg": str(e)}), 500
+    except Exception as e: return jsonify({"msg": str(e)}), 500
 
 # --- RUTAS DE MASCOTAS ---
 
@@ -85,85 +75,37 @@ def upload_pet():
     try:
         f = request.files.get('file')
         d = request.form
+        # Subida optimizada para móviles
+        up = cloudinary.uploader.upload(f, folder="huellitas", transformation=[{"quality": "auto", "fetch_format": "auto"}])
         
-        if not f:
-            return jsonify({"msg": "No se recibió ninguna imagen"}), 400
+        u_id = d.get('user_id')
+        user_id_val = int(u_id) if (u_id and u_id not in ['admin', 'undefined'] and u_id.isdigit()) else None
 
-        # 1. Subida a Cloudinary con optimización para móviles
-        up = cloudinary.uploader.upload(f, 
-            folder="huellitas",
-            transformation=[{"quality": "auto", "fetch_format": "auto"}]
-        )
-        
-        # 2. Manejo SEGURO del user_id
-        raw_user_id = d.get('user_id')
-        user_id_final = None
-        
-        if raw_user_id and raw_user_id != 'admin' and raw_user_id != 'undefined':
-            try:
-                user_id_final = int(raw_user_id)
-            except ValueError:
-                user_id_final = None
-
-        # 3. Insertar en Supabase
         supabase.table("pets").insert({
-            "user_id": user_id_final, 
-            "name": d.get('name', 'Sin nombre'), 
-            "status": d.get('status', 'perdido'), 
-            "especie": d.get('especie', 'perro'),
-            "barrio": d.get('barrio', 'Sin barrio'), 
-            "latitud": float(d.get('latitud', 0)), 
-            "longitud": float(d.get('longitud', 0)), 
-            "image_url": up['secure_url'], 
-            "is_approved": False,
+            "user_id": user_id_val, 
+            "name": d['name'], "status": d['status'], 
+            "especie": d.get('especie', 'perro'), "barrio": d['barrio'], 
+            "latitud": float(d['latitud']), "longitud": float(d['longitud']), 
+            "image_url": up['secure_url'], "is_approved": False,
             "necesita_medicacion": d.get('necesita_medicacion') == 'on',
             "esta_herido": d.get('esta_herido') == 'on',
             "estado_resguardo": d.get('estado_resguardo', 'calle'),
             "referencia": d.get('referencia', '')
         }).execute()
-        
         return jsonify({"msg": "OK"}), 201
-    except Exception as e:
-        print(f"ERROR EN UPLOAD: {str(e)}") # Esto aparecerá en los logs de Render
-        return jsonify({"msg": str(e)}), 500
-      
+    except Exception as e: return jsonify({"msg": str(e)}), 500
 
 @app.route('/pets', methods=['GET'])
 def get_pets():
-    # Traemos mascotas aprobadas y el teléfono de quien reportó
     res = supabase.table("pets").select("*, users(telefono)").eq("is_approved", True).execute()
     return jsonify(res.data)
 
-# --- RUTAS DE ADMIN ---
-
-# --- PODER ABSOLUTO: RUTAS DE ELIMINACIÓN ---
-
-@app.route('/admin/delete-pet/<int:pet_id>', methods=['DELETE'])
-def admin_delete_pet(pet_id):
-    try:
-        # Borra la mascota de la tabla
-        supabase.table("pets").delete().eq("id", pet_id).execute()
-        return jsonify({"msg": "Mascota eliminada"}), 200
-    except Exception as e:
-        print(f"Error al borrar: {e}")
-        return jsonify({"msg": str(e)}), 500
-      
-
-@app.route('/admin/delete-user/<int:user_id>', methods=['DELETE'])
-def admin_delete_user(user_id):
-    try:
-        # Borra al usuario (cuidado: esto es permanente)
-        supabase.table("users").delete().eq("id", user_id).execute()
-        return jsonify({"msg": "Usuario eliminado"}), 200
-    except Exception as e:
-        return jsonify({"msg": str(e)}), 500
-      
+# --- RUTAS DE ADMIN (OMNIPOTENTE) ---
 
 @app.route('/admin/data', methods=['GET'])
 def admin_data():
     u = supabase.table("users").select("*").eq("is_approved", False).execute()
     p = supabase.table("pets").select("*").execute()
-    
     pets_all = p.data if p.data else []
     stats = {
         "perdidos": len([x for x in pets_all if x['status'] == 'perdido' and x['is_approved']]),
@@ -174,12 +116,25 @@ def admin_data():
 
 @app.route('/admin/approve/<t>/<id>', methods=['POST'])
 def approve(t, id):
-    # 't' viene como 'user' o 'pet' desde tu index
     table = "users" if t == "user" else "pets"
     supabase.table(table).update({"is_approved": True}).eq("id", id).execute()
     return jsonify({"msg": "OK"})
 
+@app.route('/admin/delete-pet/<int:pet_id>', methods=['DELETE'])
+def admin_delete_pet(pet_id):
+    try:
+        supabase.table("pets").delete().eq("id", pet_id).execute()
+        return jsonify({"msg": "Eliminado"}), 200
+    except Exception as e: return jsonify({"msg": str(e)}), 500
+
+@app.route('/admin/delete-user/<int:user_id>', methods=['DELETE'])
+def admin_delete_user(user_id):
+    try:
+        supabase.table("users").delete().eq("id", user_id).execute()
+        return jsonify({"msg": "Usuario eliminado"}), 200
+    except Exception as e: return jsonify({"msg": str(e)}), 500
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
-      
+  
