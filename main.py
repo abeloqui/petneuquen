@@ -7,11 +7,10 @@ from flask_mail import Mail, Message
 
 app = Flask(__name__)
 
-# --- CONFIGURACIÓN DE CORREO (Ajustado a tus variables de Render) ---
+# --- CONFIGURACIÓN DE CORREO ---
 app.config['MAIL_SERVER'] = 'smtp.gmail.com'
 app.config['MAIL_PORT'] = 587
 app.config['MAIL_USE_TLS'] = True
-# Usamos .get() con ambas opciones por si acaso
 app.config['MAIL_USERNAME'] = os.getenv("Mail_Username") or os.getenv("MAIL_USERNAME")
 app.config['MAIL_PASSWORD'] = os.getenv("Mail_Password") or os.getenv("MAIL_PASSWORD")
 app.config['MAIL_DEFAULT_SENDER'] = app.config['MAIL_USERNAME']
@@ -23,31 +22,28 @@ def enviar_mail(email_destino, tipo_evento, datos=None):
     temas = {
         "bienvenida": {
             "asunto": "¡Bienvenido a Huellitas NQN! 🐾",
-            "cuerpo": "¡Hola! Gracias por sumarte a la comunidad. Tu cuenta está en revisión por seguridad. Te avisaremos apenas puedas empezar a publicar."
+            "cuerpo": "¡Hola! Gracias por sumarte a la comunidad. Tu cuenta está en revisión. Te avisaremos apenas sea aprobada."
         },
         "cuenta_aprobada": {
             "asunto": "¡Cuenta Activada! Ya podés ayudar 🐶",
-            "cuerpo": "Tu cuenta en Huellitas NQN ha sido aprobada. Ya podés entrar y reportar mascotas perdidas o en adopción."
+            "cuerpo": "Tu cuenta en Huellitas NQN ha sido aprobada. Ya podés entrar y reportar mascotas."
         },
         "publicacion_exitosa": {
             "asunto": f"Recibimos el reporte de {datos.get('nombre') if datos else 'la mascota'}",
-            "cuerpo": "¡Gracias por tu compromiso! El reporte entró en revisión y pronto estará visible en el mapa de Neuquén para todos los vecinos."
+            "cuerpo": "¡Gracias por tu compromiso! El reporte pronto estará visible en el mapa."
         }
     }
     evento = temas.get(tipo_evento)
-    if not evento or not email_destino: 
-        print(f"Error: Datos insuficientes para enviar mail a {email_destino}")
-        return False
+    if not evento or not email_destino: return False
 
     msg = Message(evento["asunto"], recipients=[email_destino])
     msg.body = evento["cuerpo"]
     
     try:
         mail.send(msg)
-        print(f"Mail de {tipo_evento} enviado exitosamente a {email_destino}")
         return True
     except Exception as e:
-        print(f"ERROR CRÍTICO MAIL: {e}")
+        print(f"ERROR MAIL: {e}")
         return False
 
 # --- CONFIGURACIONES DE SERVICIOS ---
@@ -66,11 +62,11 @@ cloudinary.config(
 def index():
     return send_from_directory('static', 'index.html')
 
+# --- RUTAS DE AUTENTICACIÓN ---
 @app.route('/login', methods=['POST'])
 def login():
     data = request.form
     e, p = data.get('email'), data.get('password')
-    # Admin sacado de variables de entorno o default
     admin_email = os.getenv("ADMIN_EMAIL", "admin@huellitas.com")
     admin_pass = os.getenv("ADMIN_PASS", "admin123")
     
@@ -84,7 +80,7 @@ def login():
             if str(user.get('is_approved')).lower() == 'true':
                 if user.get('password') == p: return jsonify(user)
                 return jsonify({"msg": "Clave incorrecta"}), 401
-            return jsonify({"msg": "Cuenta pendiente de aprobación"}), 401
+            return jsonify({"msg": "Cuenta pendiente"}), 401
     except Exception as err: print(f"Error login: {err}")
     return jsonify({"msg": "Usuario no encontrado"}), 401
 
@@ -96,17 +92,12 @@ def register():
         check = supabase.table("users").select("*").eq("email", email).execute()
         if check.data: return jsonify({"msg": "El email ya existe"}), 400
         
-        # Insertamos en la DB
         supabase.table("users").insert({"email": email, "password": password, "telefono": tel, "is_approved": False}).execute()
-        
-        # Intentamos enviar el mail
         enviar_mail(email, "bienvenida")
-        
         return jsonify({"msg": "OK"}), 201
-    except Exception as e: 
-        print(f"Error en registro: {e}")
-        return jsonify({"msg": str(e)}), 500
+    except Exception as e: return jsonify({"msg": str(e)}), 500
 
+# --- RUTAS DE MASCOTAS ---
 @app.route('/pets/upload', methods=['POST'])
 def upload_pet():
     try:
@@ -137,6 +128,27 @@ def my_pets(user_id):
     res = supabase.table("pets").select("*").eq("user_id", user_id).execute()
     return jsonify(res.data)
 
+# --- ELIMINACIÓN DE MASCOTAS (LAS QUE TE FALTABAN) ---
+
+@app.route('/pets/user-delete/<int:pet_id>', methods=['DELETE'])
+def user_delete(pet_id):
+    try:
+        # Borramos la mascota de la tabla pets en Supabase
+        supabase.table("pets").delete().eq("id", pet_id).execute()
+        return jsonify({"msg": "OK"}), 200
+    except Exception as e:
+        return jsonify({"msg": str(e)}), 500
+
+@app.route('/admin/delete-pet/<int:pet_id>', methods=['DELETE'])
+def admin_delete_pet(pet_id):
+    try:
+        # El admin borra cualquier mascota por ID
+        supabase.table("pets").delete().eq("id", pet_id).execute()
+        return jsonify({"msg": "OK"}), 200
+    except Exception as e:
+        return jsonify({"msg": str(e)}), 500
+
+# --- RUTAS DE ADMINISTRACIÓN ---
 @app.route('/admin/data', methods=['GET'])
 def admin_data():
     u = supabase.table("users").select("*").eq("is_approved", False).execute()
@@ -161,12 +173,7 @@ def approve(t, id):
             
     return jsonify({"msg": "OK"})
 
-@app.route('/pets/user-delete/<int:pet_id>', methods=['DELETE'])
-def user_delete(pet_id):
-    supabase.table("pets").delete().eq("id", pet_id).execute()
-    return jsonify({"msg": "OK"})
-
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
-    
+                        
