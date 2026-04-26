@@ -154,408 +154,208 @@
     </nav>
 
     <script>
-        let mainMap, uploadMap, uploadMarker, allPets = [], currentSpecies = 'todos';
-        let user = JSON.parse(localStorage.getItem('user'));
-        let markersGroup = L.layerGroup();
+    let map, petsLayer;
+    let allPets = [];
+    let user = JSON.parse(localStorage.getItem('huellitas_user')) || null;
+    let currentSpecies = 'todos';
 
-        function updateAuthUI() {
-            if (user) {
-                const anchor = document.getElementById('user-anchor');
-                anchor.style.backgroundColor = 'var(--logo-coral)';
-                anchor.classList.remove('text-slate-300');
-                anchor.classList.add('text-white');
-                document.getElementById('menu-email').innerText = user.email;
-                if (user.role === 'admin' || user.id === 'admin') document.getElementById('admin-badge').classList.remove('hidden');
-            }
-        }
-
-        function showSection(id) {
-            document.querySelectorAll('main > section').forEach(s => s.classList.add('hidden'));
-            const target = document.getElementById('sec-' + id);
-            if(target) target.classList.remove('hidden');
-            
-            if(id === 'home') { 
-                if(!mainMap) initMainMap(); 
-                setTimeout(() => { mainMap.invalidateSize(); loadPets(); }, 400); 
-            }
-            if(id === 'upload') { 
-                if(!uploadMap) initUploadMap(); 
-                setTimeout(() => uploadMap.invalidateSize(), 400); 
-            }
-        }
-
-        function initMainMap() {
-            mainMap = L.map('main-map', { zoomControl: false }).setView([-38.951, -68.061], 13);
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png').addTo(mainMap);
-            markersGroup.addTo(mainMap);
-        }
-
-        function initUploadMap() {
-            if(uploadMap) return;
-            uploadMap = L.map('map-upload', { zoomControl: false }).setView([-38.951, -68.061], 13);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(uploadMap);
-            
-            if ("geolocation" in navigator) {
-                navigator.geolocation.getCurrentPosition(p => {
-                    const pos = [p.coords.latitude, p.coords.longitude];
-                    uploadMap.setView(pos, 16);
-                    if(uploadMarker) uploadMarker.setLatLng(pos); else uploadMarker = L.marker(pos).addTo(uploadMap);
-                    document.getElementById('lat-in').value = pos[0];
-                    document.getElementById('lng-in').value = pos[1];
-                });
-            }
-            uploadMap.on('click', e => {
-                if(uploadMarker) uploadMarker.setLatLng(e.latlng); else uploadMarker = L.marker(e.latlng).addTo(uploadMap);
-                document.getElementById('lat-in').value = e.latlng.lat;
-                document.getElementById('lng-in').value = e.latlng.lng;
-            });
-        }
-
-        async function loadPets() {
-            try {
-                const res = await fetch('/pets');
-                allPets = await res.json();
-                renderPets();
-            } catch(e) { console.error(e); }
-        }
-
-                function renderPets() {
-            const list = document.getElementById('pet-list');
-            const term = document.getElementById('search').value.toLowerCase();
-            const status = document.getElementById('filter-status').value;
-            list.innerHTML = ""; markersGroup.clearLayers();
-
-            allPets.filter(p => p.barrio.toLowerCase().includes(term) && (status === 'todos' || p.status === status) && (currentSpecies === 'todos' || p.especie === currentSpecies))
-            .forEach(p => {
-                const color = p.status === 'perdido' ? 'var(--logo-rojo)' : '#10b981';
-                const tel = p.users ? p.users.telefono : '';
-                const waLink = tel ? `https://wa.me/549${tel}?text=Hola! Te contacto por ${p.name}` : '#';
-
-                // --- NUEVA LÓGICA DE URGENCIA ---
-                const esUrgente = p.necesita_medicacion || p.esta_herido;
-                const badgeUrgente = esUrgente ? `<span class="status-badge" style="background:var(--logo-rojo); left: auto; right: 10px;">⚠️ URGENTE</span>` : '';
-                const borderStyle = esUrgente ? 'border: 2px solid var(--logo-rojo);' : '';
-
-                list.innerHTML += `
-                    <div class="card-pet" style="${borderStyle}">
-                        <span class="status-badge" style="background:${color}">${p.status}</span>
-                        ${badgeUrgente}
-                        <img src="${p.image_url}" class="w-full h-36 object-cover cursor-zoom-in" onclick="openImage('${p.image_url}')">
-                        <div class="p-3 space-y-2">
-                            <div class="text-center">
-                                <p class="font-black text-[10px] uppercase">${p.name}</p>
-                                <p class="text-[7px] font-bold text-slate-400 uppercase">${p.barrio}</p>
-                            </div>
-                            <div class="flex gap-1">
-                                <button onclick="flyToPet(${p.latitud}, ${p.longitud})" class="flex-1 py-2 bg-slate-50 rounded-lg text-[7px] font-black uppercase">Mapa</button>
-                                <button onclick='copiarResumen(${JSON.stringify(p)})' class="flex-1 py-2 bg-blue-500 rounded-lg text-[7px] font-black uppercase text-white">Difundir</button>
-                            </div>
-                            ${tel ? `<a href="${waLink}" target="_blank" class="block w-full py-2 bg-emerald-500 rounded-lg text-[7px] font-black uppercase text-white text-center">Contactar dueño</a>` : ''}
-                        </div>
-                    </div>`;
-
-                const icon = L.divIcon({
-                    className: 'paw-marker',
-                    html: `<div style="color: ${color}; font-size: 20px;"><i class="fas fa-paw"></i></div>`,
-                    iconSize: [20, 20]
-                });
-                L.marker([p.latitud, p.longitud], {icon}).bindPopup(`<b>${p.name}</b>`).addTo(markersGroup);
-            });
-                }
-
-        
-        
-        
-
-
-        function flyToPet(lat, lng) { window.scrollTo({ top: 0, behavior: 'smooth' }); mainMap.flyTo([lat, lng], 16); }
-
-        async function handleUpload(e) {
-    e.preventDefault();
-    
-    // 1. Validaciones básicas antes de intentar subir
-    const lat = document.getElementById('lat-in').value;
-    const lng = document.getElementById('lng-in').value;
-    
-    if(!lat || !lng) {
-        alert("Por favor, toca el mapa para marcar dónde está la mascota.");
-        return;
+    // --- CARGA INICIAL ---
+    async function fetchPets() {
+        try {
+            const res = await fetch('/pets');
+            allPets = await res.json();
+            renderPets();
+            if (user) loadUserPets(); // Sincronización: carga personal solo cuando allPets está listo
+        } catch (e) { console.error("Error cargando mascotas:", e); }
     }
 
-    if(!user) {
-        alert("Tu sesión expiró. Por favor ingresa de nuevo.");
-        showSection('auth');
-        return;
-    }
-
-    const btn = document.getElementById('btn-up');
-    const originalText = btn.innerText;
-    
-    // Bloquear botón
-    btn.disabled = true;
-    btn.innerText = "⏳ SUBIENDO FOTO...";
-
-    const fd = new FormData(e.target);
-    // Asegurar que enviamos un ID válido
-    const senderId = (user.id === 'admin') ? "0" : user.id;
-    fd.append('user_id', senderId);
-    fd.append('user_email', user.email);
-
-    try {
-        const res = await fetch('/pets/upload', { 
-            method: 'POST', 
-            body: fd 
+    // --- MAPA ---
+    function initMap() {
+        map = L.map('map', { zoomControl: false }).setView([-38.95, -68.06], 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+        petsLayer = L.layerGroup().addTo(map);
+        
+        map.on('click', (e) => {
+            const { lat, lng } = e.latlng;
+            document.getElementById('latitud').value = lat;
+            document.getElementById('longitud').value = lng;
+            if (window.tempMarker) map.removeLayer(window.tempMarker);
+            window.tempMarker = L.marker([lat, lng]).addTo(map);
+            alert("Ubicación marcada en el mapa");
         });
+    }
 
-        const data = await res.json();
+    function renderPets() {
+        if (!map) return;
+        petsLayer.clearLayers();
+        // El mapa solo muestra lo aprobado
+        const filtered = allPets.filter(p => p.is_approved && (currentSpecies === 'todos' || p.especie === currentSpecies));
+        
+        filtered.forEach(p => {
+            const icon = L.divIcon({
+                className: '',
+                html: `<div class="w-8 h-8 rounded-full border-2 border-white shadow-lg overflow-hidden bg-white">
+                        <img src="${p.image_url}" class="w-full h-full object-cover">
+                       </div>`,
+                iconSize: [32, 32]
+            });
+            L.marker([p.latitud, p.longitud], { icon }).addTo(petsLayer).on('click', () => showPetDetail(p));
+        });
+    }
 
-        if(res.ok) {
-            alert("✅ ¡Publicado! Ahora un administrador debe aprobarlo.");
-            location.reload();
+    // --- COMPARTIR ---
+    function compartirMascota(id) {
+        const p = allPets.find(m => m.id === id);
+        if (!p) return;
+
+        const resguardo = p.estado_resguardo === 'casa' ? 'Está a resguardo' : 'En la calle / lugar del reporte';
+        const statusTxt = p.status === 'perdido' ? 'buscando a' : 'dando en adopción a';
+
+        const texto = `🐾 *¡AYUDANOS A DIFUNDIR!* 🐾
+Estamos ${statusTxt} *${p.name}*
+📍 Visto en: ${p.barrio} (${p.referencia || 'Sin referencia'})
+🏥 Estado: ${p.necesita_medicacion ? 'Necesita medicación urgente' : 'Estable'}
+🏠 Situación: ${resguardo}
+
+Info y fotos: https://petneuquen.onrender.com/mascota/${p.id}`;
+
+        if (navigator.share) {
+            navigator.share({ title: `Ayuda a ${p.name}`, text: texto, url: `https://petneuquen.onrender.com/mascota/${p.id}` });
         } else {
-            alert("❌ Error: " + (data.msg || "No se pudo subir"));
-            btn.disabled = false;
-            btn.innerText = originalText;
+            navigator.clipboard.writeText(texto);
+            alert("¡Texto copiado!");
         }
-    } catch (error) {
-        console.error(error);
-        alert("📡 Error de conexión. La foto puede ser muy pesada o no tienes buena señal.");
-        btn.disabled = false;
-        btn.innerText = originalText;
     }
-        }
+
+    // --- PANEL DE USUARIO ---
+    function loadUserPets() {
+        const container = document.getElementById('user-pets-list');
+        if (!container || !user || user.id === 'admin') return;
+
+        const myPets = allPets.filter(p => p.user_id == user.id);
         
-
-        async function handleLogin(e) {
-            e.preventDefault();
-            const res = await fetch('/login', { method: 'POST', body: new FormData(e.target) });
-            if(res.ok) { localStorage.setItem('user', JSON.stringify(await res.json())); location.reload(); }
-            else alert("Error al ingresar.");
+        if (myPets.length === 0) {
+            container.innerHTML = '<p class="text-center text-slate-400 text-sm py-10">No tienes publicaciones aún.</p>';
+            return;
         }
 
-        async function handleRegister(e) {
-            e.preventDefault();
-            const res = await fetch('/register', { method: 'POST', body: new FormData(e.target) });
-            if(res.ok) { alert("Registro exitoso. Espera aprobación."); location.reload(); }
-        }
-
-        function loadUserPets() {
-    if (!user || user.id === 'admin') return;
-
-    // Filtramos de allPets las que pertenecen al ID del usuario logueado
-    const myPets = allPets.filter(p => p.user_id == user.id);
-    const container = document.getElementById('user-pets-list');
-    
-    if (myPets.length === 0) {
-        container.innerHTML = '<p class="text-center text-slate-400 text-sm py-5">No tienes publicaciones aún.</p>';
-        return;
+        container.innerHTML = myPets.map(p => `
+            <div class="bg-white p-3 rounded-2xl flex items-center gap-3 shadow-sm mb-3 border border-slate-100">
+                <img src="${p.image_url}" class="w-14 h-14 rounded-xl object-cover">
+                <div class="flex-1">
+                    <p class="font-bold text-xs uppercase">${p.name}</p>
+                    <p class="text-[9px] font-bold ${p.is_approved ? 'text-emerald-500' : 'text-amber-500'}">
+                        ${p.is_approved ? '● Publicado' : '● Revisión pendiente'}
+                    </p>
+                </div>
+                <button onclick="deletePet(${p.id})" class="text-red-400 p-2"><i class="fas fa-trash"></i></button>
+            </div>`).join('');
     }
 
-    container.innerHTML = myPets.map(p => `
-        <div class="bg-white p-3 rounded-2xl flex items-center gap-3 shadow-sm mb-3 border border-slate-100">
-            <img src="${p.image_url}" class="w-14 h-14 rounded-xl object-cover">
-            <div class="flex-1">
-                <p class="font-bold text-xs uppercase">${p.name}</p>
-                <p class="text-[9px] font-bold ${p.is_approved ? 'text-emerald-500' : 'text-amber-500'}">
-                    ${p.is_approved ? '● Publicado' : '● Revisión pendiente'}
-                </p>
+    // --- NAVEGACIÓN Y UI ---
+    function showSection(id) {
+        document.querySelectorAll('section').forEach(s => s.classList.add('hidden'));
+        document.getElementById(`section-${id}`).classList.remove('hidden');
+        window.scrollTo(0,0);
+        if (id === 'home' && map) setTimeout(() => map.invalidateSize(), 200);
+    }
+
+    function updateAuthUI() {
+        document.querySelectorAll('.auth-only').forEach(el => el.classList.toggle('hidden', !user));
+        document.querySelectorAll('.guest-only').forEach(el => el.classList.toggle('hidden', !!user));
+        const adminPanel = document.getElementById('admin-panel');
+        if (adminPanel) adminPanel.classList.toggle('hidden', !user || user.role !== 'admin');
+        if (user && user.role === 'admin') loadAdminData();
+    }
+
+    // --- AUTH ---
+    async function handleLogin(e) {
+        e.preventDefault();
+        const res = await fetch('/login', { method: 'POST', body: new FormData(e.target) });
+        const data = await res.json();
+        if (res.ok) {
+            user = data;
+            localStorage.setItem('huellitas_user', JSON.stringify(data));
+            updateAuthUI();
+            showSection('home');
+            fetchPets(); // Recargar para mostrar "Mis Publicaciones"
+        } else alert(data.msg);
+    }
+
+    function logout() {
+        localStorage.removeItem('huellitas_user');
+        user = null;
+        updateAuthUI();
+        showSection('home');
+    }
+
+    // --- DETALLE MASCOTA ---
+    function showPetDetail(p) {
+        const content = document.getElementById('pet-detail-content');
+        content.innerHTML = `
+            <img src="${p.image_url}" class="w-full h-64 object-cover rounded-3xl mb-4 shadow-lg">
+            <h2 class="text-2xl font-black uppercase text-slate-800">${p.name}</h2>
+            <p class="text-amber-600 font-bold text-sm mb-4">${p.status === 'perdido' ? 'SE BUSCA' : 'EN ADOPCIÓN'}</p>
+            <div class="grid grid-cols-2 gap-3 mb-6">
+                <div class="bg-slate-100 p-3 rounded-2xl"><p class="text-[10px] text-slate-500 uppercase">Barrio</p><p class="font-bold text-sm">${p.barrio}</p></div>
+                <div class="bg-slate-100 p-3 rounded-2xl"><p class="text-[10px] text-slate-500 uppercase">Referencia</p><p class="font-bold text-sm">${p.referencia || 'Sin datos'}</p></div>
             </div>
-            <button onclick="deletePet(${p.id})" class="text-red-400 p-2"><i class="fas fa-trash"></i></button>
-        </div>
-    `).join('');
-        }
-        
-
-
-
-        
-
-// PANEL ADMIN OMNIPOTENTE
-async function loadAdminData() {
-    const res = await fetch('/admin/data'); 
-    const data = await res.json();
-    
-    document.getElementById('stat-perdidos').innerText = data.stats.perdidos;
-    document.getElementById('stat-adopcion').innerText = data.stats.adopcion;
-    document.getElementById('stat-pendientes').innerText = data.stats.pendientes;
-    
-    document.getElementById('admin-users').innerHTML = data.users.map(u => `
-        <div class="bg-amber-50 p-3 rounded-xl flex justify-between items-center mb-2">
-            <p class="text-[10px] font-black">${u.email}</p>
             <div class="flex gap-2">
-                <button onclick="approve('user', ${u.id})" class="bg-amber-500 text-white text-[8px] px-3 py-1 rounded-lg">APROBAR</button>
-                <button onclick="rejectUser(${u.id})" class="text-red-500 bg-white w-7 h-7 rounded-lg shadow-sm flex items-center justify-center">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-        </div>`).join('') || '<p class="text-[8px] text-center">Sin usuarios nuevos</p>';
+                <button onclick="compartirMascota(${p.id})" class="flex-1 bg-emerald-500 text-white py-4 rounded-2xl font-bold shadow-lg shadow-emerald-200">DIFUNDIR</button>
+                <a href="https://wa.me/${p.users ? p.users.telefono : ''}" class="flex-1 bg-slate-800 text-white py-4 rounded-2xl font-bold text-center shadow-lg shadow-slate-300">CONTACTAR</a>
+            </div>`;
+        showSection('detail');
+    }
 
-    document.getElementById('admin-pets').innerHTML = data.pets.map(p => `
-        <div class="bg-slate-50 p-2 rounded-xl flex items-center gap-2 mb-2">
-            <img src="${p.image_url}" class="w-8 h-8 rounded object-cover">
-            <div class="flex-1 text-[8px] font-black uppercase">${p.name}</div>
-            ${!p.is_approved ? `<button onclick="approve('pet', ${p.id})" class="bg-emerald-500 text-white text-[8px] px-2 py-1 rounded">OK</button>` : ''}
-            <button onclick="deletePet(${p.id})" class="text-red-400 p-1"><i class="fas fa-trash"></i></button>
-        </div>`).join('');
-}
+    // --- ACCIONES ADMIN ---
+    async function loadAdminData() {
+        const res = await fetch('/admin/data');
+        const data = await res.json();
+        document.getElementById('stat-pendientes').innerText = data.stats.pendientes;
+        document.getElementById('admin-users').innerHTML = data.users.map(u => `
+            <div class="bg-amber-50 p-3 rounded-xl flex justify-between items-center mb-2">
+                <p class="text-[10px] font-black">${u.email}</p>
+                <div class="flex gap-2">
+                    <button onclick="approve('user', ${u.id})" class="bg-amber-500 text-white text-[8px] px-3 py-1 rounded-lg">OK</button>
+                    <button onclick="rejectUser(${u.id})" class="text-red-500 px-2"><i class="fas fa-times"></i></button>
+                </div>
+            </div>`).join('');
+    }
 
-async function rejectUser(id) {
-    if(confirm("¿Eliminar usuario?")) {
+    async function approve(t, id) {
+        await fetch(`/admin/approve/${t}/${id}`, { method: 'POST' });
+        fetchPets();
+        if (user.role === 'admin') loadAdminData();
+    }
+
+    async function deletePet(id) {
+        if (!confirm("¿Eliminar permanentemente?")) return;
+        await fetch(`/admin/delete-pet/${id}`, { method: 'DELETE' });
+        fetchPets();
+    }
+
+    async function rejectUser(id) {
+        if (!confirm("¿Eliminar usuario?")) return;
         await fetch(`/admin/delete-user/${id}`, { method: 'DELETE' });
         loadAdminData();
     }
-}
 
-async function deletePet(id) {
-    if(confirm("¿Borrar reporte permanentemente?")) {
-        await fetch(`/admin/delete-pet/${id}`, { method: 'DELETE' });
-        // Si eres admin refresca el panel, si no, refresca tus mascotas
-        if(user && (user.role === 'admin' || user.id === 'admin')) {
-            loadAdminData();
-        } else {
-            loadUserPets();
-        }
-    }
-}
-        
-
-
-        
-
-                
-        async function approve(t, id) { 
-            await fetch(`/admin/approve/${t}/${id}`, {method:'POST'}); 
-            loadAdminData(); 
-        }
-
-        async function rejectUser(id) {
-    if(confirm("¿Eliminar a este usuario permanentemente?")) {
-        const res = await fetch(`/admin/delete-user/${id}`, { method: 'DELETE' });
-        if(res.ok) {
-            loadAdminData(); // Refresca la lista automáticamente
-        } else {
-            alert("Error al eliminar");
-        }
-    }
-        }
-        
-
-
-        function toggleUserMenu() { 
-            if(user) {
-                document.getElementById('user-menu').classList.toggle('hidden'); 
-            } else {
-                showSection('auth'); 
-            }
-        }
-
-        function toggleAuthMode(m) { 
-            document.getElementById('form-login').classList.toggle('hidden', m === 'register');
-            document.getElementById('form-register').classList.toggle('hidden', m === 'login');
-            
-            const btnLogin = document.getElementById('btn-mode-login');
-            const btnReg = document.getElementById('btn-mode-reg');
-            
-            if(m === 'login') {
-                btnLogin.style.borderColor = 'var(--logo-coral)';
-                btnReg.style.borderColor = 'transparent';
-                btnReg.classList.add('text-slate-300');
-                btnLogin.classList.remove('text-slate-300');
-            } else {
-                btnReg.style.borderColor = 'var(--logo-coral)';
-                btnLogin.style.borderColor = 'transparent';
-                btnLogin.classList.add('text-slate-300');
-                btnReg.classList.remove('text-slate-300');
-            }
-        }
-
-        function checkAuth() { 
-            user ? showSection('upload') : showSection('auth'); 
-        }
-
-        function checkUserPanel() { 
-            if(user.role === 'admin' || user.id === 'admin') { 
-                showSection('admin'); 
-                loadAdminData(); 
-            } else { 
-                showSection('user-panel'); 
-                loadUserPets(); 
-            } 
-        }
-
-        function logout() { 
-            localStorage.removeItem('user'); 
-            location.reload(); 
-        }
-
-        function openImage(url) {
-    const modal = document.getElementById('modal-image');
-    const img = document.getElementById('img-full');
-    img.src = url;
-    modal.classList.remove('hidden');
-    // Bloquear scroll del cuerpo al abrir
-    document.body.style.overflow = 'hidden';
-}
-
-
-function closeImage() {
-    const modal = document.getElementById('modal-image');
-    modal.classList.add('hidden');
-    // Restaurar scroll
-    document.body.style.overflow = 'auto';
-}
-        
-
-        function setSpecies(sp, btn) { 
-            currentSpecies = sp; 
-            document.querySelectorAll('.btn-filter').forEach(b => b.classList.remove('active')); 
-            btn.classList.add('active'); 
-            renderPets(); 
-        }
-
-        // Única ejecución al cargar la página
-        window.onload = () => { 
-            updateAuthUI(); 
-            showSection('home'); 
-        };
-
-
-
-        function compartirMascota(id) {
-    const mascota = allPets.find(p => p.id === id);
-    if (!mascota) return;
-
-    // DEFINIMOS LA VARIABLE QUE FALTABA
-    const resguardoTxt = mascota.estado_resguardo === 'casa' ? 'Está a resguardo' : 'Está en la calle / lugar del reporte';
-    const statusTxt = mascota.status === 'perdido' ? 'buscando a' : 'dando en adopción a';
-
-    const texto = `🐾 *¡AYUDANOS A DIFUNDIR!* 🐾
-Estamos ${statusTxt} *${mascota.name}*
-📍 Visto en: ${mascota.barrio} (${mascota.referencia || 'Sin referencia'})
-🏥 Estado: ${mascota.necesita_medicacion ? 'Necesita medicación urgente' : 'Estable'}
-🏠 Situación: ${resguardoTxt}
-
-Mas info y fotos acá: 
-https://petneuquen.onrender.com/mascota/${mascota.id}
-
-#MascotasNeuquen #RescateAnimal #Huellitas`;
-
-    if (navigator.share) {
-        navigator.share({
-            title: `Ayuda a ${mascota.name}`,
-            text: texto,
-            url: `https://petneuquen.onrender.com/mascota/${mascota.id}`
-        }).catch(err => console.log("Error al compartir:", err));
-    } else {
-        navigator.clipboard.writeText(texto);
-        alert("¡Texto copiado! Ya puedes pegarlo en WhatsApp o Facebook.");
-    }
-        }
-        
-
-
-        
+    window.onload = () => {
+        initMap();
+        fetchPets();
+        updateAuthUI();
+        showSection('home');
+    };
     </script>
+    
+
+        
+
+
+
+        
+
+
 
     <div id="modal-image" class="hidden fixed inset-0 z-[3000] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4" onclick="closeImage()">
     <button class="absolute top-6 right-6 text-white text-2xl"><i class="fas fa-times"></i></button>
