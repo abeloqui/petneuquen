@@ -12,12 +12,18 @@ from streamlit_geolocation import streamlit_geolocation
 
 st.set_page_config(page_title="Huellitas NQN", layout="centered", page_icon="🐾")
 
-cloudinary.config(cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME"), api_key=os.getenv("CLOUDINARY_API_KEY"), api_secret=os.getenv("CLOUDINARY_API_SECRET"), secure=True)
+# ===================== CONFIG =====================
+cloudinary.config(
+    cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME"),
+    api_key=os.getenv("CLOUDINARY_API_KEY"),
+    api_secret=os.getenv("CLOUDINARY_API_SECRET"),
+    secure=True
+)
 
 # ===================== COOKIES =====================
 cookie_manager = stx.CookieManager(key="huellitas_cookies")
 
-# ===================== DB =====================
+# ===================== DATABASE =====================
 def get_db_connection():
     conn = sqlite3.connect("huellitas.db", check_same_thread=False)
     conn.row_factory = sqlite3.Row
@@ -25,34 +31,61 @@ def get_db_connection():
 
 def init_db():
     conn = get_db_connection()
-    conn.execute('''CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY, email TEXT UNIQUE NOT NULL, hashed_password TEXT NOT NULL,
-        telefono TEXT, is_approved INTEGER DEFAULT 0, role TEXT DEFAULT 'user'
+    c = conn.cursor()
+    
+    # Tabla Users
+    c.execute('''CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY,
+        email TEXT UNIQUE NOT NULL,
+        hashed_password TEXT NOT NULL,
+        telefono TEXT,
+        is_approved INTEGER DEFAULT 0,
+        role TEXT DEFAULT 'user'
     )''')
-    conn.execute('''CREATE TABLE IF NOT EXISTS pets (...)''')  # completa con tus campos
+    
+    # Tabla Pets (completa)
+    c.execute('''CREATE TABLE IF NOT EXISTS pets (
+        id INTEGER PRIMARY KEY,
+        user_id INTEGER,
+        name TEXT NOT NULL,
+        especie TEXT,
+        status TEXT,
+        barrio TEXT,
+        descripcion TEXT,
+        latitud REAL,
+        longitud REAL,
+        image_url TEXT,
+        is_approved INTEGER DEFAULT 0,
+        created_at TEXT,
+        FOREIGN KEY (user_id) REFERENCES users(id)
+    )''')
+    
     conn.commit()
     conn.close()
 
 def create_default_admin():
     conn = get_db_connection()
-    if not conn.execute("SELECT 1 FROM users WHERE email = 'admin@huellitas.com'").fetchone():
+    if not conn.execute("SELECT id FROM users WHERE email = 'admin@huellitas.com'").fetchone():
         hashed = hashlib.sha256("admin123".encode()).hexdigest()
-        conn.execute("INSERT INTO users (email, hashed_password, telefono, is_approved, role) VALUES (?,?,?,?,?)",
-                     ("admin@huellitas.com", hashed, "2996894360", 1, "admin"))
+        conn.execute("""
+            INSERT INTO users (email, hashed_password, telefono, is_approved, role)
+            VALUES (?, ?, ?, 1, 'admin')
+        """, ("admin@huellitas.com", hashed, "2996894360"))
         conn.commit()
     conn.close()
 
 init_db()
 create_default_admin()
 
-def hash_password(p): 
-    return hashlib.sha256(p.encode()).hexdigest()
+# ===================== HELPERS =====================
+def hash_password(password):
+    return hashlib.sha256(password.encode()).hexdigest()
 
-# ===================== LOGIN PERSISTENTE =====================
+# ===================== APP =====================
 if 'user' not in st.session_state:
     st.session_state.user = None
 
-# Intentar recuperar desde cookie
+# Recuperar sesión desde cookie
 if st.session_state.user is None:
     saved_email = cookie_manager.get(cookie="huellitas_email")
     if saved_email:
@@ -64,11 +97,13 @@ if st.session_state.user is None:
 
 if st.session_state.user is None:
     st.title("🐾 Huellitas NQN")
+    st.caption("Comunidad de Mascotas de Neuquén Capital")
+    
     tab1, tab2 = st.tabs(["🔑 Iniciar Sesión", "📝 Registrarse"])
     
     with tab1:
-        email = st.text_input("Email")
-        password = st.text_input("Contraseña", type="password")
+        email = st.text_input("Email", key="login_email")
+        password = st.text_input("Contraseña", type="password", key="login_pass")
         remember = st.checkbox("Recordarme (permanente)", value=True)
         
         if st.button("Entrar", type="primary"):
@@ -81,43 +116,71 @@ if st.session_state.user is None:
                     cookie_manager.set("huellitas_email", email, expires_at="2035-01-01")
                 st.rerun()
             else:
-                st.error("❌ Credenciales incorrectas")
+                st.error("❌ Email o contraseña incorrectos")
+
+    with tab2:
+        email_r = st.text_input("Email", key="reg_email")
+        tel = st.text_input("WhatsApp", key="reg_tel")
+        pass_r = st.text_input("Contraseña", type="password", key="reg_pass")
+        if st.button("Solicitar Acceso", type="primary"):
+            if not email_r or not pass_r:
+                st.error("Email y contraseña son obligatorios")
+            else:
+                conn = get_db_connection()
+                if conn.execute("SELECT id FROM users WHERE email=?", (email_r,)).fetchone():
+                    st.error("El email ya está registrado")
+                else:
+                    hashed = hash_password(pass_r)
+                    conn.execute("INSERT INTO users (email, hashed_password, telefono) VALUES (?, ?, ?)",
+                               (email_r, hashed, tel))
+                    conn.commit()
+                    conn.close()
+                    st.success("✅ Solicitud enviada! André la revisará pronto.")
+
 else:
     user = st.session_state.user
-    st.sidebar.success(f"👋 Hola, {user['email'].split('@')[0]}")
+    st.sidebar.success(f"👋 {user['email'].split('@')[0]}")
     
     if st.sidebar.button("🚪 Cerrar Sesión"):
         st.session_state.user = None
         cookie_manager.delete("huellitas_email")
         st.rerun()
     
-    # Menú
-    page = st.sidebar.radio("Ir a", ["Mapa", "Nueva Publicación", "Mis Reportes"] + (["Admin"] if user.get('role') == 'admin' else []))
+    opciones = ["Mapa", "Nueva Publicación", "Mis Reportes"]
+    if user.get('role') == 'admin':
+        opciones.append("Admin")
+    
+    page = st.sidebar.radio("Menú", opciones)
 
     if page == "Mapa":
         st.title("🐾 Mascotas cerca de ti")
+        
         location = streamlit_geolocation()
-        
         if location and location.get('latitude'):
-            lat, lng = location['latitude'], location['longitude']
-            m = folium.Map(location=[lat, lng], zoom_start=15)
-            folium.Marker([lat, lng], popup="📍 Vos estás acá", icon=folium.Icon(color="blue", icon="user")).add_to(m)
+            user_lat = location['latitude']
+            user_lng = location['longitude']
+            st.success(f"📍 Tu ubicación: {user_lat:.4f}, {user_lng:.4f}")
+            m = folium.Map(location=[user_lat, user_lng], zoom_start=15)
+            folium.Marker([user_lat, user_lng], popup="📍 Vos estás acá", icon=folium.Icon(color="blue")).add_to(m)
         else:
-            lat, lng = -38.951, -68.059
-            m = folium.Map(location=[lat, lng], zoom_start=13)
-        
+            user_lat, user_lng = -38.951, -68.059
+            m = folium.Map(location=[user_lat, user_lng], zoom_start=13)
+            st.info("Permite la geolocalización para centrar en tu zona")
+
         conn = get_db_connection()
         pets = conn.execute("SELECT * FROM pets WHERE is_approved = 1").fetchall()
         conn.close()
-        
+
         for p in pets:
             color = "red" if p["status"] == "perdido" else "green"
-            folium.Marker([p["latitud"], p["longitud"]], 
-                         popup=f"<b>{p['name']}</b><br>{p['barrio']}", 
-                         icon=folium.Icon(color=color, icon="paw")).add_to(m)
+            folium.Marker(
+                [p["latitud"], p["longitud"]],
+                popup=f"<b>{p['name']}</b><br>{p['especie']} • {p['barrio']}",
+                icon=folium.Icon(color=color, icon="paw")
+            ).add_to(m)
         
         st_folium(m, width=700, height=550)
 
-    # ... (agregá las otras secciones)
+    # Agregaremos las otras páginas en el próximo paso si querés
 
-st.caption("Huellitas NQN - Neuquén Capital ❤️")
+st.caption("Huellitas NQN ❤️ Neuquén Capital")
