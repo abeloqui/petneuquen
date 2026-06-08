@@ -1,5 +1,4 @@
 streamlit
-pandas
 cloudinary
 python-dotenv
 folium
