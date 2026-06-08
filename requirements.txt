@@ -5,5 +5,5 @@ python-dotenv
 folium
 streamlit-folium
 Pillow
-extra-streamlit-components==0.1.85
+extra-streamlit-components==0.1.81
 streamlit-geolocation
