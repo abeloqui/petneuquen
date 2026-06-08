@@ -2,7 +2,7 @@ import streamlit as st
 import sqlite3
 import cloudinary
 import cloudinary.uploader
-from datetime import datetime
+from datetime import datetime, timedelta
 import folium
 from streamlit_folium import st_folium
 import hashlib
@@ -33,7 +33,6 @@ def init_db():
     conn = get_db_connection()
     c = conn.cursor()
     
-    # Tabla Users
     c.execute('''CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY,
         email TEXT UNIQUE NOT NULL,
@@ -43,7 +42,6 @@ def init_db():
         role TEXT DEFAULT 'user'
     )''')
     
-    # Tabla Pets (completa)
     c.execute('''CREATE TABLE IF NOT EXISTS pets (
         id INTEGER PRIMARY KEY,
         user_id INTEGER,
@@ -56,8 +54,7 @@ def init_db():
         longitud REAL,
         image_url TEXT,
         is_approved INTEGER DEFAULT 0,
-        created_at TEXT,
-        FOREIGN KEY (user_id) REFERENCES users(id)
+        created_at TEXT
     )''')
     
     conn.commit()
@@ -77,7 +74,6 @@ def create_default_admin():
 init_db()
 create_default_admin()
 
-# ===================== HELPERS =====================
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
 
@@ -108,12 +104,15 @@ if st.session_state.user is None:
         
         if st.button("Entrar", type="primary"):
             conn = get_db_connection()
-            user = conn.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
+            user_db = conn.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
             conn.close()
-            if user and user['hashed_password'] == hash_password(password) and (user['is_approved'] or user['role'] == 'admin'):
-                st.session_state.user = dict(user)
+            
+            if user_db and user_db['hashed_password'] == hash_password(password) and (user_db['is_approved'] or user_db['role'] == 'admin'):
+                st.session_state.user = dict(user_db)
                 if remember:
-                    cookie_manager.set("huellitas_email", email, expires_at="2035-01-01")
+                    # Fecha de expiración correcta
+                    expires = datetime.now() + timedelta(days=365)
+                    cookie_manager.set("huellitas_email", email, expires_at=expires)
                 st.rerun()
             else:
                 st.error("❌ Email o contraseña incorrectos")
@@ -154,8 +153,8 @@ else:
 
     if page == "Mapa":
         st.title("🐾 Mascotas cerca de ti")
-        
         location = streamlit_geolocation()
+        
         if location and location.get('latitude'):
             user_lat = location['latitude']
             user_lng = location['longitude']
@@ -165,7 +164,7 @@ else:
         else:
             user_lat, user_lng = -38.951, -68.059
             m = folium.Map(location=[user_lat, user_lng], zoom_start=13)
-            st.info("Permite la geolocalización para centrar en tu zona")
+            st.info("Permite geolocalización para centrar en tu zona")
 
         conn = get_db_connection()
         pets = conn.execute("SELECT * FROM pets WHERE is_approved = 1").fetchall()
@@ -180,7 +179,5 @@ else:
             ).add_to(m)
         
         st_folium(m, width=700, height=550)
-
-    # Agregaremos las otras páginas en el próximo paso si querés
 
 st.caption("Huellitas NQN ❤️ Neuquén Capital")
