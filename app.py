@@ -14,13 +14,19 @@ from email.mime.multipart import MIMEMultipart
 
 st.set_page_config(page_title="Huellitas NQN", layout="centered", page_icon="🐾")
 
-# ===================== ESTILO =====================
+# ===================== ESTILO VISUAL =====================
 st.markdown("""
 <style>
     .main { background-color: #F4F1DE; }
-    .stButton>button { background-color: #E07A5F; color: white; border-radius: 20px; font-weight: bold; }
+    .stButton>button { 
+        background-color: #E07A5F; 
+        color: white; 
+        border-radius: 20px; 
+        font-weight: bold; 
+    }
     .stButton>button:hover { background-color: #C94C4C; }
-    h1 { color: #3D405B; text-align: center; }
+    h1, h2 { color: #3D405B; }
+    .report-card { background-color: white; padding: 15px; border-radius: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
 </style>
 """, unsafe_allow_html=True)
 
@@ -40,11 +46,11 @@ def enviar_mail(destino, tipo, datos=None):
         msg['To'] = destino
         if tipo == "cuenta_aprobada":
             msg['Subject'] = "¡Tu cuenta en Huellitas NQN ha sido aprobada! 🐾"
-            body = "¡Bienvenido! Ya podés publicar y ver el mapa."
+            body = "¡Bienvenido! Ya podés publicar y ver todas las mascotas."
         elif tipo == "publicacion_aprobada":
             nombre = datos.get('nombre', 'tu mascota')
-            msg['Subject'] = f"✅ {nombre} ya está visible"
-            body = f"Tu publicación de {nombre} fue aprobada."
+            msg['Subject'] = f"✅ Tu publicación de {nombre} fue aprobada"
+            body = f"¡Genial! La publicación de {nombre} ya está visible en el mapa."
         msg.attach(MIMEText(body, 'plain'))
         server = smtplib.SMTP('smtp.gmail.com', 587)
         server.starttls()
@@ -115,7 +121,7 @@ if st.session_state.user is None:
                 st.session_state.user = dict(user)
                 st.rerun()
             elif user and not user['is_approved']:
-                st.warning("Tu cuenta aún está pendiente de aprobación")
+                st.warning("Tu cuenta está pendiente de aprobación")
             else:
                 st.error("Credenciales incorrectas")
     
@@ -133,7 +139,8 @@ if st.session_state.user is None:
                            (email_r, hashed, tel))
                 conn.commit()
                 conn.close()
-                st.success("✅ Solicitud enviada! Esperá la aprobación.")
+                st.success("✅ Solicitud enviada! André la revisará pronto.")
+
 else:
     user = st.session_state.user
     st.sidebar.success(f"👋 {user['email'].split('@')[0]}")
@@ -142,7 +149,6 @@ else:
         st.session_state.user = None
         st.rerun()
 
-    # Menú según rol
     menu_options = ["🗺️ Mapa Principal", "📸 Nueva Publicación", "Mis Reportes"]
     if user.get('role') == 'admin':
         menu_options.append("🛠 Panel Admin")
@@ -172,7 +178,102 @@ else:
                          icon=folium.Icon(color=color, icon="paw")).add_to(m)
         st_folium(m, width=700, height=550)
 
-    # ===================== PANEL ADMIN (completo) =====================
+    # ===================== NUEVA PUBLICACIÓN =====================
+    elif page == "📸 Nueva Publicación":
+        st.title("📸 Nueva Publicación")
+        with st.form("upload_form", clear_on_submit=True):
+            col1, col2 = st.columns(2)
+            with col1:
+                name = st.text_input("Nombre de la mascota *")
+                especie = st.selectbox("Especie", ["perro", "gato", "otro"])
+                raza = st.text_input("Raza (opcional)")
+                edad = st.text_input("Edad aproximada")
+            with col2:
+                status = st.selectbox("Estado", ["perdido", "adopcion"])
+                barrio = st.text_input("Barrio *")
+                lat = st.number_input("Latitud", value=-38.951)
+                lng = st.number_input("Longitud", value=-68.059)
+            
+            descripcion = st.text_area("Descripción / Comentarios", height=100)
+            
+            col3, col4 = st.columns(2)
+            with col3:
+                necesita_medicacion = st.checkbox("Necesita medicación")
+                esta_herido = st.checkbox("Está herido")
+            with col4:
+                estado_resguardo = st.selectbox("Estado de resguardo", ["calle", "en tránsito", "veterinaria", "rescatado"])
+                referencia = st.text_input("Referencia / Contacto extra")
+            
+            file = st.file_uploader("Foto de la mascota *", type=["jpg", "jpeg", "png"])
+            
+            if st.form_submit_button("Publicar Reporte 🐾", type="primary"):
+                if not name or not barrio or not file:
+                    st.error("Nombre, barrio y foto son obligatorios")
+                else:
+                    with st.spinner("Subiendo foto..."):
+                        result = cloudinary.uploader.upload(file, folder="huellitas")
+                        image_url = result["secure_url"]
+                    
+                    conn = get_db_connection()
+                    conn.execute("""INSERT INTO pets 
+                        (user_id, name, especie, status, barrio, descripcion, latitud, longitud, image_url, created_at,
+                         edad, raza, necesita_medicacion, esta_herido, estado_resguardo, referencia)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                        (user['id'], name, especie, status, barrio, descripcion, lat, lng, image_url, 
+                         datetime.now().isoformat(), edad, raza, int(necesita_medicacion), int(esta_herido), 
+                         estado_resguardo, referencia))
+                    conn.commit()
+                    conn.close()
+                    st.success("✅ Reporte enviado correctamente! Esperando aprobación.")
+                    st.rerun()
+
+    # ===================== MIS REPORTES =====================
+    elif page == "Mis Reportes":
+        st.title("Mis Publicaciones")
+        conn = get_db_connection()
+        my_pets = conn.execute("SELECT * FROM pets WHERE user_id = ?", (user['id'],)).fetchall()
+        conn.close()
+        
+        for p in my_pets:
+            col1, col2, col3 = st.columns([1, 5, 1])
+            with col1:
+                st.image(p["image_url"], width=110)
+            with col2:
+                st.subheader(p["name"])
+                st.caption(f"{p['especie']} • {p['barrio']} • {p['status']}")
+                st.write(p.get('descripcion', ''))
+            with col3:
+                if st.button("✏️ Editar", key=f"edit_my_{p['id']}"):
+                    st.session_state.edit_pet = p
+                    st.rerun()
+                if st.button("🗑 Eliminar", key=f"del_my_{p['id']}"):
+                    conn = get_db_connection()
+                    conn.execute("DELETE FROM pets WHERE id = ?", (p['id'],))
+                    conn.commit()
+                    conn.close()
+                    st.success("Eliminado")
+                    st.rerun()
+
+        if 'edit_pet' in st.session_state:
+            p = st.session_state.edit_pet
+            st.subheader(f"Editando: {p['name']}")
+            with st.form("edit_form"):
+                new_name = st.text_input("Nombre", value=p['name'])
+                new_especie = st.selectbox("Especie", ["perro", "gato", "otro"])
+                new_status = st.selectbox("Estado", ["perdido", "adopcion"])
+                new_barrio = st.text_input("Barrio", value=p['barrio'])
+                new_desc = st.text_area("Descripción", value=p.get('descripcion', ''))
+                if st.form_submit_button("Guardar Cambios"):
+                    conn = get_db_connection()
+                    conn.execute("""UPDATE pets SET name=?, especie=?, status=?, barrio=?, descripcion=? WHERE id=?""",
+                               (new_name, new_especie, new_status, new_barrio, new_desc, p['id']))
+                    conn.commit()
+                    conn.close()
+                    st.success("Cambios guardados")
+                    del st.session_state.edit_pet
+                    st.rerun()
+
+    # ===================== PANEL ADMIN =====================
     elif page == "🛠 Panel Admin" and user.get('role') == 'admin':
         st.title("🛠 Panel de Administración Total")
         tab1, tab2, tab3 = st.tabs(["👥 Usuarios", "🐾 Mascotas", "📊 Estadísticas"])
@@ -194,13 +295,12 @@ else:
                             conn.commit()
                             conn.close()
                             enviar_mail(u['email'], "cuenta_aprobada")
-                            st.success("Aprobado")
+                            st.success("Usuario aprobado")
                             st.rerun()
 
         with tab2:
             st.subheader("Gestión de Mascotas")
-            # (Aquí va el código completo de gestión de mascotas con editar, aprobar, eliminar)
-            search = st.text_input("Buscar mascota")
+            search = st.text_input("Buscar mascota o barrio")
             conn = get_db_connection()
             pets = conn.execute("SELECT p.*, u.email as user_email FROM pets p LEFT JOIN users u ON p.user_id = u.id").fetchall()
             conn.close()
@@ -210,21 +310,25 @@ else:
                 with col2: st.write(f"**{p['name']}** - {p['barrio']}")
                 with col3:
                     if not p['is_approved']:
-                        if st.button("Aprobar", key=f"apr_{p['id']}"):
+                        if st.button("✅ Aprobar", key=f"apr_{p['id']}"):
                             conn = get_db_connection()
                             conn.execute("UPDATE pets SET is_approved=1 WHERE id=?", (p['id'],))
                             conn.commit()
                             conn.close()
                             enviar_mail(p['user_email'], "publicacion_aprobada", {"nombre": p['name']})
-                            st.success("Aprobado")
+                            st.success("Aprobado + email")
                             st.rerun()
-                    if st.button("Eliminar", key=f"del_{p['id']}"):
-                        conn = get_db_connection()
-                        conn.execute("DELETE FROM pets WHERE id=?", (p['id'],))
-                        conn.commit()
-                        conn.close()
-                        st.success("Eliminado")
+                    if st.button("✏️ Editar", key=f"edit_admin_{p['id']}"):
+                        st.session_state.edit_pet_admin = p
                         st.rerun()
+                    if st.button("🗑 Eliminar", key=f"del_{p['id']}"):
+                        if st.checkbox("Confirmar", key=f"conf_{p['id']}"):
+                            conn = get_db_connection()
+                            conn.execute("DELETE FROM pets WHERE id=?", (p['id'],))
+                            conn.commit()
+                            conn.close()
+                            st.success("Eliminado")
+                            st.rerun()
 
         with tab3:
             conn = get_db_connection()
@@ -241,4 +345,24 @@ else:
             col3.metric("Aprobadas", stats["aprobadas"])
             col4.metric("Pendientes", stats["pendientes"])
 
-st.caption("Huellitas NQN - Neuquén Capital ❤️")
+    # Modal de edición en Admin
+    if 'edit_pet_admin' in st.session_state:
+        p = st.session_state.edit_pet_admin
+        st.subheader(f"Editando: {p['name']}")
+        with st.form("edit_admin_form"):
+            new_name = st.text_input("Nombre", value=p['name'])
+            new_especie = st.selectbox("Especie", ["perro", "gato", "otro"])
+            new_status = st.selectbox("Estado", ["perdido", "adopcion"])
+            new_barrio = st.text_input("Barrio", value=p['barrio'])
+            new_desc = st.text_area("Descripción", value=p.get('descripcion', ''))
+            if st.form_submit_button("Guardar Cambios"):
+                conn = get_db_connection()
+                conn.execute("""UPDATE pets SET name=?, especie=?, status=?, barrio=?, descripcion=? WHERE id=?""",
+                           (new_name, new_especie, new_status, new_barrio, new_desc, p['id']))
+                conn.commit()
+                conn.close()
+                st.success("Cambios guardados")
+                del st.session_state.edit_pet_admin
+                st.rerun()
+
+st.caption("Huellitas NQN - Neuquén Capital ❤️ Desarrollado por André Beloqui")
