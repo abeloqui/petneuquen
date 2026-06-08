@@ -30,6 +30,7 @@ def get_db_connection():
 def init_db():
     conn = get_db_connection()
     c = conn.cursor()
+    
     c.execute('''CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY,
         email TEXT UNIQUE NOT NULL,
@@ -53,10 +54,26 @@ def init_db():
         is_approved INTEGER DEFAULT 0,
         created_at TEXT
     )''')
+    
     conn.commit()
     conn.close()
 
+def create_default_admin():
+    conn = get_db_connection()
+    admin_exists = conn.execute("SELECT id FROM users WHERE email = 'admin@huellitas.com'").fetchone()
+    
+    if not admin_exists:
+        hashed = hashlib.sha256("admin123".encode()).hexdigest()
+        conn.execute("""
+            INSERT INTO users (email, hashed_password, telefono, is_approved, role)
+            VALUES (?, ?, ?, 1, 'admin')
+        """, ("admin@huellitas.com", hashed, "2996894360"))
+        conn.commit()
+        print("✅ Admin por defecto creado: admin@huellitas.com / admin123")
+    conn.close()
+
 init_db()
+create_default_admin()
 
 # ===================== EMAIL =====================
 def enviar_mail(destino, tipo, datos=None):
@@ -103,7 +120,7 @@ def login_user(email, password):
         if user['is_approved'] or user['role'] == 'admin':
             return dict(user)
         else:
-            st.warning("Tu cuenta aún está pendiente de aprobación por André.")
+            st.warning("Tu cuenta aún está pendiente de aprobación.")
             return None
     return None
 
@@ -113,6 +130,8 @@ if 'user' not in st.session_state:
 
 if st.session_state.user is None:
     st.title("🐾 Huellitas NQN")
+    st.caption("Comunidad de Mascotas de Neuquén")
+    
     tab1, tab2 = st.tabs(["Iniciar Sesión", "Registrarse"])
     
     with tab1:
@@ -126,7 +145,7 @@ if st.session_state.user is None:
     
     with tab2:
         email_r = st.text_input("Email", key="reg_email")
-        tel = st.text_input("WhatsApp (con código de país)", key="reg_tel")
+        tel = st.text_input("WhatsApp", key="reg_tel")
         pass_r = st.text_input("Contraseña", type="password", key="reg_pass")
         if st.button("Solicitar Acceso", type="primary"):
             if not email_r or not pass_r:
@@ -143,6 +162,7 @@ if st.session_state.user is None:
                     conn.close()
                     enviar_mail(email_r, "bienvenida")
                     st.success("✅ Solicitud enviada! André la revisará pronto.")
+
 else:
     user = st.session_state.user
     st.sidebar.success(f"👋 {user['email'].split('@')[0]}")
@@ -151,8 +171,12 @@ else:
         st.session_state.user = None
         st.rerun()
     
-    page = st.sidebar.radio("Menú", 
-        ["Mapa", "Nueva Publicación", "Mis Reportes"] + (["Admin"] if user.get('role') == 'admin' else []))
+    # Menú
+    opciones = ["Mapa", "Nueva Publicación", "Mis Reportes"]
+    if user.get('role') == 'admin':
+        opciones.append("Admin")
+    
+    page = st.sidebar.radio("Menú", opciones)
 
     if page == "Mapa":
         st.title("🐾 Mascotas en Neuquén")
@@ -166,7 +190,7 @@ else:
                 color = "red" if p["status"] == "perdido" else "green"
                 folium.Marker(
                     [p["latitud"], p["longitud"]],
-                    popup=f"<b>{p['name']}</b><br>{p['barrio']}<br>{p['especie']}",
+                    popup=f"<b>{p['name']}</b><br>{p['barrio']}",
                     icon=folium.Icon(color=color, icon="paw")
                 ).add_to(m)
             st_folium(m, width=700, height=500)
@@ -174,6 +198,7 @@ else:
             st.info("Aún no hay publicaciones aprobadas.")
 
     elif page == "Nueva Publicación":
+        # (mismo código de antes - lo mantengo igual)
         st.title("📸 Nueva Publicación")
         with st.form("upload_form", clear_on_submit=True):
             col1, col2 = st.columns(2)
@@ -187,19 +212,16 @@ else:
             descripcion = st.text_area("Descripción / Comentarios", height=100)
             
             col3, col4 = st.columns(2)
-            with col3:
-                lat = st.number_input("Latitud", value=-38.951)
-            with col4:
-                lng = st.number_input("Longitud", value=-68.059)
+            with col3: lat = st.number_input("Latitud", value=-38.951)
+            with col4: lng = st.number_input("Longitud", value=-68.059)
             
             file = st.file_uploader("Foto de la mascota *", type=["jpg", "jpeg", "png"])
             
-            submitted = st.form_submit_button("Publicar Reporte 🐾", type="primary")
-            if submitted:
+            if st.form_submit_button("Publicar Reporte 🐾", type="primary"):
                 if not name or not barrio or not file:
                     st.error("Nombre, barrio y foto son obligatorios")
                 else:
-                    with st.spinner("Subiendo a Cloudinary..."):
+                    with st.spinner("Subiendo foto..."):
                         upload_result = cloudinary.uploader.upload(file, folder="huellitas")
                         image_url = upload_result["secure_url"]
                     
@@ -212,7 +234,7 @@ else:
                     conn.close()
                     
                     enviar_mail(user['email'], "publicacion_exitosa", {"nombre": name})
-                    st.success("¡Reporte enviado correctamente! Esperando aprobación.")
+                    st.success("¡Reporte enviado! Esperando aprobación.")
                     st.rerun()
 
     elif page == "Mis Reportes":
@@ -229,11 +251,49 @@ else:
                 st.image(p["image_url"], width=120)
             with col2:
                 st.subheader(p["name"])
-                st.caption(f"{p['especie'].capitalize()} • {p['barrio']} • {p['status']}")
-                st.write("✅ Aprobado" if p["is_approved"] else "⏳ Pendiente de aprobación")
+                st.caption(f"{p['especie'].capitalize()} • {p['barrio']}")
+                st.write("✅ Aprobado" if p["is_approved"] else "⏳ Pendiente")
 
     elif page == "Admin" and user.get('role') == 'admin':
         st.title("🔧 Panel de Administración")
-        # Aquí podemos expandir más tarde
+        st.success("¡Bienvenido al panel de Administrador!")
+        
+        tab_admin1, tab_admin2 = st.tabs(["Usuarios Pendientes", "Mascotas Pendientes"])
+        
+        with tab_admin1:
+            conn = get_db_connection()
+            pending_users = conn.execute("SELECT * FROM users WHERE is_approved = 0").fetchall()
+            conn.close()
+            
+            if not pending_users:
+                st.info("No hay usuarios pendientes.")
+            for u in pending_users:
+                if st.button(f"Aprobar {u['email']}", key=f"u_{u['id']}"):
+                    conn = get_db_connection()
+                    conn.execute("UPDATE users SET is_approved = 1 WHERE id = ?", (u['id'],))
+                    conn.commit()
+                    conn.close()
+                    enviar_mail(u['email'], "cuenta_aprobada")
+                    st.success(f"Usuario {u['email']} aprobado")
+                    st.rerun()
+
+        with tab_admin2:
+            conn = get_db_connection()
+            pending_pets = conn.execute("SELECT * FROM pets WHERE is_approved = 0").fetchall()
+            conn.close()
+            
+            for p in pending_pets:
+                col1, col2 = st.columns([1, 3])
+                with col1:
+                    st.image(p["image_url"], width=100)
+                with col2:
+                    st.write(f"**{p['name']}** - {p['especie']} • {p['barrio']}")
+                    if st.button("Aprobar Publicación", key=f"p_{p['id']}"):
+                        conn = get_db_connection()
+                        conn.execute("UPDATE pets SET is_approved = 1 WHERE id = ?", (p['id'],))
+                        conn.commit()
+                        conn.close()
+                        st.success("Publicación aprobada")
+                        st.rerun()
 
 st.caption("Huellitas NQN - Neuquén Capital ❤️")
