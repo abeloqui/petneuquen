@@ -15,7 +15,7 @@ from math import radians, cos, sin, asin, sqrt
 
 st.set_page_config(page_title="Huellitas NQN", layout="wide", page_icon="🐾")
 
-# ===================== ESTILO VISUAL =====================
+# ===================== ESTILO VISUAL MEJORADO =====================
 st.markdown("""
 <style>
     .main { background-color: #F4F1DE; }
@@ -25,9 +25,12 @@ st.markdown("""
         border-radius: 25px; 
         font-weight: bold; 
         height: 3.2em;
+        transition: all 0.3s;
     }
-    h1, h2 { color: #3D405B; }
-    .card { background: white; padding: 15px; border-radius: 20px; box-shadow: 0 8px 25px rgba(0,0,0,0.1); }
+    .stButton>button:hover { transform: scale(1.05); }
+    h1 { color: #3D405B; text-align: center; }
+    .subtitle { color: #81B29A; text-align: center; font-weight: 600; }
+    .card { background: white; padding: 18px; border-radius: 20px; box-shadow: 0 8px 25px rgba(0,0,0,0.08); }
 </style>
 """, unsafe_allow_html=True)
 
@@ -56,10 +59,10 @@ def enviar_mail(destino, tipo, datos=None):
         msg['To'] = destino
         if tipo == "cuenta_aprobada":
             msg['Subject'] = "¡Tu cuenta en Huellitas NQN ha sido aprobada! 🐾"
-            body = "¡Bienvenido a la comunidad!"
+            body = "¡Bienvenido a la comunidad! Ya podés publicar y ayudar."
         elif tipo == "publicacion_aprobada":
             nombre = datos.get('nombre', 'tu mascota')
-            msg['Subject'] = f"✅ {nombre} ya está visible"
+            msg['Subject'] = f"✅ {nombre} ya está visible en el mapa"
             body = f"Tu publicación de {nombre} fue aprobada."
         msg.attach(MIMEText(body, 'plain'))
         server = smtplib.SMTP('smtp.gmail.com', 587)
@@ -148,7 +151,7 @@ if st.session_state.user is None:
                            (email_r, hashed, tel))
                 conn.commit()
                 conn.close()
-                st.success("✅ Solicitud enviada! Esperá la aprobación.")
+                st.success("✅ Solicitud enviada!")
 
 else:
     user = st.session_state.user
@@ -163,30 +166,30 @@ else:
         menu_options.append("🛠 Panel Admin")
     page = st.sidebar.radio("Ir a", menu_options)
 
-    # ===================== MAPA PRINCIPAL CON FILTROS Y MASCOTAS CERCANAS =====================
+    # ===================== MAPA PRINCIPAL CON FILTROS =====================
     if page == "🗺️ Mapa Principal":
         st.title("🐾 Mascotas cerca tuyo")
-        
+        st.caption("Usa los filtros y activa tu ubicación")
+
         location = streamlit_geolocation()
         user_lat = user_lng = None
         if location and location.get('latitude'):
             user_lat = location['latitude']
             user_lng = location['longitude']
-            st.success(f"📍 Tu ubicación: {user_lat:.4f}, {user_lng:.4f}")
+            st.success(f"📍 Ubicación detectada")
             m = folium.Map(location=[user_lat, user_lng], zoom_start=15)
             folium.Marker([user_lat, user_lng], popup="📍 Vos estás acá", icon=folium.Icon(color="blue")).add_to(m)
         else:
             user_lat, user_lng = -38.951, -68.059
             m = folium.Map(location=[user_lat, user_lng], zoom_start=13)
 
-        # Filtros
-        col1, col2, col3 = st.columns([2,2,1])
+        col1, col2, col3 = st.columns([2, 2, 1])
         with col1:
             search = st.text_input("Buscar nombre o barrio")
         with col2:
             especie_filter = st.selectbox("Especie", ["Todos", "perro", "gato", "otro"])
         with col3:
-            max_dist = st.slider("Distancia máx (km)", 1, 50, 15)
+            max_dist = st.slider("Distancia máx (km)", 1, 30, 10)
 
         conn = get_db_connection()
         pets = conn.execute("SELECT * FROM pets WHERE is_approved = 1").fetchall()
@@ -202,7 +205,7 @@ else:
                 filtered.append((p, None))
 
         if user_lat and user_lng:
-            filtered.sort(key=lambda x: x[1])
+            filtered.sort(key=lambda x: x[1] if x[1] is not None else 999)
 
         for p, dist in filtered:
             color = "red" if p["status"] == "perdido" else "green"
@@ -210,9 +213,8 @@ else:
             if dist is not None:
                 popup += f"<br>📍 {dist} km de ti"
             folium.Marker([p["latitud"], p["longitud"]], popup=popup, icon=folium.Icon(color=color, icon="paw")).add_to(m)
-        
-        st_folium(m, width=800, height=600)
-        st.caption(f"Mostrando {len(filtered)} mascotas")
+
+        st_folium(m, width=800, height=550)
 
     # ===================== NUEVA PUBLICACIÓN =====================
     elif page == "📸 Nueva Publicación":
@@ -261,7 +263,118 @@ else:
                     st.success("✅ Reporte enviado correctamente!")
                     st.rerun()
 
-    # ===================== MIS REPORTES Y PANEL ADMIN (incluidos) =====================
-    # ... (mantengo las secciones completas de Mis Reportes y Panel Admin de las versiones anteriores)
+    # ===================== MIS REPORTES =====================
+    elif page == "Mis Reportes":
+        st.title("Mis Publicaciones")
+        conn = get_db_connection()
+        my_pets = conn.execute("SELECT * FROM pets WHERE user_id = ?", (user['id'],)).fetchall()
+        conn.close()
+        
+        for p in my_pets:
+            col1, col2 = st.columns([1, 5])
+            with col1:
+                st.image(p["image_url"], width=120)
+            with col2:
+                st.subheader(p["name"])
+                st.caption(f"{p['especie']} • {p['barrio']} • {p['status']}")
+                st.write(p.get('descripcion', ''))
+            if st.button("✏️ Editar", key=f"edit_my_{p['id']}"):
+                st.session_state.edit_pet = p
+                st.rerun()
+            if st.button("🗑 Eliminar", key=f"del_my_{p['id']}"):
+                conn = get_db_connection()
+                conn.execute("DELETE FROM pets WHERE id = ?", (p['id'],))
+                conn.commit()
+                conn.close()
+                st.success("Eliminado")
+                st.rerun()
 
-st.caption("Huellitas NQN - Neuquén Capital ❤️ Desarrollado por André")
+        if 'edit_pet' in st.session_state:
+            p = st.session_state.edit_pet
+            st.subheader(f"Editando: {p['name']}")
+            with st.form("edit_form"):
+                new_name = st.text_input("Nombre", value=p['name'])
+                new_especie = st.selectbox("Especie", ["perro", "gato", "otro"])
+                new_status = st.selectbox("Estado", ["perdido", "adopcion"])
+                new_barrio = st.text_input("Barrio", value=p['barrio'])
+                new_desc = st.text_area("Descripción", value=p.get('descripcion', ''))
+                if st.form_submit_button("Guardar Cambios"):
+                    conn = get_db_connection()
+                    conn.execute("""UPDATE pets SET name=?, especie=?, status=?, barrio=?, descripcion=? WHERE id=?""",
+                               (new_name, new_especie, new_status, new_barrio, new_desc, p['id']))
+                    conn.commit()
+                    conn.close()
+                    st.success("Cambios guardados")
+                    del st.session_state.edit_pet
+                    st.rerun()
+
+    # ===================== PANEL ADMIN =====================
+    elif page == "🛠 Panel Admin" and user.get('role') == 'admin':
+        st.title("🛠 Panel de Administración Total")
+        tab1, tab2, tab3 = st.tabs(["👥 Usuarios", "🐾 Mascotas", "📊 Estadísticas"])
+
+        with tab1:
+            st.subheader("Gestión de Usuarios")
+            conn = get_db_connection()
+            users = conn.execute("SELECT * FROM users").fetchall()
+            conn.close()
+            for u in users:
+                col1, col2, col3 = st.columns([3,2,2])
+                with col1: st.write(f"**{u['email']}**")
+                with col2: st.write("✅ Aprobado" if u['is_approved'] else "⏳ Pendiente")
+                with col3:
+                    if not u['is_approved']:
+                        if st.button("Aprobar", key=f"u_{u['id']}"):
+                            conn = get_db_connection()
+                            conn.execute("UPDATE users SET is_approved=1 WHERE id=?", (u['id'],))
+                            conn.commit()
+                            conn.close()
+                            enviar_mail(u['email'], "cuenta_aprobada")
+                            st.success("Usuario aprobado")
+                            st.rerun()
+
+        with tab2:
+            st.subheader("Gestión de Mascotas")
+            search = st.text_input("Buscar mascota o barrio")
+            conn = get_db_connection()
+            pets = conn.execute("SELECT p.*, u.email as user_email FROM pets p LEFT JOIN users u ON p.user_id = u.id").fetchall()
+            conn.close()
+            for p in pets:
+                col1, col2, col3 = st.columns([1,5,2])
+                with col1: st.image(p["image_url"], width=100)
+                with col2: st.write(f"**{p['name']}** - {p['barrio']}")
+                with col3:
+                    if not p['is_approved']:
+                        if st.button("✅ Aprobar", key=f"apr_{p['id']}"):
+                            conn = get_db_connection()
+                            conn.execute("UPDATE pets SET is_approved=1 WHERE id=?", (p['id'],))
+                            conn.commit()
+                            conn.close()
+                            enviar_mail(p['user_email'], "publicacion_aprobada", {"nombre": p['name']})
+                            st.success("Aprobado")
+                            st.rerun()
+                    if st.button("🗑 Eliminar", key=f"del_{p['id']}"):
+                        if st.checkbox("Confirmar", key=f"conf_{p['id']}"):
+                            conn = get_db_connection()
+                            conn.execute("DELETE FROM pets WHERE id=?", (p['id'],))
+                            conn.commit()
+                            conn.close()
+                            st.success("Eliminado")
+                            st.rerun()
+
+        with tab3:
+            conn = get_db_connection()
+            stats = {
+                "usuarios": conn.execute("SELECT COUNT(*) FROM users").fetchone()[0],
+                "mascotas": conn.execute("SELECT COUNT(*) FROM pets").fetchone()[0],
+                "aprobadas": conn.execute("SELECT COUNT(*) FROM pets WHERE is_approved=1").fetchone()[0],
+                "pendientes": conn.execute("SELECT COUNT(*) FROM pets WHERE is_approved=0").fetchone()[0]
+            }
+            conn.close()
+            col1, col2, col3, col4 = st.columns(4)
+            col1.metric("Usuarios", stats["usuarios"])
+            col2.metric("Publicaciones", stats["mascotas"])
+            col3.metric("Aprobadas", stats["aprobadas"])
+            col4.metric("Pendientes", stats["pendientes"])
+
+st.caption("Huellitas NQN - Neuquén Capital ❤️ Desarrollado por André Beloqui")
