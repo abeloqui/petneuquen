@@ -1,18 +1,47 @@
+import sqlite3
 import os
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.ext.declarative import declarative_base
+from datetime import datetime
 
-# Obtiene la URL de la base de datos de Render
-DATABASE_URL = os.environ.get("DATABASE_URL")
+DB_PATH = "huellitas.db"
 
-# Parche necesario para que SQLAlchemy acepte el formato de Render
-if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
-    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
-else:
-    # Si no hay URL, usa SQLite para que la app no explote al testear local
-    DATABASE_URL = "sqlite:///./test.db"
+def get_db_connection():
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
 
-engine = create_engine(DATABASE_URL)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-Base = declarative_base()
+def init_db():
+    conn = get_db_connection()
+    c = conn.cursor()
+    
+    c.execute('''CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY,
+        email TEXT UNIQUE,
+        hashed_password TEXT,
+        telefono TEXT,
+        is_approved BOOLEAN DEFAULT 0,
+        role TEXT DEFAULT 'user'
+    )''')
+    
+    c.execute('''CREATE TABLE IF NOT EXISTS pets (
+        id INTEGER PRIMARY KEY,
+        user_id INTEGER,
+        name TEXT,
+        especie TEXT,
+        status TEXT,
+        barrio TEXT,
+        descripcion TEXT,
+        latitud REAL,
+        longitud REAL,
+        image_url TEXT,
+        is_approved BOOLEAN DEFAULT 0,
+        necesita_medicacion BOOLEAN DEFAULT 0,
+        esta_herido BOOLEAN DEFAULT 0,
+        estado_resguardo TEXT DEFAULT 'calle',
+        referencia TEXT,
+        created_at TEXT
+    )''')
+    
+    conn.commit()
+    conn.close()
+
+init_db()
