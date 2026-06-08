@@ -15,7 +15,7 @@ from math import radians, cos, sin, asin, sqrt
 
 st.set_page_config(page_title="Huellitas NQN", layout="wide", page_icon="🐾")
 
-# ===================== ESTILO VISUAL MEJORADO =====================
+# ===================== ESTILO VISUAL =====================
 st.markdown("""
 <style>
     .main { background-color: #F4F1DE; }
@@ -59,10 +59,10 @@ def enviar_mail(destino, tipo, datos=None):
         msg['To'] = destino
         if tipo == "cuenta_aprobada":
             msg['Subject'] = "¡Tu cuenta en Huellitas NQN ha sido aprobada! 🐾"
-            body = "¡Bienvenido a la comunidad! Ya podés publicar y ayudar."
+            body = "¡Bienvenido a la comunidad!"
         elif tipo == "publicacion_aprobada":
             nombre = datos.get('nombre', 'tu mascota')
-            msg['Subject'] = f"✅ {nombre} ya está visible en el mapa"
+            msg['Subject'] = f"✅ {nombre} ya está visible"
             body = f"Tu publicación de {nombre} fue aprobada."
         msg.attach(MIMEText(body, 'plain'))
         server = smtplib.SMTP('smtp.gmail.com', 587)
@@ -166,11 +166,9 @@ else:
         menu_options.append("🛠 Panel Admin")
     page = st.sidebar.radio("Ir a", menu_options)
 
-    # ===================== MAPA PRINCIPAL CON FILTROS =====================
+    # ===================== MAPA PRINCIPAL =====================
     if page == "🗺️ Mapa Principal":
         st.title("🐾 Mascotas cerca tuyo")
-        st.caption("Usa los filtros y activa tu ubicación")
-
         location = streamlit_geolocation()
         user_lat = user_lng = None
         if location and location.get('latitude'):
@@ -178,18 +176,15 @@ else:
             user_lng = location['longitude']
             st.success(f"📍 Ubicación detectada")
             m = folium.Map(location=[user_lat, user_lng], zoom_start=15)
-            folium.Marker([user_lat, user_lng], popup="📍 Vos estás acá", icon=folium.Icon(color="blue")).add_to(m)
+            folium.Marker([user_lat, user_lng], popup="📍 Vos", icon=folium.Icon(color="blue")).add_to(m)
         else:
             user_lat, user_lng = -38.951, -68.059
             m = folium.Map(location=[user_lat, user_lng], zoom_start=13)
 
-        col1, col2, col3 = st.columns([2, 2, 1])
-        with col1:
-            search = st.text_input("Buscar nombre o barrio")
-        with col2:
-            especie_filter = st.selectbox("Especie", ["Todos", "perro", "gato", "otro"])
-        with col3:
-            max_dist = st.slider("Distancia máx (km)", 1, 30, 10)
+        col1, col2, col3 = st.columns([2,2,1])
+        with col1: search = st.text_input("Buscar nombre o barrio")
+        with col2: especie_filter = st.selectbox("Especie", ["Todos", "perro", "gato", "otro"])
+        with col3: max_dist = st.slider("Distancia máx (km)", 1, 30, 10)
 
         conn = get_db_connection()
         pets = conn.execute("SELECT * FROM pets WHERE is_approved = 1").fetchall()
@@ -213,12 +208,13 @@ else:
             if dist is not None:
                 popup += f"<br>📍 {dist} km de ti"
             folium.Marker([p["latitud"], p["longitud"]], popup=popup, icon=folium.Icon(color=color, icon="paw")).add_to(m)
-
+        
         st_folium(m, width=800, height=550)
 
     # ===================== NUEVA PUBLICACIÓN =====================
     elif page == "📸 Nueva Publicación":
         st.title("📸 Nueva Publicación")
+        st.caption("Contanos sobre la mascota 🐾")
         with st.form("upload_form", clear_on_submit=True):
             col1, col2 = st.columns(2)
             with col1:
@@ -229,9 +225,22 @@ else:
             with col2:
                 status = st.selectbox("Estado", ["perdido", "adopcion"])
                 barrio = st.text_input("Barrio *")
-                lat = st.number_input("Latitud", value=-38.951)
-                lng = st.number_input("Longitud", value=-68.059)
+                lat = st.number_input("Latitud", value=-38.951, format="%.6f")
+                lng = st.number_input("Longitud", value=-68.059, format="%.6f")
             
+            # Botón Geolocalización
+            if st.button("📍 Usar mi ubicación actual"):
+                loc = streamlit_geolocation()
+                if loc and loc.get('latitude'):
+                    st.session_state.temp_lat = loc['latitude']
+                    st.session_state.temp_lng = loc['longitude']
+                    st.success("✅ Ubicación capturada!")
+                    st.rerun()
+
+            if 'temp_lat' in st.session_state:
+                lat = st.session_state.temp_lat
+                lng = st.session_state.temp_lng
+
             descripcion = st.text_area("Descripción / Comentarios", height=100)
             
             col3, col4 = st.columns(2)
@@ -261,6 +270,9 @@ else:
                     conn.commit()
                     conn.close()
                     st.success("✅ Reporte enviado correctamente!")
+                    if 'temp_lat' in st.session_state:
+                        del st.session_state.temp_lat
+                        del st.session_state.temp_lng
                     st.rerun()
 
     # ===================== MIS REPORTES =====================
